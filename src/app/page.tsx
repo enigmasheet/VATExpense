@@ -110,7 +110,7 @@ export default function DashboardPage() {
           <Link
             key={s.href}
             href={s.href}
-            className="group rounded-lg border border-border bg-surface p-4 transition-colors hover:border-primary/40 hover:bg-[#f8f7f2]"
+            className="group rounded-lg border border-border bg-surface p-4 transition-colors hover:border-primary/40 hover:bg-surface-subtle"
           >
             <p className="font-medium text-primary group-hover:underline">{s.label}</p>
             <p className="mt-1 text-sm text-muted">{s.hint}</p>

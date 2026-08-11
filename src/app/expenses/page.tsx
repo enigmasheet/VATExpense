@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError, apiUrl } from "@/lib/api-client";
 import { useApp } from "@/lib/use-app";
 import { NEPALI_MONTHS } from "@/lib/nepali-date";
@@ -9,6 +9,16 @@ import { formatAmount } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(id);
+  }, [value, delay]);
+  return debounced;
+}
 
 interface ExpenseRow {
   id: string;
@@ -48,8 +58,11 @@ export default function ExpensesPage() {
   const [categoryId, setCategoryId] = useState("");
   const [month, setMonth] = useState("");
 
+  const debouncedQ = useDebounce(q, 300);
+
   const [parties, setParties] = useState<{ id: string; name: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; item: string } | null>(null);
 
   useEffect(() => {
     if (!companyId) return;
@@ -70,7 +83,7 @@ export default function ExpensesPage() {
           fiscalYearId,
           page,
           pageSize,
-          q,
+          q: debouncedQ,
           partyId,
           categoryId,
           month,
@@ -84,7 +97,7 @@ export default function ExpensesPage() {
     } finally {
       setLoading(false);
     }
-  }, [companyId, fiscalYearId, page, pageSize, q, partyId, categoryId, month]);
+  }, [companyId, fiscalYearId, page, pageSize, debouncedQ, partyId, categoryId, month]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
@@ -98,10 +111,11 @@ export default function ExpensesPage() {
     setLoading(true);
   }
 
-  async function removeExpense(id: string, item: string) {
-    if (!window.confirm(`Delete "${item}"? This can be undone from the database only.`)) return;
+  async function confirmDeleteExpense() {
+    if (!deleteTarget) return;
     try {
-      await api(`/api/expenses/${id}`, { method: "DELETE" });
+      await api(`/api/expenses/${deleteTarget.id}`, { method: "DELETE" });
+      setDeleteTarget(null);
       setLoading(true);
       load();
     } catch (e) {
@@ -187,65 +201,98 @@ export default function ExpensesPage() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <div className="rounded-lg border border-border bg-surface">
         {loading ? (
           <p className="p-6 text-sm text-muted">Loading…</p>
         ) : rows.length === 0 ? (
           <p className="p-6 text-sm text-muted">No expenses match. Record your first one.</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                <th className="px-4 py-3">Miti</th>
-                <th className="px-4 py-3">Invoice</th>
-                <th className="px-4 py-3">Party</th>
-                <th className="px-4 py-3">Item</th>
-                <th className="px-4 py-3 text-right">Taxable</th>
-                <th className="px-4 py-3 text-right">VAT</th>
-                <th className="px-4 py-3 text-right">Total</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
+                    <th className="px-4 py-3">Miti</th>
+                    <th className="px-4 py-3">Invoice</th>
+                    <th className="px-4 py-3">Party</th>
+                    <th className="px-4 py-3">Item</th>
+                    <th className="px-4 py-3 text-right">Taxable</th>
+                    <th className="px-4 py-3 text-right">VAT</th>
+                    <th className="px-4 py-3 text-right">Total</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.id} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <Link
+                          href={`/expenses/${row.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {row.miti}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {row.invoiceNumber ? (
+                          <span className="tabular-amount">{row.invoiceNumber}</span>
+                        ) : (
+                          <Badge tone="warning">No invoice</Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">{row.partyName}</td>
+                      <td className="px-4 py-3 max-w-[16rem] truncate">
+                        {row.item}
+                        <span className="ml-2 text-xs text-muted">{row.categoryName}</span>
+                      </td>
+                      <td className="tabular-amount px-4 py-3 text-right">{formatAmount(row.taxableAmount)}</td>
+                      <td className="tabular-amount px-4 py-3 text-right">{formatAmount(row.vatAmount)}</td>
+                      <td className="tabular-amount px-4 py-3 text-right font-medium">
+                        {formatAmount(row.totalAmount)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          className="text-sm text-danger hover:underline"
+                          onClick={() => setDeleteTarget({ id: row.id, item: row.item })}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile card list */}
+            <div className="sm:hidden">
               {rows.map((row) => (
-                <tr key={row.id} className="border-b border-border last:border-b-0 hover:bg-[#f8f7f2]">
-                  <td className="px-4 py-3 whitespace-nowrap">
+                <div key={row.id} className="border-b border-border p-4 last:border-b-0">
+                  <div className="mb-1 flex items-start justify-between">
                     <Link
                       href={`/expenses/${row.id}`}
                       className="font-medium text-primary hover:underline"
                     >
                       {row.miti}
                     </Link>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {row.invoiceNumber ? (
-                      <span className="tabular-amount">{row.invoiceNumber}</span>
-                    ) : (
-                      <Badge tone="warning">No invoice</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">{row.partyName}</td>
-                  <td className="px-4 py-3 max-w-[16rem] truncate">
-                    {row.item}
-                    <span className="ml-2 text-xs text-muted">{row.categoryName}</span>
-                  </td>
-                  <td className="tabular-amount px-4 py-3 text-right">{formatAmount(row.taxableAmount)}</td>
-                  <td className="tabular-amount px-4 py-3 text-right">{formatAmount(row.vatAmount)}</td>
-                  <td className="tabular-amount px-4 py-3 text-right font-medium">
-                    {formatAmount(row.totalAmount)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
+                    <span className="tabular-amount font-medium">{formatAmount(row.totalAmount)}</span>
+                  </div>
+                  <p className="text-sm text-foreground">{row.partyName}</p>
+                  <p className="truncate text-sm text-muted">{row.item}</p>
+                  <div className="mt-2 flex items-center justify-between text-xs text-muted">
+                    <span>{row.categoryName}</span>
                     <button
-                      className="text-sm text-danger hover:underline"
-                      onClick={() => removeExpense(row.id, row.item)}
+                      className="text-danger hover:underline"
+                      onClick={() => setDeleteTarget({ id: row.id, item: row.item })}
                     >
                       Delete
                     </button>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
 
@@ -261,6 +308,7 @@ export default function ExpensesPage() {
             onClick={() => {
               setPage((p) => p - 1);
               setLoading(true);
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           >
             Previous
@@ -272,12 +320,23 @@ export default function ExpensesPage() {
             onClick={() => {
               setPage((p) => p + 1);
               setLoading(true);
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           >
             Next
           </Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={`Delete "${deleteTarget?.item}"?`}
+        message="This action cannot be undone from the database only."
+        confirmLabel="Delete"
+        danger
+        onConfirm={confirmDeleteExpense}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

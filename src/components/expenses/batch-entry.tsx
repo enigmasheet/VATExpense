@@ -492,7 +492,7 @@ export function BatchEntry() {
           {/* Computed display */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-foreground">Computed</label>
-            <div className="flex h-10 items-center rounded-md bg-[#f3f2ec] px-3 text-sm tabular-amount">
+            <div className="flex h-10 items-center rounded-md bg-surface-muted px-3 text-sm tabular-amount">
               {amount ? (
                 <span>
                   Tax: {computedAmounts.taxable ? `Rs. ${Number(computedAmounts.taxable).toLocaleString()}` : "–"} ·
@@ -623,161 +623,226 @@ export function BatchEntry() {
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                  <th className="px-3 py-2">#</th>
-                  <th className="px-3 py-2">Date</th>
-                  <th className="px-3 py-2">Party</th>
-                  <th className="px-3 py-2">Invoice</th>
-                  <th className="px-3 py-2">Category</th>
-                  <th className="px-3 py-2">Description</th>
-                  <th className="px-3 py-2 text-right">Taxable</th>
-                  <th className="px-3 py-2 text-right">VAT</th>
-                  <th className="px-3 py-2 text-right">Total</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {queue.map((qi, idx) => {
-                  const isEditing = editingId === qi.id;
-                  return (
-                    <tr
-                      key={qi.id}
-                      className={`border-b border-border last:border-b-0 ${
-                        qi.status === "error" ? "bg-danger/5" : qi.status === "saved" ? "bg-success/5" : ""
-                      }`}
-                    >
-                      <td className="px-3 py-2 text-muted">{idx + 1}</td>
-                      <td className="px-3 py-2">
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editValues.miti ?? qi.miti}
-                            onChange={(e) => setEditValues((v) => ({ ...v, miti: e.target.value }))}
-                            className="h-8 w-24 rounded border border-border bg-surface px-2 text-xs"
-                          />
-                        ) : (
-                          qi.miti
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className="font-medium">{qi.partyName}</span>
+          <div className="rounded-lg border border-border bg-surface">
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
+                    <th className="px-3 py-2">#</th>
+                    <th className="px-3 py-2">Date</th>
+                    <th className="px-3 py-2">Party</th>
+                    <th className="px-3 py-2">Invoice</th>
+                    <th className="px-3 py-2">Category</th>
+                    <th className="px-3 py-2">Description</th>
+                    <th className="px-3 py-2 text-right">Taxable</th>
+                    <th className="px-3 py-2 text-right">VAT</th>
+                    <th className="px-3 py-2 text-right">Total</th>
+                    <th className="px-3 py-2">Status</th>
+                    <th className="px-3 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {queue.map((qi, idx) => {
+                    const isEditing = editingId === qi.id;
+                    return (
+                      <tr
+                        key={qi.id}
+                        className={`border-b border-border last:border-b-0 ${
+                          qi.status === "error" ? "bg-danger/5" : qi.status === "saved" ? "bg-success/5" : ""
+                        }`}
+                      >
+                        <td className="px-3 py-2 text-muted">{idx + 1}</td>
+                        <td className="px-3 py-2">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editValues.miti ?? qi.miti}
+                              onChange={(e) => setEditValues((v) => ({ ...v, miti: e.target.value }))}
+                              className="h-8 w-24 rounded border border-border bg-surface px-2 text-xs"
+                            />
+                          ) : (
+                            qi.miti
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="font-medium">{qi.partyName}</span>
+                          {qi.locationName && (
+                            <span className="ml-1 text-xs text-muted">· {qi.locationName}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editValues.invoiceNumber ?? qi.invoiceNumber}
+                              onChange={(e) => setEditValues((v) => ({ ...v, invoiceNumber: e.target.value }))}
+                              className="h-8 w-24 rounded border border-border bg-surface px-2 text-xs"
+                            />
+                          ) : (
+                            qi.invoiceNumber || "–"
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {isEditing ? (
+                            <select
+                              value={editValues.categoryId ?? qi.categoryId}
+                              onChange={(e) => setEditValues((v) => ({ ...v, categoryId: e.target.value }))}
+                              className="h-8 rounded border border-border bg-surface px-2 text-xs"
+                            >
+                              {categories.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            qi.categoryName
+                          )}
+                        </td>
+                        <td className="px-3 py-2 max-w-48 truncate">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editValues.item ?? qi.item}
+                              onChange={(e) => setEditValues((v) => ({ ...v, item: e.target.value }))}
+                              className="h-8 w-full rounded border border-border bg-surface px-2 text-xs"
+                            />
+                          ) : (
+                            qi.item
+                          )}
+                        </td>
+                        <td className="tabular-amount px-3 py-2 text-right text-xs">
+                          {formatAmount(qi.taxableAmount)}
+                        </td>
+                        <td className="tabular-amount px-3 py-2 text-right text-xs">
+                          {formatAmount(qi.vatAmount)}
+                        </td>
+                        <td className="tabular-amount px-3 py-2 text-right text-xs font-medium">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={editValues.totalAmount ?? qi.totalAmount}
+                              onChange={(e) => setEditValues((v) => ({ ...v, totalAmount: e.target.value }))}
+                              className="h-8 w-24 rounded border border-border bg-surface px-2 text-xs text-right"
+                            />
+                          ) : (
+                            formatAmount(qi.totalAmount)
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {qi.status === "saved" && <Badge tone="success">Saved</Badge>}
+                          {qi.status === "saving" && <Badge tone="default">Saving…</Badge>}
+                          {qi.status === "error" && (
+                            <Badge tone="danger">{qi.error ?? "Error"}</Badge>
+                          )}
+                          {qi.status === "pending" && <Badge tone="default">Pending</Badge>}
+                          {qi.warnings && qi.warnings.length > 0 && (
+                            <p className="mt-1 max-w-48 truncate text-xs text-warning" title={qi.warnings.join("\n")}>
+                              {qi.warnings.length} warning(s)
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {qi.status === "pending" && (
+                            <div className="flex items-center justify-end gap-1">
+                              {isEditing ? (
+                                <>
+                                  <button className="text-xs text-primary hover:underline" onClick={saveEdit}>Save</button>
+                                  <button className="text-xs text-muted hover:underline" onClick={() => { setEditingId(null); setEditValues({}); }}>Cancel</button>
+                                </>
+                              ) : (
+                                <>
+                                  <button className="text-xs text-primary hover:underline" onClick={() => startEdit(qi)}>Edit</button>
+                                  <button className="text-xs text-danger hover:underline" onClick={() => removeFromQueue(qi.id)}>Remove</button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-border bg-surface-subtle text-xs font-medium">
+                    <td className="px-3 py-2" colSpan={6}>Total</td>
+                    <td className="tabular-amount px-3 py-2 text-right">
+                      {formatAmount(queue.reduce((s, q) => s + Number(q.taxableAmount), 0))}
+                    </td>
+                    <td className="tabular-amount px-3 py-2 text-right">
+                      {formatAmount(queue.reduce((s, q) => s + Number(q.vatAmount), 0))}
+                    </td>
+                    <td className="tabular-amount px-3 py-2 text-right">
+                      {formatAmount(queue.reduce((s, q) => s + Number(q.totalAmount), 0))}
+                    </td>
+                    <td className="px-3 py-2"></td>
+                    <td className="px-3 py-2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Mobile card list */}
+            <div className="lg:hidden">
+              {queue.map((qi, idx) => {
+                const isEditing = editingId === qi.id;
+                return (
+                  <div
+                    key={qi.id}
+                    className={`border-b border-border p-4 last:border-b-0 ${
+                      qi.status === "error" ? "bg-danger/5" : qi.status === "saved" ? "bg-success/5" : ""
+                    }`}
+                  >
+                    <div className="mb-2 flex items-start justify-between">
+                      <div>
+                        <span className="text-xs text-muted">#{idx + 1}</span>
+                        <span className="ml-2 font-medium">{qi.partyName}</span>
                         {qi.locationName && (
                           <span className="ml-1 text-xs text-muted">· {qi.locationName}</span>
                         )}
-                      </td>
-                      <td className="px-3 py-2">
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editValues.invoiceNumber ?? qi.invoiceNumber}
-                            onChange={(e) => setEditValues((v) => ({ ...v, invoiceNumber: e.target.value }))}
-                            className="h-8 w-24 rounded border border-border bg-surface px-2 text-xs"
-                          />
-                        ) : (
-                          qi.invoiceNumber || "–"
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
-                        {isEditing ? (
-                          <select
-                            value={editValues.categoryId ?? qi.categoryId}
-                            onChange={(e) => setEditValues((v) => ({ ...v, categoryId: e.target.value }))}
-                            className="h-8 rounded border border-border bg-surface px-2 text-xs"
-                          >
-                            {categories.map((c) => (
-                              <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          qi.categoryName
-                        )}
-                      </td>
-                      <td className="px-3 py-2 max-w-48 truncate">
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editValues.item ?? qi.item}
-                            onChange={(e) => setEditValues((v) => ({ ...v, item: e.target.value }))}
-                            className="h-8 w-full rounded border border-border bg-surface px-2 text-xs"
-                          />
-                        ) : (
-                          qi.item
-                        )}
-                      </td>
-                      <td className="tabular-amount px-3 py-2 text-right text-xs">
-                        {formatAmount(qi.taxableAmount)}
-                      </td>
-                      <td className="tabular-amount px-3 py-2 text-right text-xs">
-                        {formatAmount(qi.vatAmount)}
-                      </td>
-                      <td className="tabular-amount px-3 py-2 text-right text-xs font-medium">
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={editValues.totalAmount ?? qi.totalAmount}
-                            onChange={(e) => setEditValues((v) => ({ ...v, totalAmount: e.target.value }))}
-                            className="h-8 w-24 rounded border border-border bg-surface px-2 text-xs text-right"
-                          />
-                        ) : (
-                          formatAmount(qi.totalAmount)
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
+                      </div>
+                      <span className="tabular-amount text-sm font-medium">{formatAmount(qi.totalAmount)}</span>
+                    </div>
+                    <div className="mb-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+                      <span>{qi.miti}</span>
+                      {qi.invoiceNumber && <span>Inv: {qi.invoiceNumber}</span>}
+                      <span>{qi.categoryName}</span>
+                    </div>
+                    <p className="mb-2 truncate text-sm text-foreground">{qi.item}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
                         {qi.status === "saved" && <Badge tone="success">Saved</Badge>}
                         {qi.status === "saving" && <Badge tone="default">Saving…</Badge>}
-                        {qi.status === "error" && (
-                          <Badge tone="danger">{qi.error ?? "Error"}</Badge>
-                        )}
+                        {qi.status === "error" && <Badge tone="danger">{qi.error ?? "Error"}</Badge>}
                         {qi.status === "pending" && <Badge tone="default">Pending</Badge>}
-                        {qi.warnings && qi.warnings.length > 0 && (
-                          <p className="mt-1 max-w-48 truncate text-xs text-warning" title={qi.warnings.join("\n")}>
-                            {qi.warnings.length} warning(s)
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {qi.status === "pending" && (
-                          <div className="flex items-center justify-end gap-1">
-                            {isEditing ? (
-                              <>
-                                <button className="text-xs text-primary hover:underline" onClick={saveEdit}>Save</button>
-                                <button className="text-xs text-muted hover:underline" onClick={() => { setEditingId(null); setEditValues({}); }}>Cancel</button>
-                              </>
-                            ) : (
-                              <>
-                                <button className="text-xs text-primary hover:underline" onClick={() => startEdit(qi)}>Edit</button>
-                                <button className="text-xs text-danger hover:underline" onClick={() => removeFromQueue(qi.id)}>Remove</button>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-border bg-[#f8f7f2] text-xs font-medium">
-                  <td className="px-3 py-2" colSpan={6}>Total</td>
-                  <td className="tabular-amount px-3 py-2 text-right">
-                    {formatAmount(queue.reduce((s, q) => s + Number(q.taxableAmount), 0))}
-                  </td>
-                  <td className="tabular-amount px-3 py-2 text-right">
-                    {formatAmount(queue.reduce((s, q) => s + Number(q.vatAmount), 0))}
-                  </td>
-                  <td className="tabular-amount px-3 py-2 text-right">
-                    {formatAmount(queue.reduce((s, q) => s + Number(q.totalAmount), 0))}
-                  </td>
-                  <td className="px-3 py-2"></td>
-                  <td className="px-3 py-2"></td>
-                </tr>
-              </tfoot>
-            </table>
+                      </div>
+                      {qi.status === "pending" && (
+                        <div className="flex gap-2">
+                          {isEditing ? (
+                            <>
+                              <button className="text-xs text-primary hover:underline" onClick={saveEdit}>Save</button>
+                              <button className="text-xs text-muted hover:underline" onClick={() => { setEditingId(null); setEditValues({}); }}>Cancel</button>
+                            </>
+                          ) : (
+                            <>
+                              <button className="text-xs text-primary hover:underline" onClick={() => startEdit(qi)}>Edit</button>
+                              <button className="text-xs text-danger hover:underline" onClick={() => removeFromQueue(qi.id)}>Remove</button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {/* Mobile totals */}
+              {queue.length > 0 && (
+                <div className="flex items-center justify-between bg-surface-subtle px-4 py-3 text-xs font-medium">
+                  <span>Total ({queue.length} items)</span>
+                  <span className="tabular-amount">{formatAmount(queue.reduce((s, q) => s + Number(q.totalAmount), 0))}</span>
+                </div>
+              )}
+            </div>
           </div>
         </section>
       )}

@@ -1,7 +1,7 @@
 import { type InputHTMLAttributes, type SelectHTMLAttributes, type ReactNode } from "react";
 
 const fieldClass =
-  "w-full h-10 rounded-md border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted/70 focus:outline-2 focus:outline-offset-1 focus:outline-primary disabled:bg-[#f3f2ec]";
+  "w-full h-10 rounded-md border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted/70 focus:outline-2 focus:outline-offset-1 focus:outline-primary disabled:bg-surface-muted";
 
 interface FieldProps {
   label: string;

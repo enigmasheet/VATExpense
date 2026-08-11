@@ -6,6 +6,7 @@ import { useApp } from "@/lib/use-app";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export interface FieldSpec {
   name: string;
@@ -64,6 +65,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const refresh = useCallback(() => {
     if (!companyId) return;
@@ -153,11 +155,15 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
     }
   }
 
-  async function deleteItem(id: string, name: string) {
-    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
-    if (!companyId) return;
+  function confirmDelete(id: string, name: string) {
+    setDeleteTarget({ id, name });
+  }
+
+  async function deleteItem() {
+    if (!deleteTarget || !companyId) return;
     try {
-      await api(`${listUrl}/${id}`, { method: "DELETE" });
+      await api(`${listUrl}/${deleteTarget.id}`, { method: "DELETE" });
+      setDeleteTarget(null);
       refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Failed to delete");
@@ -233,36 +239,108 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
         {error && <p className="text-sm text-danger">{error}</p>}
       </form>
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <div className="rounded-lg border border-border bg-surface">
         {items.length === 0 ? (
           <p className="p-6 text-sm text-muted">{emptyHint}</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                <th className="px-4 py-3">Name</th>
-                {columns.map((col) => (
-                  <th key={col.header} className="px-4 py-3">
-                    {col.header}
-                  </th>
-                ))}
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
+                    <th className="px-4 py-3">Name</th>
+                    {columns.map((col) => (
+                      <th key={col.header} className="px-4 py-3">
+                        {col.header}
+                      </th>
+                    ))}
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => (
+                    <tr key={item.id} className="border-b border-border last:border-b-0">
+                      <td className="px-4 py-3">
+                        {editingId === item.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={editValues.name ?? ""}
+                              onChange={(e) => setEditValues((v) => ({ ...v, name: e.target.value }))}
+                              className="h-8 rounded-md border border-border bg-background px-2 text-sm"
+                              autoFocus
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => saveEdit(item.id)}
+                              disabled={submitting}
+                            >
+                              Save
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={cancelEdit}>
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="font-medium">{item.name}</span>
+                        )}
+                      </td>
+                      {columns.map((col) => (
+                        <td key={col.header} className="px-4 py-3 text-muted">
+                          {col.render(item)}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => toggleActive(item)}
+                          className="cursor-pointer"
+                          aria-label={`Toggle ${item.name} ${item.isActive ? "inactive" : "active"}`}
+                        >
+                          <Badge tone={item.isActive ? "success" : "default"}>
+                            {item.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {editingId !== item.id && (
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              className="text-sm text-primary hover:underline"
+                              onClick={() => startEdit(item)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="text-sm text-danger hover:underline"
+                              onClick={() => confirmDelete(item.id, item.name)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile card list */}
+            <div className="sm:hidden">
               {items.map((item) => (
-                <tr key={item.id} className="border-b border-border last:border-b-0">
-                  <td className="px-4 py-3">
-                    {editingId === item.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={editValues.name ?? ""}
-                          onChange={(e) => setEditValues((v) => ({ ...v, name: e.target.value }))}
-                          className="h-8 rounded-md border border-border bg-background px-2 text-sm"
-                          autoFocus
-                        />
+                <div key={item.id} className="border-b border-border p-4 last:border-b-0">
+                  {editingId === item.id ? (
+                    <div className="flex flex-col gap-3">
+                      <input
+                        type="text"
+                        value={editValues.name ?? ""}
+                        onChange={(e) => setEditValues((v) => ({ ...v, name: e.target.value }))}
+                        className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
                         <Button
                           size="sm"
                           onClick={() => saveEdit(item.id)}
@@ -274,28 +352,27 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
                           Cancel
                         </Button>
                       </div>
-                    ) : (
-                      <span className="font-medium">{item.name}</span>
-                    )}
-                  </td>
-                  {columns.map((col) => (
-                    <td key={col.header} className="px-4 py-3 text-muted">
-                      {col.render(item)}
-                    </td>
-                  ))}
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => toggleActive(item)}
-                      className="cursor-pointer"
-                    >
-                      <Badge tone={item.isActive ? "success" : "default"}>
-                        {item.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {editingId !== item.id && (
-                      <div className="flex items-center justify-end gap-2">
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="font-medium">{item.name}</span>
+                        <button
+                          onClick={() => toggleActive(item)}
+                          className="cursor-pointer"
+                          aria-label={`Toggle ${item.name} ${item.isActive ? "inactive" : "active"}`}
+                        >
+                          <Badge tone={item.isActive ? "success" : "default"}>
+                            {item.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </button>
+                      </div>
+                      {columns.map((col) => (
+                        <div key={col.header} className="text-sm text-muted">
+                          {col.render(item)}
+                        </div>
+                      ))}
+                      <div className="mt-3 flex gap-3">
                         <button
                           className="text-sm text-primary hover:underline"
                           onClick={() => startEdit(item)}
@@ -304,19 +381,29 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
                         </button>
                         <button
                           className="text-sm text-danger hover:underline"
-                          onClick={() => deleteItem(item.id, item.name)}
+                          onClick={() => confirmDelete(item.id, item.name)}
                         >
                           Delete
                         </button>
                       </div>
-                    )}
-                  </td>
-                </tr>
+                    </>
+                  )}
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={`Delete "${deleteTarget?.name}"?`}
+        message="This action cannot be undone."
+        confirmLabel="Delete"
+        danger
+        onConfirm={deleteItem}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

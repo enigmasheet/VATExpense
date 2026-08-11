@@ -106,7 +106,7 @@ export default function MonthlyReportPage() {
         </select>
         <button
           onClick={handleExport}
-          className="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-[#f8f7f2]"
+          className="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-subtle"
         >
           Export .xlsx
         </button>

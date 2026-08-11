@@ -3,6 +3,9 @@
 :root {
   --background: #faf9f5;
   --surface: #ffffff;
+  --surface-hover: #efeee8;
+  --surface-muted: #f3f2ec;
+  --surface-subtle: #f8f7f2;
   --foreground: #1c2621;
   --muted: #5b6b63;
   --border: #dcded4;
@@ -19,6 +22,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-subtle: var(--surface-subtle);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border);

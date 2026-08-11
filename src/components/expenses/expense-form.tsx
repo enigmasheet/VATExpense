@@ -386,7 +386,7 @@ export function ExpenseForm({
               inputMode="decimal"
               value={values.vatAmount}
               readOnly
-              className="bg-[#f3f2ec]"
+              className="bg-surface-muted"
             />
           </Field>
           <Field label="Total amount (Rs.)" htmlFor="e-total" hint="Enter this OR taxable above">
