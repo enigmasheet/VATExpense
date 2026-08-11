@@ -184,8 +184,6 @@ export function BatchEntry() {
       setResolvedParty(p);
       setShowCreateParty(false);
       setVatLookupError(null);
-      // Refresh parties list
-      api<{ data: Party[] }>(`/api/parties?companyId=${companyId}`).then(({ data }) => setParties(data));
     } catch (err) {
       setCreatePartyError(err instanceof ApiError ? err.detail : "Failed to create party");
     } finally {
@@ -237,9 +235,6 @@ export function BatchEntry() {
     setInvoiceNumber("");
     setItem("");
     setAmount("");
-    setTaxableDisplay("");
-    setVatDisplay("");
-    setTotalDisplay("");
     setVatLookupError(null);
     setShowCreateParty(false);
 
