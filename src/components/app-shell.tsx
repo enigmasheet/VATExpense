@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { type ReactNode, useState, useEffect, useRef, useCallback } from "react";
+import { type ReactNode, useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { AppProvider, useApp } from "@/lib/use-app";
 import { AuthProvider } from "@/lib/auth-provider";
@@ -285,7 +285,7 @@ function Sidebar({
               <>
                 <div
                   className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-sm font-semibold text-primary"
-                  title={session.user.name}
+                  title={session.user.name ?? undefined}
                 >
                   {userInitials}
                 </div>

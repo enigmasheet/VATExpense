@@ -198,7 +198,7 @@ function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open, updatePosition, position?.top]);
+  }, [open, updatePosition]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (!open) return;
