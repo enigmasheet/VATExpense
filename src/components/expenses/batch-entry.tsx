@@ -70,7 +70,6 @@ export function BatchEntry() {
     locationId: "",
   });
 
-  const [parties, setParties] = useState<Party[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
 
@@ -85,9 +84,6 @@ export function BatchEntry() {
   const [item, setItem] = useState("");
   const [amountMode, setAmountMode] = useState<"total" | "taxable">("total");
   const [amount, setAmount] = useState("");
-  const [taxableDisplay, setTaxableDisplay] = useState("");
-  const [vatDisplay, setVatDisplay] = useState("");
-  const [totalDisplay, setTotalDisplay] = useState("");
 
   // Inline party creation
   const [showCreateParty, setShowCreateParty] = useState(false);
@@ -113,41 +109,30 @@ export function BatchEntry() {
   // Load master data
   useEffect(() => {
     if (!companyId) return;
-    api<{ data: Party[] }>(`/api/parties?companyId=${companyId}`).then(({ data }) => setParties(data));
     api<{ data: { id: string; name: string }[] }>(`/api/categories?companyId=${companyId}`).then(({ data }) => setCategories(data));
     api<{ data: { id: string; name: string }[] }>(`/api/locations?companyId=${companyId}`).then(({ data }) => setLocations(data));
   }, [companyId]);
 
-  // Auto-calculate amounts when amount changes
-  useEffect(() => {
+  // Derived: computed amounts from input
+  const computedAmounts = (() => {
     const num = Number(amount);
     if (!amount || !Number.isFinite(num) || num <= 0) {
-      setTaxableDisplay("");
-      setVatDisplay("");
-      setTotalDisplay("");
-      return;
+      return { taxable: "", vat: "", total: "" };
     }
     if (amountMode === "total") {
       const { taxable, vat } = calcFromTotal(num);
-      setTaxableDisplay(String(taxable));
-      setVatDisplay(String(vat));
-      setTotalDisplay(String(round2(num)));
-    } else {
-      const { vat, total } = calcFromTaxable(num);
-      setTaxableDisplay(String(round2(num)));
-      setVatDisplay(String(vat));
-      setTotalDisplay(String(total));
+      return { taxable: String(taxable), vat: String(vat), total: String(round2(num)) };
     }
-  }, [amount, amountMode]);
+    const { vat, total } = calcFromTaxable(num);
+    return { taxable: String(round2(num)), vat: String(vat), total: String(total) };
+  })();
 
-  // Auto-fill item from category name
-  useEffect(() => {
-    if (item) return; // don't overwrite if user already typed something
-    const catId = entryCategoryId || defaults.categoryId;
-    if (!catId) return;
-    const cat = categories.find((c) => c.id === catId);
-    if (cat) setItem(cat.name);
-  }, [entryCategoryId, defaults.categoryId, categories, item]);
+  // Derived: effective item name (auto-fill from category if user hasn't typed)
+  const effectiveCategoryId = entryCategoryId || defaults.categoryId;
+  const categoryAutoItem = effectiveCategoryId
+    ? categories.find((c) => c.id === effectiveCategoryId)?.name ?? ""
+    : "";
+  const displayItem = item || categoryAutoItem;
 
   const lookupVat = useCallback(
     async (vat: string) => {
@@ -221,7 +206,7 @@ export function BatchEntry() {
     if (!catId) {
       return;
     }
-    const totalNum = Number(totalDisplay || amount);
+    const totalNum = Number(computedAmounts.total || amount);
     if (!Number.isFinite(totalNum) || totalNum <= 0) {
       amountRef.current?.focus();
       return;
@@ -237,10 +222,10 @@ export function BatchEntry() {
       locationName: effectiveLocationName,
       categoryId: catId,
       categoryName: catName,
-      item: item.trim() || catName,
-      taxableAmount: taxableDisplay || amount,
-      vatAmount: vatDisplay || "0",
-      totalAmount: totalDisplay || amount,
+      item: displayItem.trim() || categoryAutoItem,
+      taxableAmount: computedAmounts.taxable || amount,
+      vatAmount: computedAmounts.vat || "0",
+      totalAmount: computedAmounts.total || amount,
       status: "pending",
     };
 
@@ -370,8 +355,6 @@ export function BatchEntry() {
   }
 
   const pendingCount = queue.filter((q) => q.status === "pending").length;
-  const savedCount = queue.filter((q) => q.status === "saved").length;
-  const effectiveCategoryId = entryCategoryId || defaults.categoryId;
 
   return (
     <div className="flex flex-col gap-6">
@@ -517,8 +500,8 @@ export function BatchEntry() {
             <div className="flex h-10 items-center rounded-md bg-[#f3f2ec] px-3 text-sm tabular-amount">
               {amount ? (
                 <span>
-                  Tax: {taxableDisplay ? `Rs. ${Number(taxableDisplay).toLocaleString()}` : "–"} ·
-                  VAT: {vatDisplay ? `Rs. ${Number(vatDisplay).toLocaleString()}` : "–"}
+                  Tax: {computedAmounts.taxable ? `Rs. ${Number(computedAmounts.taxable).toLocaleString()}` : "–"} ·
+                  VAT: {computedAmounts.vat ? `Rs. ${Number(computedAmounts.vat).toLocaleString()}` : "–"}
                 </span>
               ) : (
                 <span className="text-muted">Enter amount</span>
@@ -602,7 +585,7 @@ export function BatchEntry() {
         <div className="flex items-center gap-3">
           <Button
             onClick={addToQueue}
-            disabled={!resolvedParty || !totalDisplay || !defaults.miti}
+            disabled={!resolvedParty || !computedAmounts.total || !defaults.miti}
           >
             Add to queue
           </Button>
@@ -718,7 +701,7 @@ export function BatchEntry() {
                           qi.categoryName
                         )}
                       </td>
-                      <td className="px-3 py-2 max-w-[12rem] truncate">
+                      <td className="px-3 py-2 max-w-48 truncate">
                         {isEditing ? (
                           <input
                             type="text"
@@ -757,7 +740,7 @@ export function BatchEntry() {
                         )}
                         {qi.status === "pending" && <Badge tone="default">Pending</Badge>}
                         {qi.warnings && qi.warnings.length > 0 && (
-                          <p className="mt-1 max-w-[12rem] truncate text-xs text-warning" title={qi.warnings.join("\n")}>
+                          <p className="mt-1 max-w-48 truncate text-xs text-warning" title={qi.warnings.join("\n")}>
                             {qi.warnings.length} warning(s)
                           </p>
                         )}

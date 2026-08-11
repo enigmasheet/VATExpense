@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { expenses, categories } from "@/lib/db/schema";
+import { expenses } from "@/lib/db/schema";
 import { badRequest, internalError } from "@/lib/api-response";
 import { NEPALI_MONTHS, type NepaliMonth } from "@/lib/nepali-date";
 import { and, eq, sql, type SQL } from "drizzle-orm";

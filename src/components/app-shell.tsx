@@ -156,11 +156,11 @@ function MobileHeader() {
   const { fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
   const { data: session } = useSession();
 
-  // Close menu on route change
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
+    // Close menu on route change. Run asynchronously to avoid synchronous setState in effect.
+    useEffect(() => {
+      const id = window.setTimeout(() => setOpen(false), 0);
+      return () => window.clearTimeout(id);
+    }, [pathname]);
 
   return (
     <>
