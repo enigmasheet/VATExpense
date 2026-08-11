@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { type ReactNode, useState, useRef } from "react";
+import { type ReactNode, useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { AppProvider, useApp } from "@/lib/use-app";
 import { AuthProvider } from "@/lib/auth-provider";
@@ -23,6 +23,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: "Main",
     items: [
       { href: "/", label: "Dashboard", icon: "📊" },
+      { href: "/expenses/new", label: "Quick Add", icon: "⚡" },
       { href: "/expenses", label: "Expenses", icon: "📋" },
       { href: "/import", label: "Import", icon: "📥" },
     ],
@@ -147,12 +148,11 @@ function MobileHeader() {
   const { fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
   const { data: session } = useSession();
 
-  // Close menu on route change via ref-based approach
-  const prevPathname = useRef(pathname);
-  if (prevPathname.current !== pathname) {
-    prevPathname.current = pathname;
+  // Close menu on route change
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
     setOpen(false);
-  }
+  }, [pathname]);
 
   return (
     <>
