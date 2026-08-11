@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useCallback } from "react";
 import { NEPALI_MONTHS } from "@/lib/nepali-date";
 import { formatAmount } from "@/lib/format";
@@ -57,13 +57,14 @@ export function ExpensesListClient({
   categories,
 }: ExpensesListClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [rows, setRows] = useState(initialData);
   const [total, setTotal] = useState(initialTotal);
 
-  const [q, setQ] = useState("");
-  const [partyId, setPartyId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [month, setMonth] = useState("");
+  const [q, setQ] = useState(searchParams.get("q") ?? "");
+  const [partyId, setPartyId] = useState(searchParams.get("partyId") ?? "");
+  const [categoryId, setCategoryId] = useState(searchParams.get("categoryId") ?? "");
+  const [month, setMonth] = useState(searchParams.get("month") ?? "");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; item: string } | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
