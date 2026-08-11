@@ -38,6 +38,29 @@ export interface LedgerRow {
   warnings?: string[];
 }
 
+export interface ValidationResult {
+  status: LedgerRowStatus;
+  error: string | undefined;
+  warnings: string[];
+}
+
+export type CellField =
+  | "miti"
+  | "partySearch"
+  | "invoiceNumber"
+  | "categoryId"
+  | "taxableAmount"
+  | "totalAmount";
+
+export const FIELD_ORDER: CellField[] = [
+  "miti",
+  "partySearch",
+  "invoiceNumber",
+  "categoryId",
+  "taxableAmount",
+  "totalAmount",
+];
+
 export interface LedgerTotals {
   taxable: number;
   vat: number;

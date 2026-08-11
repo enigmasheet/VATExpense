@@ -1,4 +1,4 @@
-import type { LedgerRow, LedgerRowStatus } from "./ledger-types";
+import type { LedgerRow } from "./ledger-types";
 
 /**
  * Returns a row-safe identifier, preferring crypto.randomUUID with a
