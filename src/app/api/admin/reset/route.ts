@@ -18,7 +18,7 @@ export async function POST() {
 
   try {
     await db.execute(
-      sql`TRUNCATE TABLE "companies","users","fiscal_years","locations","categories","parties","expenses","import_batches","import_batch_rows" CASCADE`,
+      sql`DO $$ DECLARE t TEXT; tables TEXT[] := ARRAY['companies','users','fiscal_years','locations','categories','parties','expenses','import_batches','import_batch_rows']; BEGIN FOREACH t IN ARRAY tables LOOP IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = t AND table_schema = 'public') THEN EXECUTE format('TRUNCATE TABLE %I CASCADE', t); END IF; END LOOP; END $$`,
     );
     return apiOk({ data: { ok: true } });
   } catch (err) {
