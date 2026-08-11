@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { batchSaveExpenses, type BatchRowInput } from "@/lib/actions/expenses";
 import { round2 } from "@/lib/money";
 import { formatAmount } from "@/lib/format";
-import { parseMiti } from "@/lib/nepali-date";
+import { parseMiti, FISCAL_YEAR_START_MONTH, fyName } from "@/lib/nepali-date";
 import { VAT_RATE } from "@/lib/constants";
 
 const VAT_FACTOR = 1 + VAT_RATE / 100;
@@ -114,7 +114,7 @@ function createEmptyRow(prev?: LedgerRow): LedgerRow {
  * @param fyName - The selected fiscal year name
  * @returns Validation error messages for the row
  */
-function validateRow(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set<string>, fyName: string): string[] {
+function validateRow(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set<string>, currentFyName: string): string[] {
   const errors: string[] = [];
   if (!row.miti) {
     errors.push("Miti required");
@@ -123,10 +123,9 @@ function validateRow(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set
     if (!parsed.ok) {
       errors.push("Invalid date");
     } else {
-      const startMonth = 7;
-      const fy = parsed.month >= startMonth ? parsed.year : parsed.year - 1;
-      const rowFyName = `${fy}/${String((fy % 100) + 1).padStart(2, "0")}`;
-      if (rowFyName !== fyName) {
+      const fy = parsed.month >= FISCAL_YEAR_START_MONTH ? parsed.year : parsed.year - 1;
+      const rowFyName = fyName(fy);
+      if (rowFyName !== currentFyName) {
         errors.push(`Date falls in FY ${rowFyName}`);
       }
     }
@@ -159,9 +158,9 @@ function validateRow(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set
  * @param fyName - The fiscal year name used for validation
  * @returns The row status: `incomplete` for an empty row, `duplicate` when validation errors exist, or `pending` otherwise
  */
-function getRowStatus(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set<string>, fyName: string): LedgerRow["status"] {
+function getRowStatus(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set<string>, currentFyName: string): LedgerRow["status"] {
   if (!row.miti && !row.partyId && !row.taxableAmount) return "incomplete";
-  const errors = validateRow(row, allRows, existingInvoices, fyName);
+  const errors = validateRow(row, allRows, existingInvoices, currentFyName);
   if (errors.length > 0) return "duplicate";
   return "pending";
 }

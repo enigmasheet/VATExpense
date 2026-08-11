@@ -191,12 +191,13 @@ function getNavGroups(role?: string): NavGroup[] {
   return role === "SuperAdmin" ? ADMIN_NAV_GROUPS : NAV_GROUPS;
 }
 
-function SidebarLink({ href, label, icon, active, collapsed = false }: NavItem & { active: boolean; collapsed?: boolean }) {
+function SidebarLink({ href, label, icon, active, collapsed = false, onClose }: NavItem & { active: boolean; collapsed?: boolean; onClose?: () => void }) {
   return (
     <Link
       href={href}
       title={collapsed ? label : undefined}
       aria-label={collapsed ? label : undefined}
+      onClick={onClose}
       className={`flex items-center rounded-md transition-colors ${
         collapsed
           ? "justify-center py-2.5"
@@ -398,6 +399,16 @@ function MobileHeader() {
     return () => window.clearTimeout(id);
   }, [pathname]);
 
+  // Lock body scroll when the mobile menu is open.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   return (
     <>
       <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:hidden">
@@ -405,6 +416,7 @@ function MobileHeader() {
           onClick={() => setOpen(!open)}
           className="rounded-md p-1 text-foreground hover:bg-surface-hover"
           aria-label="Toggle menu"
+          aria-expanded={open}
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             {open ? (
@@ -502,6 +514,7 @@ function MobileNavPanel({ onClose }: { onClose: () => void }) {
                         ? pathname === "/"
                         : pathname === item.href
                     }
+                    onClose={onClose}
                   />
                 ))}
               </div>
