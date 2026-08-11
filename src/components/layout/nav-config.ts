@@ -26,6 +26,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/reports/monthly", label: "Monthly Report", icon: "monthlyReport" },
       { href: "/reports/fiscal-year", label: "FY Report", icon: "fyReport" },
+      { href: "/reports/parties", label: "Party Purchases", icon: "parties" },
     ],
   },
   {

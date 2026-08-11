@@ -1,45 +1,20 @@
 "use server";
 
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { expenses, companies, fiscalYears, parties } from "@/lib/db/schema";
+import { expenses, companies } from "@/lib/db/schema";
 import { expenseInputSchema, validateAmounts } from "@/lib/validation/expense";
 import { safeParse } from "@/lib/validation/utils";
 import { parseMiti } from "@/lib/nepali-date";
-import {
-  checkInvoiceDuplicate,
-  findSuspiciousDuplicates,
-} from "@/lib/expenses/duplicates";
 import { and, eq, sql } from "drizzle-orm";
+import { requireCompanyId, type ActionResult } from "./common";
+import {
+  prepareValidatedExpense,
+  type ExpenseInput,
+} from "./expenses-helpers";
 
-export interface ActionError {
-  ok: false;
-  error: string;
-  errors?: string[];
-}
+export type { ExpenseInput, ActionResult };
 
-export interface ActionOk<T> {
-  ok: true;
-  data: T;
-  warnings?: string[];
-}
-
-export type ActionResult<T> = ActionOk<T> | ActionError;
-
-/**
- * Retrieves the authenticated user's company ID.
- *
- * @returns The authenticated user's company ID
- * @throws If no authenticated company ID is available
- */
-async function requireCompanyId(): Promise<string> {
-  const session = await auth();
-  const companyId = (session?.user as { companyId?: string })?.companyId;
-  if (!companyId) throw new Error("Not authenticated");
-  return companyId;
-}
-
-export interface ExpenseInput {
+export interface ExpenseInputPayload {
   fiscalYearId: string;
   partyId: string;
   categoryId: string;
@@ -63,7 +38,7 @@ export interface ExpenseInput {
  * @returns The created expense record with any duplicate or amount-validation warnings
  */
 export async function createExpense(
-  input: ExpenseInput,
+  input: ExpenseInputPayload,
 ): Promise<ActionResult<typeof expenses.$inferSelect>> {
   let companyId: string;
   try {
@@ -77,8 +52,6 @@ export async function createExpense(
   if (!parsed.ok)
     return { ok: false, error: "Validation failed", errors: parsed.errors };
 
-  const data = parsed.data;
-
   try {
     const company = (
       await db
@@ -89,104 +62,28 @@ export async function createExpense(
     )[0];
     if (!company) return { ok: false, error: "Company not found" };
 
-    const fiscalYear = (
-      await db
-        .select()
-        .from(fiscalYears)
-        .where(
-          and(
-            eq(fiscalYears.id, data.fiscalYearId),
-            eq(fiscalYears.companyId, companyId),
-          ),
-        )
-        .limit(1)
-    )[0];
-    if (!fiscalYear) return { ok: false, error: "Fiscal year not found" };
-
-    const party = (
-      await db
-        .select()
-        .from(parties)
-        .where(
-          and(eq(parties.id, data.partyId), eq(parties.companyId, companyId)),
-        )
-        .limit(1)
-    )[0];
-    if (!party) return { ok: false, error: "Party not found" };
-
-    const vatRate = data.vatRate ?? company.defaultVatRate;
-
-    const fingerprint = {
+    const result = await prepareValidatedExpense(
       companyId,
-      fiscalYearId: data.fiscalYearId,
-      partyId: data.partyId,
-      invoiceNumber: data.invoiceNumber ?? null,
-      miti: data.miti,
-      taxableAmount: data.taxableAmount,
-      vatAmount: data.vatAmount,
-      totalAmount: data.totalAmount,
-    };
+      parsed.data,
+      company.defaultVatRate,
+      {
+        duplicateExact:
+          "This exact invoice has already been recorded for this party and fiscal year",
+        duplicateInvoice:
+          "An invoice with this number already exists for this party and fiscal year — review before saving",
+        suspicious: (count) =>
+          `${count} similar expense(s) already exist without an invoice number — possibly a duplicate`,
+      },
+    );
+    if (!result.ok) return { ok: false, error: result.error };
 
-    const duplicate = await checkInvoiceDuplicate(fingerprint);
-    if (duplicate) {
-      return {
-        ok: false,
-        error:
-          duplicate.level === "exact"
-            ? "This exact invoice has already been recorded for this party and fiscal year"
-            : "An invoice with this number already exists for this party and fiscal year — review before saving",
-      };
-    }
-
-    const warnings: string[] = [];
-    if (!data.invoiceNumber) {
-      const suspicious = await findSuspiciousDuplicates(fingerprint);
-      if (suspicious.length > 0) {
-        warnings.push(
-          `${suspicious.length} similar expense(s) already exist without an invoice number — possibly a duplicate`,
-        );
-      }
-    }
-
-    const toleranceWarnings = validateAmounts({
-      quantity: data.quantity ?? null,
-      rate: data.rate ?? null,
-      taxableAmount: data.taxableAmount,
-      vatAmount: data.vatAmount,
-      totalAmount: data.totalAmount,
-      vatRate,
-    });
-    warnings.push(...toleranceWarnings);
-
-    const miti = parseMiti(data.miti);
-    if (!miti.ok) return { ok: false, error: `Invalid date: ${miti.error}` };
-
-    const [created] = await db
-      .insert(expenses)
-      .values({
-        companyId,
-        fiscalYearId: data.fiscalYearId,
-        partyId: data.partyId,
-        categoryId: data.categoryId,
-        locationId: data.locationId ?? null,
-        miti: data.miti,
-        nepaliMonth: miti.monthName,
-        invoiceNumber: data.invoiceNumber ?? null,
-        item: data.item,
-        quantity: data.quantity ?? null,
-        rate: data.rate ?? null,
-        taxableAmount: data.taxableAmount,
-        vatAmount: data.vatAmount,
-        totalAmount: data.totalAmount,
-        vatRate,
-        remarks: data.remarks ?? null,
-      })
-      .returning();
+    const { prepared } = result;
+    const [created] = await db.insert(expenses).values(prepared.insert).returning();
 
     return {
       ok: true,
       data: created,
-      warnings: warnings.length > 0 ? warnings : undefined,
+      warnings: prepared.warnings.length > 0 ? prepared.warnings : undefined,
     };
   } catch (err) {
     console.error("createExpense failed", err);
@@ -266,120 +163,30 @@ export async function batchSaveExpenses(
         continue;
       }
 
-      const data = parsed.data;
-      const mitiParsed = parseMiti(data.miti);
-      if (!mitiParsed.ok) {
-        results.push({
-          index: i,
-          ok: false,
-          error: `Invalid date: ${mitiParsed.error}`,
-        });
-        continue;
-      }
-
-      const fiscalYear = (
-        await db
-          .select()
-          .from(fiscalYears)
-          .where(
-            and(
-              eq(fiscalYears.id, data.fiscalYearId),
-              eq(fiscalYears.companyId, companyId),
-            ),
-          )
-          .limit(1)
-      )[0];
-      if (!fiscalYear) {
-        results.push({ index: i, ok: false, error: "Fiscal year not found" });
-        continue;
-      }
-
-      const party = (
-        await db
-          .select()
-          .from(parties)
-          .where(
-            and(eq(parties.id, data.partyId), eq(parties.companyId, companyId)),
-          )
-          .limit(1)
-      )[0];
-      if (!party) {
-        results.push({ index: i, ok: false, error: "Party not found" });
-        continue;
-      }
-
-      const vatRate = data.vatRate ?? company.defaultVatRate;
-
-      const fingerprint = {
+      const prepared = await prepareValidatedExpense(
         companyId,
-        fiscalYearId: data.fiscalYearId,
-        partyId: data.partyId,
-        invoiceNumber: data.invoiceNumber ?? null,
-        miti: data.miti,
-        taxableAmount: data.taxableAmount,
-        vatAmount: data.vatAmount,
-        totalAmount: data.totalAmount,
-      };
-
-      const duplicate = await checkInvoiceDuplicate(fingerprint);
-      if (duplicate) {
-        results.push({
-          index: i,
-          ok: false,
-          error:
-            duplicate.level === "exact"
-              ? "Exact duplicate already recorded"
-              : "Invoice number already exists for this party — review",
-        });
+        parsed.data,
+        company.defaultVatRate,
+        {
+          duplicateExact: "Exact duplicate already recorded",
+          duplicateInvoice: "Invoice number already exists for this party — review",
+          suspicious: (count) => `${count} similar expense(s) may be duplicates`,
+        },
+      );
+      if (!prepared.ok) {
+        results.push({ index: i, ok: false, error: prepared.error });
         continue;
       }
 
-      const warnings: string[] = [];
-      if (!data.invoiceNumber) {
-        const suspicious = await findSuspiciousDuplicates(fingerprint);
-        if (suspicious.length > 0) {
-          warnings.push(
-            `${suspicious.length} similar expense(s) may be duplicates`,
-          );
-        }
-      }
-
-      const toleranceWarnings = validateAmounts({
-        quantity: data.quantity ?? null,
-        rate: data.rate ?? null,
-        taxableAmount: data.taxableAmount,
-        vatAmount: data.vatAmount,
-        totalAmount: data.totalAmount,
-        vatRate,
-      });
-      warnings.push(...toleranceWarnings);
-
-      rowsToInsert.push({
-        index: i,
-        data: {
-          companyId,
-          fiscalYearId: data.fiscalYearId,
-          partyId: data.partyId,
-          categoryId: data.categoryId,
-          locationId: data.locationId ?? null,
-          miti: data.miti,
-          nepaliMonth: mitiParsed.monthName,
-          invoiceNumber: data.invoiceNumber ?? null,
-          item: data.item,
-          quantity: data.quantity ?? null,
-          rate: data.rate ?? null,
-          taxableAmount: data.taxableAmount,
-          vatAmount: data.vatAmount,
-          totalAmount: data.totalAmount,
-          vatRate,
-          remarks: data.remarks ?? null,
-        },
-      });
+      rowsToInsert.push({ index: i, data: prepared.prepared.insert });
 
       results.push({
         index: i,
         ok: true,
-        warnings: warnings.length > 0 ? warnings : undefined,
+        warnings:
+          prepared.prepared.warnings.length > 0
+            ? prepared.prepared.warnings
+            : undefined,
       });
     }
 
@@ -453,7 +260,7 @@ export async function deleteExpense(
  */
 export async function updateExpense(
   id: string,
-  changes: Partial<ExpenseInput> & { rowVersion: number },
+  changes: Partial<ExpenseInputPayload> & { rowVersion: number },
 ): Promise<ActionResult<typeof expenses.$inferSelect>> {
   let companyId: string;
   try {
