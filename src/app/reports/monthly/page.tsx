@@ -53,6 +53,16 @@ export default function MonthlyReportPage() {
       });
   }, [companyId, fiscalYearId, selectedMonth]);
 
+  const handleExport = () => {
+    if (!companyId || !fiscalYearId) return;
+    const url = apiUrl("/api/export/monthly", {
+      companyId,
+      fiscalYearId,
+      nepaliMonth: selectedMonth,
+    });
+    window.open(url, "_blank");
+  };
+
   if (loading) return <p className="text-sm text-muted">Loading…</p>;
   if (!companyId || !fiscalYearId) {
     return (
@@ -91,6 +101,12 @@ export default function MonthlyReportPage() {
             </option>
           ))}
         </select>
+        <button
+          onClick={handleExport}
+          className="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-[#f8f7f2]"
+        >
+          Export .xlsx
+        </button>
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}

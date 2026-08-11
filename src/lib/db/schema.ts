@@ -170,3 +170,71 @@ export const expenses = pgTable(
 
 export type Expense = typeof expenses.$inferSelect;
 export type NewExpense = typeof expenses.$inferInsert;
+
+export const importBatches = pgTable(
+  "import_batches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    fiscalYearId: uuid("fiscal_year_id")
+      .notNull()
+      .references(() => fiscalYears.id),
+    filename: text("filename").notNull(),
+    status: text("status").notNull().default("pending"), // pending | confirmed | cancelled
+    rowCount: integer("row_count").notNull().default(0),
+    errorCount: integer("error_count").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("import_batches_company_idx").on(t.companyId),
+    index("import_batches_status_idx").on(t.status),
+  ],
+);
+
+export type ImportBatch = typeof importBatches.$inferSelect;
+export type NewImportBatch = typeof importBatches.$inferInsert;
+
+export const importBatchRows = pgTable(
+  "import_batch_rows",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    batchId: uuid("batch_id")
+      .notNull()
+      .references(() => importBatches.id, { onDelete: "cascade" }),
+    rowIndex: integer("row_index").notNull(),
+    status: text("status").notNull().default("pending"), // pending | valid | error | duplicate
+    rawMiti: text("raw_miti"),
+    rawInvoiceNumber: text("raw_invoice_number"),
+    rawPartyName: text("raw_party_name"),
+    rawCategoryName: text("raw_category_name"),
+    rawItem: text("raw_item"),
+    rawQuantity: text("raw_quantity"),
+    rawRate: text("raw_rate"),
+    rawTaxableAmount: text("raw_taxable_amount"),
+    rawVatAmount: text("raw_vat_amount"),
+    rawTotalAmount: text("raw_total_amount"),
+    rawVatRate: text("raw_vat_rate"),
+    rawRemarks: text("raw_remarks"),
+    resolvedPartyId: uuid("resolved_party_id"),
+    resolvedCategoryId: uuid("resolved_category_id"),
+    resolvedLocationId: uuid("resolved_location_id"),
+    resolvedMiti: text("resolved_miti"),
+    resolvedNepaliMonth: text("resolved_nepali_month"),
+    resolvedTaxableAmount: numeric("resolved_taxable_amount", { precision: 18, scale: 2 }),
+    resolvedVatAmount: numeric("resolved_vat_amount", { precision: 18, scale: 2 }),
+    resolvedTotalAmount: numeric("resolved_total_amount", { precision: 18, scale: 2 }),
+    resolvedVatRate: numeric("resolved_vat_rate", { precision: 5, scale: 2 }),
+    errors: text("errors"), // JSON array of error messages
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("import_batch_rows_batch_idx").on(t.batchId),
+    index("import_batch_rows_status_idx").on(t.status),
+  ],
+);
+
+export type ImportBatchRow = typeof importBatchRows.$inferSelect;
+export type NewImportBatchRow = typeof importBatchRows.$inferInsert;

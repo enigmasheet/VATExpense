@@ -8,6 +8,7 @@ import { AppProvider, useApp } from "@/lib/use-app";
 const NAV = [
   { href: "/", label: "Dashboard" },
   { href: "/expenses", label: "Expenses" },
+  { href: "/import", label: "Import" },
   { href: "/reports/monthly", label: "Monthly Report" },
   { href: "/reports/fiscal-year", label: "FY Report" },
   { href: "/parties", label: "Parties" },
