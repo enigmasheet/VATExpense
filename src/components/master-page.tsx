@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DataTable } from "@/components/ui/data-table";
 
 export interface FieldSpec {
   name: string;
@@ -173,6 +174,98 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
     }
   }
 
+  const filtered = search
+    ? items.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()))
+    : items;
+
+  const nameCell = (item: T) =>
+    editingId === item.id ? (
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={editValues.name ?? ""}
+          onChange={(e) => setEditValues((v) => ({ ...v, name: e.target.value }))}
+          className="h-8 rounded-md border border-border bg-background px-2 text-sm"
+          autoFocus
+        />
+        <Button size="sm" onClick={() => saveEdit(item.id)} disabled={submitting}>
+          Save
+        </Button>
+        <Button size="sm" variant="ghost" onClick={cancelEdit}>
+          Cancel
+        </Button>
+      </div>
+    ) : (
+      <span className="font-medium">{item.name}</span>
+    );
+
+  const actions = (item: T) =>
+    editingId !== item.id && (
+      <div className="flex items-center justify-end gap-2">
+        <button className="text-sm text-primary hover:underline" onClick={() => startEdit(item)}>
+          Edit
+        </button>
+        <button
+          className="text-sm text-danger hover:underline"
+          onClick={() => confirmDelete(item.id, item.name)}
+        >
+          Delete
+        </button>
+      </div>
+    );
+
+  const mobileCard = (item: T) =>
+    editingId === item.id ? (
+      <div className="flex flex-col gap-3">
+        <input
+          type="text"
+          value={editValues.name ?? ""}
+          onChange={(e) => setEditValues((v) => ({ ...v, name: e.target.value }))}
+          className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+          autoFocus
+        />
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => saveEdit(item.id)} disabled={submitting}>
+            Save
+          </Button>
+          <Button size="sm" variant="ghost" onClick={cancelEdit}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    ) : (
+      <>
+        <div className="mb-2 flex items-center justify-between">
+          <span className="font-medium">{item.name}</span>
+          <button
+            onClick={() => toggleActive(item)}
+            className="cursor-pointer"
+            aria-label={`Toggle ${item.name} ${item.isActive ? "inactive" : "active"}`}
+          >
+            <Badge tone={item.isActive ? "success" : "default"}>
+              {item.isActive ? "Active" : "Inactive"}
+            </Badge>
+          </button>
+        </div>
+        {columns.map((col) => (
+          <div key={col.header} className="text-sm text-muted">
+            {col.render(item)}
+          </div>
+        ))}
+        <div className="mt-3 flex gap-3">
+          <button className="text-sm text-primary hover:underline" onClick={() => startEdit(item)}>
+            Edit
+          </button>
+          <button
+            className="text-sm text-danger hover:underline"
+            onClick={() => confirmDelete(item.id, item.name)}
+          >
+            Delete
+          </button>
+        </div>
+      </>
+    );
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -242,183 +335,55 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
         {error && <p className="text-sm text-danger">{error}</p>}
       </form>
 
-      <div className="rounded-lg border border-border bg-surface">
-        {/* Search filter */}
-        {items.length > 0 && (
-          <div className="border-b border-border px-4 py-3">
-            <input
-              type="text"
-              placeholder={`Search ${title.toLowerCase()}...`}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring focus:outline-none"
-            />
-          </div>
-        )}
-
-        {loading ? (
-          <div className="p-6 text-center text-sm text-muted">Loading...</div>
-        ) : items.length === 0 ? (
-          <p className="p-6 text-sm text-muted">{emptyHint}</p>
-        ) : (() => {
-          const filtered = search
-            ? items.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()))
-            : items;
-          return filtered.length === 0 ? (
-            <p className="p-6 text-sm text-muted">No results for &ldquo;{search}&rdquo;</p>
+      <DataTable
+        topContent={
+          items.length > 0 ? (
+            <div className="border-b border-border px-4 py-3">
+              <input
+                type="text"
+                placeholder={`Search ${title.toLowerCase()}...`}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring focus:outline-none"
+              />
+            </div>
+          ) : null
+        }
+        emptyState={
+          loading ? (
+            <div className="p-6 text-center text-sm text-muted">Loading...</div>
+          ) : items.length === 0 ? (
+            <p className="p-6 text-sm text-muted">{emptyHint}</p>
           ) : (
-            <>
-              {/* Desktop table */}
-              <div className="hidden overflow-x-auto sm:block">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                      <th className="px-4 py-3">Name</th>
-                      {columns.map((col) => (
-                        <th key={col.header} className="px-4 py-3">
-                          {col.header}
-                        </th>
-                      ))}
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((item) => (
-                    <tr key={item.id} className="border-b border-border last:border-b-0">
-                      <td className="px-4 py-3">
-                        {editingId === item.id ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={editValues.name ?? ""}
-                              onChange={(e) => setEditValues((v) => ({ ...v, name: e.target.value }))}
-                              className="h-8 rounded-md border border-border bg-background px-2 text-sm"
-                              autoFocus
-                            />
-                            <Button
-                              size="sm"
-                              onClick={() => saveEdit(item.id)}
-                              disabled={submitting}
-                            >
-                              Save
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={cancelEdit}>
-                              Cancel
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="font-medium">{item.name}</span>
-                        )}
-                      </td>
-                      {columns.map((col) => (
-                        <td key={col.header} className="px-4 py-3 text-muted">
-                          {col.render(item)}
-                        </td>
-                      ))}
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => toggleActive(item)}
-                          className="cursor-pointer"
-                          aria-label={`Toggle ${item.name} ${item.isActive ? "inactive" : "active"}`}
-                        >
-                          <Badge tone={item.isActive ? "success" : "default"}>
-                            {item.isActive ? "Active" : "Inactive"}
-                          </Badge>
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {editingId !== item.id && (
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              className="text-sm text-primary hover:underline"
-                              onClick={() => startEdit(item)}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="text-sm text-danger hover:underline"
-                              onClick={() => confirmDelete(item.id, item.name)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile card list */}
-            <div className="sm:hidden">
-              {filtered.map((item) => (
-                <div key={item.id} className="border-b border-border p-4 last:border-b-0">
-                  {editingId === item.id ? (
-                    <div className="flex flex-col gap-3">
-                      <input
-                        type="text"
-                        value={editValues.name ?? ""}
-                        onChange={(e) => setEditValues((v) => ({ ...v, name: e.target.value }))}
-                        className="h-10 rounded-md border border-border bg-background px-3 text-sm"
-                        autoFocus
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => saveEdit(item.id)}
-                          disabled={submitting}
-                        >
-                          Save
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={cancelEdit}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="font-medium">{item.name}</span>
-                        <button
-                          onClick={() => toggleActive(item)}
-                          className="cursor-pointer"
-                          aria-label={`Toggle ${item.name} ${item.isActive ? "inactive" : "active"}`}
-                        >
-                          <Badge tone={item.isActive ? "success" : "default"}>
-                            {item.isActive ? "Active" : "Inactive"}
-                          </Badge>
-                        </button>
-                      </div>
-                      {columns.map((col) => (
-                        <div key={col.header} className="text-sm text-muted">
-                          {col.render(item)}
-                        </div>
-                      ))}
-                      <div className="mt-3 flex gap-3">
-                        <button
-                          className="text-sm text-primary hover:underline"
-                          onClick={() => startEdit(item)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="text-sm text-danger hover:underline"
-                          onClick={() => confirmDelete(item.id, item.name)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        );
-        })()}
-      </div>
+            <p className="p-6 text-sm text-muted">No results for &ldquo;{search}&rdquo;</p>
+          )
+        }
+        columns={[
+          { header: "Name", cell: (item) => nameCell(item) },
+          ...columns.map((col) => ({
+            header: col.header,
+            cell: (item: T) => <span className="text-muted">{col.render(item)}</span>,
+          })),
+          {
+            header: "Status",
+            cell: (item) => (
+              <button
+                onClick={() => toggleActive(item)}
+                className="cursor-pointer"
+                aria-label={`Toggle ${item.name} ${item.isActive ? "inactive" : "active"}`}
+              >
+                <Badge tone={item.isActive ? "success" : "default"}>
+                  {item.isActive ? "Active" : "Inactive"}
+                </Badge>
+              </button>
+            ),
+          },
+          { header: "Actions", align: "right", cell: (item) => actions(item) },
+        ]}
+        rows={filtered}
+        getKey={(item) => item.id}
+        mobileCard={mobileCard}
+      />
 
       <ConfirmDialog
         open={deleteTarget !== null}

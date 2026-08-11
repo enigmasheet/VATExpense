@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DataTable } from "@/components/ui/data-table";
 
 interface ExpenseRow {
   id: string;
@@ -187,92 +188,98 @@ export function ExpensesListClient({
             </Link>
           </div>
         ) : (
-          <>
-            {/* Desktop table */}
-            <div className="hidden overflow-x-auto sm:block">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                    <th className="px-4 py-3">Miti</th>
-                    <th className="px-4 py-3">Invoice</th>
-                    <th className="px-4 py-3">Party</th>
-                    <th className="px-4 py-3">Item</th>
-                    <th className="px-4 py-3 text-right">Taxable</th>
-                    <th className="px-4 py-3 text-right">VAT</th>
-                    <th className="px-4 py-3 text-right">Total</th>
-                    <th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <Link
-                          href={`/expenses/${row.id}`}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {row.miti}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {row.invoiceNumber ? (
-                          <span className="tabular-amount">{row.invoiceNumber}</span>
-                        ) : (
-                          <Badge tone="warning">No invoice</Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">{row.partyName}</td>
-                      <td className="px-4 py-3 max-w-[16rem] truncate">
-                        {row.item}
-                        <span className="ml-2 text-xs text-muted">{row.categoryName}</span>
-                      </td>
-                      <td className="tabular-amount px-4 py-3 text-right">{formatAmount(row.taxableAmount)}</td>
-                      <td className="tabular-amount px-4 py-3 text-right">{formatAmount(row.vatAmount)}</td>
-                      <td className="tabular-amount px-4 py-3 text-right font-medium">
-                        {formatAmount(row.totalAmount)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          className="text-sm text-danger hover:underline"
-                          onClick={() => setDeleteTarget({ id: row.id, item: row.item })}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile card list */}
-            <div className="sm:hidden">
-              {rows.map((row) => (
-                <div key={row.id} className="border-b border-border p-4 last:border-b-0">
-                  <div className="mb-1 flex items-start justify-between">
+          <DataTable
+            rowClassName={() => "hover:bg-surface-subtle"}
+            columns={[
+              {
+                header: "Miti",
+                cell: (row) => (
+                  <span className="whitespace-nowrap">
                     <Link
                       href={`/expenses/${row.id}`}
                       className="font-medium text-primary hover:underline"
                     >
                       {row.miti}
                     </Link>
-                    <span className="tabular-amount font-medium">{formatAmount(row.totalAmount)}</span>
-                  </div>
-                  <p className="text-sm text-foreground">{row.partyName}</p>
-                  <p className="truncate text-sm text-muted">{row.item}</p>
-                  <div className="mt-2 flex items-center justify-between text-xs text-muted">
-                    <span>{row.categoryName}</span>
-                    <button
-                      className="text-danger hover:underline"
-                      onClick={() => setDeleteTarget({ id: row.id, item: row.item })}
-                    >
-                      Delete
-                    </button>
-                  </div>
+                  </span>
+                ),
+              },
+              {
+                header: "Invoice",
+                cell: (row) =>
+                  row.invoiceNumber ? (
+                    <span className="tabular-amount whitespace-nowrap">{row.invoiceNumber}</span>
+                  ) : (
+                    <Badge tone="warning">No invoice</Badge>
+                  ),
+              },
+              { header: "Party", cell: (row) => row.partyName },
+              {
+                header: "Item",
+                cell: (row) => (
+                  <span className="block max-w-[16rem] truncate">
+                    {row.item}
+                    <span className="ml-2 text-xs text-muted">{row.categoryName}</span>
+                  </span>
+                ),
+              },
+              {
+                header: "Taxable",
+                align: "right",
+                cell: (row) => <span className="tabular-amount">{formatAmount(row.taxableAmount)}</span>,
+              },
+              {
+                header: "VAT",
+                align: "right",
+                cell: (row) => <span className="tabular-amount">{formatAmount(row.vatAmount)}</span>,
+              },
+              {
+                header: "Total",
+                align: "right",
+                cell: (row) => (
+                  <span className="tabular-amount font-medium">{formatAmount(row.totalAmount)}</span>
+                ),
+              },
+              {
+                header: "",
+                align: "right",
+                cell: (row) => (
+                  <button
+                    className="text-sm text-danger hover:underline"
+                    onClick={() => setDeleteTarget({ id: row.id, item: row.item })}
+                  >
+                    Delete
+                  </button>
+                ),
+              },
+            ]}
+            rows={rows}
+            getKey={(row) => row.id}
+            mobileCard={(row) => (
+              <>
+                <div className="mb-1 flex items-start justify-between">
+                  <Link
+                    href={`/expenses/${row.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {row.miti}
+                  </Link>
+                  <span className="tabular-amount font-medium">{formatAmount(row.totalAmount)}</span>
                 </div>
-              ))}
-            </div>
-          </>
+                <p className="text-sm text-foreground">{row.partyName}</p>
+                <p className="truncate text-sm text-muted">{row.item}</p>
+                <div className="mt-2 flex items-center justify-between text-xs text-muted">
+                  <span>{row.categoryName}</span>
+                  <button
+                    className="text-danger hover:underline"
+                    onClick={() => setDeleteTarget({ id: row.id, item: row.item })}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </>
+            )}
+          />
         )}
       </div>
 
