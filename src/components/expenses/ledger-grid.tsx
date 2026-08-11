@@ -3,151 +3,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { batchSaveExpenses, type BatchRowInput } from "@/lib/actions/expenses";
-import { round2 } from "@/lib/money";
 import { formatAmount } from "@/lib/format";
-import { parseMiti, FISCAL_YEAR_START_MONTH, fyName } from "@/lib/nepali-date";
 import { VAT_RATE } from "@/lib/constants";
-
-const VAT_FACTOR = 1 + VAT_RATE / 100;
-
-interface Party {
-  id: string;
-  name: string;
-  vatNumber: string | null;
-  locationId: string | null;
-  locationName: string | null;
-}
-
-interface Category {
-  id: string;
-  name: string;
-}
-
-interface LedgerRow {
-  id: string;
-  miti: string;
-  partyId: string;
-  partyName: string;
-  partyResolved: boolean;
-  locationId: string | null;
-  locationName: string | null;
-  invoiceNumber: string;
-  categoryId: string;
-  categoryName: string;
-  taxableAmount: string;
-  vatAmount: string;
-  totalAmount: string;
-  status: "pending" | "saving" | "saved" | "error" | "duplicate" | "incomplete";
-  error?: string;
-  warnings?: string[];
-}
+import { calcFromTaxable, calcFromTotal } from "@/lib/expenses/ledger-calculation";
+import { createLedgerRow, getInvoiceKey } from "@/lib/expenses/ledger-utils";
+import { validateLedgerRow } from "@/lib/expenses/ledger-validation";
+import type { LedgerRow } from "@/lib/expenses/ledger-types";
 
 type CellField = "miti" | "partySearch" | "invoiceNumber" | "categoryId" | "taxableAmount" | "totalAmount";
 const FIELD_ORDER: CellField[] = ["miti", "partySearch", "invoiceNumber", "categoryId", "taxableAmount", "totalAmount"];
-
-/**
- * Calculates VAT and the total amount from a taxable amount.
- *
- * @param taxable - The taxable amount before VAT
- * @returns The rounded VAT amount and VAT-inclusive total
- */
-function calcFromTaxable(taxable: number): { vat: number; total: number } {
-  const vat = round2(taxable * VAT_RATE / 100);
-  const total = round2(taxable + vat);
-  return { vat, total };
-}
-
-/**
- * Derives taxable and VAT amounts from a VAT-inclusive total.
- *
- * @param total - The VAT-inclusive total amount
- * @returns The rounded taxable amount and VAT amount
- */
-function calcFromTotal(total: number): { taxable: number; vat: number } {
-  const taxable = round2(total / VAT_FACTOR);
-  const vat = round2(total - taxable);
-  return { taxable, vat };
-}
-
-let nextId = 1;
-
-/**
- * Generates a unique identifier for a ledger row.
- *
- * @returns A sequential ledger-row identifier
- */
-function genId() {
-  return `row-${nextId++}`;
-}
-
-/**
- * Creates an incomplete ledger row, carrying forward selected fields from a previous row when provided.
- *
- * @param prev - The previous row whose date, location, and category values should be carried forward
- * @returns A new ledger row with a generated identifier and empty expense-entry fields
- */
-function createEmptyRow(prev?: LedgerRow): LedgerRow {
-  return {
-    id: genId(),
-    miti: prev?.miti ?? "",
-    partyId: "",
-    partyName: "",
-    partyResolved: false,
-    locationId: prev?.locationId ?? null,
-    locationName: prev?.locationName ?? null,
-    invoiceNumber: "",
-    categoryId: prev?.categoryId ?? "",
-    categoryName: prev?.categoryName ?? "",
-    taxableAmount: "",
-    vatAmount: "",
-    totalAmount: "",
-    status: "incomplete",
-  };
-}
-
-/**
- * Validates a ledger row against required fields, fiscal year constraints, existing invoices, and duplicates within the current batch.
- *
- * @param row - The ledger row to validate
- * @param allRows - All rows in the current batch
- * @param existingInvoices - Existing invoice keys in the format `partyId|invoiceNumber`
- * @param fyName - The selected fiscal year name
- * @returns Validation error messages for the row
- */
-function validateRow(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set<string>, currentFyName: string): string[] {
-  const errors: string[] = [];
-  if (!row.miti) {
-    errors.push("Miti required");
-  } else {
-    const parsed = parseMiti(row.miti);
-    if (!parsed.ok) {
-      errors.push("Invalid date");
-    } else {
-      const fy = parsed.month >= FISCAL_YEAR_START_MONTH ? parsed.year : parsed.year - 1;
-      const rowFyName = fyName(fy);
-      if (rowFyName !== currentFyName) {
-        errors.push(`Date falls in FY ${rowFyName}`);
-      }
-    }
-  }
-  if (!row.partyResolved || !row.partyId) errors.push("Select a valid party");
-  if (!row.invoiceNumber.trim()) errors.push("Invoice number required");
-  if (!row.categoryId) errors.push("Category required");
-  if (!row.taxableAmount || parseFloat(row.taxableAmount) <= 0) errors.push("Taxable amount must be greater than 0");
-  if (row.invoiceNumber && row.partyId) {
-    const key = `${row.partyId}|${row.invoiceNumber}`;
-    if (existingInvoices.has(key)) {
-      errors.push(`Invoice ${row.invoiceNumber} already exists for this party`);
-    }
-    const dupesInBatch = allRows.filter(
-      (r) => r.id !== row.id && r.partyId === row.partyId && r.invoiceNumber === row.invoiceNumber && r.invoiceNumber !== "",
-    );
-    if (dupesInBatch.length > 0) {
-      errors.push("Duplicate in batch");
-    }
-  }
-  return errors;
-}
 
 /**
  * Determines the current status of an expense ledger row.
@@ -155,12 +19,12 @@ function validateRow(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set
  * @param row - The ledger row to evaluate
  * @param allRows - All ledger rows used to detect duplicates
  * @param existingInvoices - Invoice numbers already recorded for the fiscal year
- * @param fyName - The fiscal year name used for validation
+ * @param currentFyName - The fiscal year name used for validation
  * @returns The row status: `incomplete` for an empty row, `duplicate` when validation errors exist, or `pending` otherwise
  */
 function getRowStatus(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set<string>, currentFyName: string): LedgerRow["status"] {
   if (!row.miti && !row.partyId && !row.taxableAmount) return "incomplete";
-  const errors = validateRow(row, allRows, existingInvoices, currentFyName);
+  const errors = validateLedgerRow(row, allRows, existingInvoices, currentFyName);
   if (errors.length > 0) return "duplicate";
   return "pending";
 }
@@ -445,7 +309,7 @@ export function LedgerGrid({
   allParties,
   allCategories,
 }: LedgerGridProps) {
-  const [rows, setRows] = useState<LedgerRow[]>(() => [createEmptyRow()]);
+  const [rows, setRows] = useState<LedgerRow[]>(() => [createLedgerRow()]);
   const [existingInvoices, setExistingInvoices] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [saveResult, setSaveResult] = useState<{ saved: number; errors: number } | null>(null);
@@ -459,7 +323,7 @@ export function LedgerGrid({
       .then((res: { data: { partyId: string; invoiceNumber: string | null }[] }) => {
         const keys = new Set<string>();
         for (const e of res.data) {
-          if (e.invoiceNumber) keys.add(`${e.partyId}|${e.invoiceNumber}`);
+          if (e.invoiceNumber) keys.add(getInvoiceKey(e.partyId, e.invoiceNumber));
         }
         setExistingInvoices(keys);
       })
@@ -471,7 +335,7 @@ export function LedgerGrid({
       if (row.status === "saving" || row.status === "saved" || row.status === "error") {
         return row;
       }
-      const errors = validateRow(row, rows, existingInvoices, fiscalYearName);
+      const errors = validateLedgerRow(row, rows, existingInvoices, fiscalYearName);
       const status = getRowStatus(row, rows, existingInvoices, fiscalYearName);
       return { ...row, status, error: errors[0] };
     });
@@ -592,7 +456,7 @@ export function LedgerGrid({
   function addRow(afterId?: string): string {
     const idx = afterId ? rows.findIndex((r) => r.id === afterId) : rows.length - 1;
     const prevRow = idx >= 0 ? rows[idx] : undefined;
-    const newRow = createEmptyRow(prevRow);
+    const newRow = createLedgerRow(prevRow);
     setRows((prev) => {
       const next = [...prev];
       next.splice(idx + 1, 0, newRow);
@@ -608,7 +472,7 @@ export function LedgerGrid({
    */
   function removeRow(rowId: string) {
     setRows((prev) => {
-      if (prev.length <= 1) return [createEmptyRow()];
+      if (prev.length <= 1) return [createLedgerRow()];
       return prev.filter((r) => r.id !== rowId);
     });
   }
@@ -619,7 +483,7 @@ export function LedgerGrid({
       if (idx < 0) return prev;
       const src = prev[idx];
       const newRow: LedgerRow = {
-        ...createEmptyRow(src),
+        ...createLedgerRow(src),
         partyId: src.partyId,
         partyName: src.partyName,
         partyResolved: src.partyResolved,
@@ -743,7 +607,7 @@ export function LedgerGrid({
         if (r.ok) {
           savedCount++;
           if (pending[r.index].invoiceNumber) {
-            newlySaved.push(`${pending[r.index].partyId}|${pending[r.index].invoiceNumber}`);
+            newlySaved.push(getInvoiceKey(pending[r.index].partyId, pending[r.index].invoiceNumber));
           }
           setRows((prev) =>
             prev.map((row) =>
