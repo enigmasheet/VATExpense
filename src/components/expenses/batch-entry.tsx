@@ -3,7 +3,25 @@
 import { useApp } from "@/lib/use-app";
 import { LedgerGrid } from "@/components/expenses/ledger-grid";
 
-export function BatchEntry() {
+interface Party {
+  id: string;
+  name: string;
+  vatNumber: string | null;
+  locationId: string | null;
+  locationName: string | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface BatchEntryProps {
+  allParties: Party[];
+  allCategories: Category[];
+}
+
+export function BatchEntry({ allParties, allCategories }: BatchEntryProps) {
   const { companyId, fiscalYearId, fiscalYears } = useApp();
 
   if (fiscalYears.length === 0) {
@@ -29,6 +47,8 @@ export function BatchEntry() {
       companyId={companyId}
       fiscalYearId={fiscalYearId}
       fiscalYearName={activeFY?.name ?? ""}
+      allParties={allParties}
+      allCategories={allCategories}
     />
   );
 }

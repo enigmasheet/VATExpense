@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, ApiError } from "@/lib/api-client";
+import { batchSaveExpenses, type BatchRowInput } from "@/lib/actions/expenses";
 import { round2 } from "@/lib/money";
 import { formatAmount } from "@/lib/format";
 import { parseMiti } from "@/lib/nepali-date";
@@ -118,21 +118,19 @@ function getRowStatus(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Se
 }
 
 interface PartyAutocompleteProps {
-  companyId: string;
+  allParties: Party[];
   value: string;
   partyId: string;
   onSelect: (party: Party) => void;
 }
 
-function PartyAutocomplete({ companyId, value, partyId, onSelect }: PartyAutocompleteProps) {
+function PartyAutocomplete({ allParties, value, partyId, onSelect }: PartyAutocompleteProps) {
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<Party[]>([]);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevValueRef = useRef(value);
 
   if (prevValueRef.current !== value) {
@@ -142,31 +140,25 @@ function PartyAutocomplete({ companyId, value, partyId, onSelect }: PartyAutocom
 
   const search = useCallback(
     (q: string) => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
       if (q.length < 1) { setResults([]); setOpen(false); return; }
-      debounceRef.current = setTimeout(async () => {
-        setLoading(true);
-        try {
-          const isVat = /\d{5,}/.test(q);
-          let res: { data: Party[] };
-          if (isVat) {
-            try {
-              const party = await api<{ data: Party }>(`/api/parties/by-vat?companyId=${companyId}&vat=${q}`);
-              res = { data: [party.data] };
-            } catch { res = { data: [] }; }
-          } else {
-            res = await api<{ data: Party[] }>(`/api/parties?companyId=${companyId}&q=${encodeURIComponent(q)}`);
-          }
-          setResults(res.data.slice(0, 8));
-          setOpen(true);
-          setHighlightIdx(-1);
-        } catch { setResults([]); } finally { setLoading(false); }
-      }, 200);
+      const lower = q.toLowerCase();
+      const isVat = /\d{5,}/.test(q);
+      let matched: Party[];
+      if (isVat) {
+        matched = allParties.filter((p) => p.vatNumber?.includes(q));
+      } else {
+        matched = allParties.filter(
+          (p) =>
+            p.name.toLowerCase().includes(lower) ||
+            (p.vatNumber && p.vatNumber.includes(q)),
+        );
+      }
+      setResults(matched.slice(0, 8));
+      setOpen(matched.length > 0);
+      setHighlightIdx(-1);
     },
-    [companyId],
+    [allParties],
   );
-
-  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -202,7 +194,6 @@ function PartyAutocomplete({ companyId, value, partyId, onSelect }: PartyAutocom
         placeholder="Search party or VAT..."
         className="h-8 w-full rounded border border-border bg-surface px-2 text-xs"
       />
-      {loading && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted">...</span>}
       {open && results.length > 0 && (
         <div className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded border border-border bg-surface shadow-lg">
           {results.map((party, idx) => (
@@ -232,7 +223,7 @@ function statusBadge(status: LedgerRow["status"]) {
     case "saved": return <Badge tone="success">Saved</Badge>;
     case "error": return <Badge tone="danger">Error</Badge>;
     case "duplicate": return <Badge tone="warning">Issue</Badge>;
-    default: return <span className="text-xs text-muted">—</span>;
+    default: return <span className="text-xs text-muted">--</span>;
   }
 }
 
@@ -240,10 +231,17 @@ interface LedgerGridProps {
   companyId: string;
   fiscalYearId: string;
   fiscalYearName: string;
+  allParties: Party[];
+  allCategories: Category[];
 }
 
-export function LedgerGrid({ companyId, fiscalYearId, fiscalYearName }: LedgerGridProps) {
-  const [categories, setCategories] = useState<Category[]>([]);
+export function LedgerGrid({
+  companyId,
+  fiscalYearId,
+  fiscalYearName,
+  allParties,
+  allCategories,
+}: LedgerGridProps) {
   const [rows, setRows] = useState<LedgerRow[]>(() => [createEmptyRow()]);
   const [existingInvoices, setExistingInvoices] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -252,21 +250,17 @@ export function LedgerGrid({ companyId, fiscalYearId, fiscalYearName }: LedgerGr
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!companyId) return;
-    api<{ data: Category[] }>(`/api/categories?companyId=${companyId}`).then(({ data }) => setCategories(data));
-  }, [companyId]);
-
-  useEffect(() => {
     if (!companyId || !fiscalYearId) return;
-    api<{ data: { partyId: string; invoiceNumber: string | null }[] }>(
-      `/api/expenses?companyId=${companyId}&fiscalYearId=${fiscalYearId}&pageSize=500`,
-    ).then(({ data }) => {
-      const keys = new Set<string>();
-      for (const e of data) {
-        if (e.invoiceNumber) keys.add(`${e.partyId}|${e.invoiceNumber}`);
-      }
-      setExistingInvoices(keys);
-    });
+    fetch(`/api/expenses?companyId=${companyId}&fiscalYearId=${fiscalYearId}&pageSize=500`)
+      .then((r) => r.json())
+      .then((res: { data: { partyId: string; invoiceNumber: string | null }[] }) => {
+        const keys = new Set<string>();
+        for (const e of res.data) {
+          if (e.invoiceNumber) keys.add(`${e.partyId}|${e.invoiceNumber}`);
+        }
+        setExistingInvoices(keys);
+      })
+      .catch(() => {});
   }, [companyId, fiscalYearId]);
 
   const enrichedRows = useMemo(() => {
@@ -399,38 +393,70 @@ export function LedgerGrid({ companyId, fiscalYearId, fiscalYearName }: LedgerGr
   }
 
   async function saveAll() {
-    if (!companyId) return;
     const pending = enrichedRows.filter((r) => r.status === "pending");
     if (pending.length === 0) return;
     setSaving(true);
     setSaveResult(null);
-    let savedCount = 0;
-    let errorCount = 0;
-    for (const row of pending) {
-      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: "saving" as const } : r)));
-      try {
-        const mitiParsed = parseMiti(row.miti);
-        const nepaliMonth = mitiParsed.ok ? mitiParsed.monthName : "";
-        await api<{ data: unknown; warnings?: string[] }>("/api/expenses", {
-          method: "POST",
-          body: JSON.stringify({
-            companyId, fiscalYearId, miti: row.miti, nepaliMonth,
-            invoiceNumber: row.invoiceNumber || null,
-            partyId: row.partyId, categoryId: row.categoryId, locationId: row.locationId,
-            item: row.item || row.categoryName,
-            taxableAmount: row.taxableAmount, vatAmount: row.vatAmount,
-            totalAmount: row.totalAmount, vatRate: "13.00",
-          }),
-        });
-        savedCount++;
-        setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: "saved" as const } : r)));
-      } catch (err) {
-        errorCount++;
-        const detail = err instanceof ApiError ? err.detail : "Save failed";
-        setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: "error" as const, error: detail } : r)));
+
+    // Mark all as saving
+    setRows((prev) =>
+      prev.map((r) => (r.status === "pending" ? { ...r, status: "saving" as const } : r)),
+    );
+
+    const batchInputs: BatchRowInput[] = pending.map((row) => ({
+      fiscalYearId,
+      partyId: row.partyId,
+      categoryId: row.categoryId,
+      locationId: row.locationId,
+      miti: row.miti,
+      invoiceNumber: row.invoiceNumber || null,
+      item: row.item || row.categoryName,
+      taxableAmount: row.taxableAmount,
+      vatAmount: row.vatAmount,
+      totalAmount: row.totalAmount,
+      vatRate: "13.00",
+    }));
+
+    const result = await batchSaveExpenses(batchInputs);
+
+    if (result.ok) {
+      let savedCount = 0;
+      let errorCount = 0;
+      for (const r of result.data) {
+        const rowId = pending[r.index].id;
+        if (r.ok) {
+          savedCount++;
+          setRows((prev) =>
+            prev.map((row) =>
+              row.id === rowId
+                ? { ...row, status: "saved" as const, error: undefined, warnings: r.warnings }
+                : row,
+            ),
+          );
+        } else {
+          errorCount++;
+          setRows((prev) =>
+            prev.map((row) =>
+              row.id === rowId
+                ? { ...row, status: "error" as const, error: r.error }
+                : row,
+            ),
+          );
+        }
       }
+      setSaveResult({ saved: savedCount, errors: errorCount });
+    } else {
+      // Batch-level failure — mark all as error
+      setRows((prev) =>
+        prev.map((r) =>
+          r.status === "saving"
+            ? { ...r, status: "error" as const, error: result.error }
+            : r,
+        ),
+      );
+      setSaveResult({ saved: 0, errors: pending.length });
     }
-    setSaveResult({ saved: savedCount, errors: errorCount });
+
     setSaving(false);
   }
 
@@ -497,7 +523,7 @@ export function LedgerGrid({ companyId, fiscalYearId, fiscalYearName }: LedgerGr
 
                 <td className="px-1 py-1">
                   <PartyAutocomplete
-                    companyId={companyId}
+                    allParties={allParties}
                     value={row.partyName}
                     partyId={row.partyId}
                     onSelect={(party) => updateRow(row.id, {
@@ -525,14 +551,14 @@ export function LedgerGrid({ companyId, fiscalYearId, fiscalYearName }: LedgerGr
                     data-field="categoryId"
                     value={row.categoryId}
                     onChange={(e) => {
-                      const cat = categories.find((c) => c.id === e.target.value);
+                      const cat = allCategories.find((c) => c.id === e.target.value);
                       updateRow(row.id, { categoryId: e.target.value, categoryName: cat?.name ?? "" });
                     }}
                     onKeyDown={(e) => handleCellKeyDown(e, row.id, "categoryId")}
                     className="h-8 w-full rounded border border-border bg-surface px-2 text-xs"
                   >
-                    <option value="">—</option>
-                    {categories.map((c) => (
+                    <option value="">--</option>
+                    {allCategories.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
