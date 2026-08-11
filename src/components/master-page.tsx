@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DataTable } from "@/components/ui/data-table";
 
 export interface FieldSpec {
   name: string;
@@ -172,6 +173,98 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
       setError(err instanceof ApiError ? err.detail : "Failed to delete");
     }
   }
+
+  const filtered = search
+    ? items.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()))
+    : items;
+
+  const nameCell = (item: T) =>
+    editingId === item.id ? (
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={editValues.name ?? ""}
+          onChange={(e) => setEditValues((v) => ({ ...v, name: e.target.value }))}
+          className="h-8 rounded-md border border-border bg-background px-2 text-sm"
+          autoFocus
+        />
+        <Button size="sm" onClick={() => saveEdit(item.id)} disabled={submitting}>
+          Save
+        </Button>
+        <Button size="sm" variant="ghost" onClick={cancelEdit}>
+          Cancel
+        </Button>
+      </div>
+    ) : (
+      <span className="font-medium">{item.name}</span>
+    );
+
+  const actions = (item: T) =>
+    editingId !== item.id && (
+      <div className="flex items-center justify-end gap-2">
+        <button className="text-sm text-primary hover:underline" onClick={() => startEdit(item)}>
+          Edit
+        </button>
+        <button
+          className="text-sm text-danger hover:underline"
+          onClick={() => confirmDelete(item.id, item.name)}
+        >
+          Delete
+        </button>
+      </div>
+    );
+
+  const mobileCard = (item: T) =>
+    editingId === item.id ? (
+      <div className="flex flex-col gap-3">
+        <input
+          type="text"
+          value={editValues.name ?? ""}
+          onChange={(e) => setEditValues((v) => ({ ...v, name: e.target.value }))}
+          className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+          autoFocus
+        />
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => saveEdit(item.id)} disabled={submitting}>
+            Save
+          </Button>
+          <Button size="sm" variant="ghost" onClick={cancelEdit}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    ) : (
+      <>
+        <div className="mb-2 flex items-center justify-between">
+          <span className="font-medium">{item.name}</span>
+          <button
+            onClick={() => toggleActive(item)}
+            className="cursor-pointer"
+            aria-label={`Toggle ${item.name} ${item.isActive ? "inactive" : "active"}`}
+          >
+            <Badge tone={item.isActive ? "success" : "default"}>
+              {item.isActive ? "Active" : "Inactive"}
+            </Badge>
+          </button>
+        </div>
+        {columns.map((col) => (
+          <div key={col.header} className="text-sm text-muted">
+            {col.render(item)}
+          </div>
+        ))}
+        <div className="mt-3 flex gap-3">
+          <button className="text-sm text-primary hover:underline" onClick={() => startEdit(item)}>
+            Edit
+          </button>
+          <button
+            className="text-sm text-danger hover:underline"
+            onClick={() => confirmDelete(item.id, item.name)}
+          >
+            Delete
+          </button>
+        </div>
+      </>
+    );
 
   return (
     <div className="flex flex-col gap-6">
