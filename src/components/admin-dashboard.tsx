@@ -244,11 +244,7 @@ export function AdminDashboard({ resetEnabled }: AdminDashboardProps) {
         )}
       </section>
 
-      {error && (
-        <div className="rounded-lg border border-danger/30 bg-danger-bg p-3 text-sm text-danger">
-          {error}
-        </div>
-      )}
+      {error && <Alert kind="danger" className="p-3">{error}</Alert>}
 
       <ConfirmDialog
         open={resetConfirmOpen}
