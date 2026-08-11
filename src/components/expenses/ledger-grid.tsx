@@ -44,12 +44,24 @@ interface LedgerRow {
 type CellField = "miti" | "partySearch" | "invoiceNumber" | "categoryId" | "taxableAmount" | "totalAmount";
 const FIELD_ORDER: CellField[] = ["miti", "partySearch", "invoiceNumber", "categoryId", "taxableAmount", "totalAmount"];
 
+/**
+ * Calculates VAT and the total amount from a taxable amount.
+ *
+ * @param taxable - The taxable amount before VAT
+ * @returns The rounded VAT amount and VAT-inclusive total
+ */
 function calcFromTaxable(taxable: number): { vat: number; total: number } {
   const vat = round2(taxable * VAT_RATE / 100);
   const total = round2(taxable + vat);
   return { vat, total };
 }
 
+/**
+ * Derives taxable and VAT amounts from a VAT-inclusive total.
+ *
+ * @param total - The VAT-inclusive total amount
+ * @returns The rounded taxable amount and VAT amount
+ */
 function calcFromTotal(total: number): { taxable: number; vat: number } {
   const taxable = round2(total / VAT_FACTOR);
   const vat = round2(total - taxable);
@@ -58,10 +70,21 @@ function calcFromTotal(total: number): { taxable: number; vat: number } {
 
 let nextId = 1;
 
+/**
+ * Generates a unique identifier for a ledger row.
+ *
+ * @returns A sequential ledger-row identifier
+ */
 function genId() {
   return `row-${nextId++}`;
 }
 
+/**
+ * Creates an incomplete ledger row, carrying forward selected fields from a previous row when provided.
+ *
+ * @param prev - The previous row whose date, location, and category values should be carried forward
+ * @returns A new ledger row with a generated identifier and empty expense-entry fields
+ */
 function createEmptyRow(prev?: LedgerRow): LedgerRow {
   return {
     id: genId(),
@@ -81,6 +104,15 @@ function createEmptyRow(prev?: LedgerRow): LedgerRow {
   };
 }
 
+/**
+ * Validates a ledger row against required fields, fiscal year constraints, existing invoices, and duplicates within the current batch.
+ *
+ * @param row - The ledger row to validate
+ * @param allRows - All rows in the current batch
+ * @param existingInvoices - Existing invoice keys in the format `partyId|invoiceNumber`
+ * @param fyName - The selected fiscal year name
+ * @returns Validation error messages for the row
+ */
 function validateRow(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set<string>, fyName: string): string[] {
   const errors: string[] = [];
   if (!row.miti) {
@@ -117,6 +149,15 @@ function validateRow(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set
   return errors;
 }
 
+/**
+ * Determines the current status of an expense ledger row.
+ *
+ * @param row - The ledger row to evaluate
+ * @param allRows - All ledger rows used to detect duplicates
+ * @param existingInvoices - Invoice numbers already recorded for the fiscal year
+ * @param fyName - The fiscal year name used for validation
+ * @returns The row status: `incomplete` for an empty row, `duplicate` when validation errors exist, or `pending` otherwise
+ */
 function getRowStatus(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set<string>, fyName: string): LedgerRow["status"] {
   if (!row.miti && !row.partyId && !row.taxableAmount) return "incomplete";
   const errors = validateRow(row, allRows, existingInvoices, fyName);
@@ -124,6 +165,12 @@ function getRowStatus(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Se
   return "pending";
 }
 
+/**
+ * Determines whether a ledger row contains all required valid expense details.
+ *
+ * @param row - The ledger row to evaluate
+ * @returns `true` if the row has a date, resolved party, invoice number, category, and positive taxable amount, `false` otherwise.
+ */
 function isComplete(row: LedgerRow): boolean {
   return !!(
     row.miti.trim() &&
@@ -136,6 +183,12 @@ function isComplete(row: LedgerRow): boolean {
   );
 }
 
+/**
+ * Determines whether a ledger row requires attention.
+ *
+ * @param row - The ledger row to evaluate
+ * @returns `true` if the row has an error, duplicate, or incomplete status, `false` otherwise.
+ */
 function isIssueRow(row: LedgerRow): boolean {
   return row.status === "error" || row.status === "duplicate" || row.status === "incomplete";
 }
@@ -148,6 +201,15 @@ interface PartyAutocompleteProps {
   onSelect: (party: Party) => void;
 }
 
+/**
+ * Provides searchable party selection with keyboard navigation and resolved-party status.
+ *
+ * @param allParties - The parties available for search
+ * @param value - The current party name
+ * @param partyId - The selected party identifier
+ * @param partyResolved - Whether the current party value resolves to a party
+ * @param onSelect - Called when a party is selected
+ */
 function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect }: PartyAutocompleteProps) {
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<Party[]>([]);
@@ -249,6 +311,11 @@ function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect
   );
 }
 
+/**
+ * Renders a visual status badge for a ledger row.
+ *
+ * @param status - The ledger row status to display
+ */
 function StatusBadge({ status }: { status: LedgerRow["status"] }) {
   if (status === "saved") {
     return (
@@ -313,6 +380,15 @@ interface LedgerGridProps {
   allCategories: Category[];
 }
 
+/**
+ * Provides an editable expense ledger for a company and fiscal year, including validation, VAT calculations, row management, and batch saving.
+ *
+ * @param companyId - The company whose expenses are being entered
+ * @param fiscalYearId - The fiscal year associated with the expenses
+ * @param fiscalYearName - The fiscal year name used for date validation
+ * @param allParties - Available parties for party selection
+ * @param allCategories - Available expense categories
+ */
 export function LedgerGrid({
   companyId,
   fiscalYearId,

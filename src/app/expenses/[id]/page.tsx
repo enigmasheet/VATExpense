@@ -6,6 +6,11 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
+/**
+ * Renders the detail view for an expense identified by the route parameter.
+ *
+ * @param params - Route parameters containing the expense ID.
+ */
 export default async function ExpenseDetailPage({ params }: Props) {
   const companyId = await getCompanyId();
   if (!companyId) redirect("/login");

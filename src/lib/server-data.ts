@@ -10,20 +10,43 @@ import {
 } from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 
+/**
+ * Converts an optional session company ID into a nullable company ID.
+ *
+ * @param sessionCompanyId - The company ID from the authenticated session
+ * @returns The session company ID, or `null` when it is undefined
+ */
 function requireCompanyId(sessionCompanyId: string | undefined): string | null {
   return sessionCompanyId ?? null;
 }
 
+/**
+ * Retrieves the company ID associated with the authenticated user.
+ *
+ * @returns The authenticated user's company ID, or `null` when no company ID is available.
+ */
 export async function getCompanyId(): Promise<string | null> {
   const session = await auth();
   return requireCompanyId((session?.user as { companyId?: string })?.companyId);
 }
 
+/**
+ * Retrieves a company by its ID.
+ *
+ * @param companyId - The company's unique identifier
+ * @returns The matching company, or `null` if no company is found
+ */
 export async function getCompany(companyId: string) {
   const rows = await db.select().from(companies).where(eq(companies.id, companyId)).limit(1);
   return rows[0] ?? null;
 }
 
+/**
+ * Retrieves all fiscal years for a company in descending order of start year.
+ *
+ * @param companyId - The company's identifier
+ * @returns The company's fiscal years ordered from latest to earliest start year
+ */
 export async function getFiscalYears(companyId: string) {
   return db
     .select()
@@ -32,6 +55,12 @@ export async function getFiscalYears(companyId: string) {
     .orderBy(sql`${fiscalYears.startYear} desc`);
 }
 
+/**
+ * Retrieves the active fiscal year for a company.
+ *
+ * @param companyId - The company identifier
+ * @returns The active fiscal year, or `null` if none exists
+ */
 export async function getActiveFiscalYear(companyId: string) {
   const rows = await db
     .select()
@@ -41,6 +70,12 @@ export async function getActiveFiscalYear(companyId: string) {
   return rows[0] ?? null;
 }
 
+/**
+ * Retrieves the parties associated with a company, including their location names.
+ *
+ * @param companyId - The identifier of the company
+ * @returns The company's parties ordered by name.
+ */
 export async function getParties(companyId: string) {
   return db
     .select({
@@ -57,6 +92,12 @@ export async function getParties(companyId: string) {
     .orderBy(parties.name);
 }
 
+/**
+ * Retrieves the categories belonging to a company in name order.
+ *
+ * @param companyId - The company identifier
+ * @returns The company's categories ordered by name
+ */
 export async function getCategories(companyId: string) {
   return db
     .select()
@@ -65,6 +106,12 @@ export async function getCategories(companyId: string) {
     .orderBy(categories.name);
 }
 
+/**
+ * Retrieves the locations associated with a company in name order.
+ *
+ * @param companyId - The ID of the company whose locations to retrieve
+ * @returns The company's locations ordered by name
+ */
 export async function getLocations(companyId: string) {
   return db
     .select()
@@ -74,7 +121,11 @@ export async function getLocations(companyId: string) {
 }
 
 /**
- * Dashboard summary — uses SQL aggregation instead of fetching all rows.
+ * Summarizes expenses for a company and fiscal year, including aggregate totals and recent expenses.
+ *
+ * @param companyId - The company identifier
+ * @param fiscalYearId - The fiscal year identifier
+ * @returns Aggregate taxable, VAT, and total amounts with the expense count, plus the five most recent expenses
  */
 export async function getDashboardSummary(companyId: string, fiscalYearId: string) {
   const [totals] = await db
@@ -131,6 +182,12 @@ export interface ExpenseListParams {
   pageSize?: number;
 }
 
+/**
+ * Retrieves paginated, non-deleted expenses for a company with optional filters and related party and category names.
+ *
+ * @param params - Company context, optional expense filters, and pagination settings.
+ * @returns The matching expense rows, current page, page size, and total matching count.
+ */
 export async function getExpenses(params: ExpenseListParams) {
   const {
     companyId,
@@ -192,7 +249,9 @@ export async function getExpenses(params: ExpenseListParams) {
 }
 
 /**
- * Get a single expense by ID.
+ * Retrieves a single expense with its related party and category names.
+ *
+ * @returns The matching expense, or `null` if no expense has the specified ID.
  */
 export async function getExpenseById(id: string) {
   const row = await db
@@ -225,7 +284,10 @@ export async function getExpenseById(id: string) {
 }
 
 /**
- * Monthly report aggregation.
+ * Generates an expense report for a company and fiscal year month, grouped by category.
+ *
+ * @param nepaliMonth - The Nepali month included in the report
+ * @returns Category-level expense totals and overall totals for the specified month
  */
 export async function getMonthlyReport(
   companyId: string,
@@ -287,6 +349,13 @@ const NEPALI_MONTHS_ORDER = [
   "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra",
 ] as const;
 
+/**
+ * Generates an expense report for every month in a fiscal year.
+ *
+ * @param companyId - The company identifier
+ * @param fiscalYearId - The fiscal year identifier
+ * @returns Monthly expense totals in fiscal-year order and aggregate totals for the fiscal year
+ */
 export async function getFiscalYearReport(companyId: string, fiscalYearId: string) {
   const monthData = await db
     .select({

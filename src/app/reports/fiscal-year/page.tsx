@@ -3,6 +3,13 @@ import { getCompanyId, getActiveFiscalYear, getFiscalYearReport } from "@/lib/se
 import { formatAmount } from "@/lib/format";
 import { FiscalYearReportExport } from "@/components/fiscal-year-report-export";
 
+/**
+ * Displays the active fiscal year's report with summary totals and monthly expense details.
+ *
+ * Redirects unauthenticated users to the login page and prompts users to create a fiscal year when none is configured.
+ *
+ * @returns The rendered fiscal year report page.
+ */
 export default async function FiscalYearReportPage() {
   const companyId = await getCompanyId();
   if (!companyId) redirect("/login");
