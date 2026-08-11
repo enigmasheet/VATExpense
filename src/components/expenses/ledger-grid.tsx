@@ -837,9 +837,11 @@ export function LedgerGrid({
                       }}
                       onKeyDown={(e) => handleCellKeyDown(e, row.id, "categoryId")}
                       className={`h-10 w-full rounded border bg-transparent px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
-                        !row.categoryId
+                        !row.categoryId && (row.miti || row.partyResolved || row.invoiceNumber || row.taxableAmount)
                           ? "text-muted-foreground border-destructive bg-destructive/5 focus:ring-destructive/40"
-                          : "border-border/50"
+                          : !row.categoryId
+                            ? "text-muted-foreground border-border/50"
+                            : "border-border/50"
                       }`}
                     >
                       <option value="">Select...</option>
