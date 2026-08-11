@@ -8,6 +8,12 @@ interface Props {
   searchParams: Promise<{ month?: string }>;
 }
 
+/**
+ * Displays the monthly expense report for the requested Nepali month.
+ *
+ * @param searchParams - URL parameters containing the selected Nepali month.
+ * @returns The monthly report page, or a fiscal-year setup message when no active fiscal year exists.
+ */
 export default async function MonthlyReportPage({ searchParams }: Props) {
   const companyId = await getCompanyId();
   if (!companyId) redirect("/login");
@@ -113,6 +119,12 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
   );
 }
 
+/**
+ * Provides a selector for navigating between Nepali months.
+ *
+ * @param currentMonth - The month initially selected in the selector
+ * @returns A month navigation control
+ */
 function MonthSelector({ currentMonth }: { currentMonth: string }) {
   return (
     <div className="flex items-center gap-4">

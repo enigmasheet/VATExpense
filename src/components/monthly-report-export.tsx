@@ -8,6 +8,14 @@ interface MonthlyReportExportProps {
   nepaliMonth: string;
 }
 
+/**
+ * Renders a button that opens the monthly report export.
+ *
+ * @param companyId - The company identifier included in the export request
+ * @param fiscalYearId - The fiscal year identifier included in the export request
+ * @param nepaliMonth - The Nepali month included in the export request
+ * @returns A button for initiating the monthly report export
+ */
 export function MonthlyReportExport({
   companyId,
   fiscalYearId,

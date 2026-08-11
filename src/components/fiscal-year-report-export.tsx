@@ -7,6 +7,12 @@ interface FiscalYearReportExportProps {
   fiscalYearId: string;
 }
 
+/**
+ * Renders a button that exports the specified fiscal year report as an Excel file.
+ *
+ * @param companyId - The company identifier included in the export request
+ * @param fiscalYearId - The fiscal year identifier included in the export request
+ */
 export function FiscalYearReportExport({
   companyId,
   fiscalYearId,
