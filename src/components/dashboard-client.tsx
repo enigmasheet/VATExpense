@@ -116,8 +116,12 @@ export function DashboardClient({
                 </thead>
                 <tbody>
                   {recent.map((e) => (
-                    <tr key={e.id} className="border-b border-border last:border-b-0">
-                      <td className="px-4 py-3">{e.miti}</td>
+                    <tr key={e.id} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
+                      <td className="px-4 py-3">
+                        <Link href={`/expenses/${e.id}`} className="font-medium text-primary hover:underline">
+                          {e.miti}
+                        </Link>
+                      </td>
                       <td className="px-4 py-3">{e.invoiceNumber ?? "—"}</td>
                       <td className="px-4 py-3">{e.partyName}</td>
                       <td className="px-4 py-3">{e.item}</td>
@@ -135,7 +139,9 @@ export function DashboardClient({
               {recent.map((e) => (
                 <div key={e.id} className="border-b border-border p-4 last:border-b-0">
                   <div className="flex items-start justify-between">
-                    <span className="font-medium">{e.partyName}</span>
+                    <Link href={`/expenses/${e.id}`} className="font-medium text-primary hover:underline">
+                      {e.partyName}
+                    </Link>
                     <span className="tabular-amount font-medium">{formatAmount(e.totalAmount)}</span>
                   </div>
                   <p className="truncate text-sm text-muted">{e.item}</p>

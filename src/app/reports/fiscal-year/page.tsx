@@ -70,7 +70,8 @@ export default async function FiscalYearReportPage() {
 
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-semibold text-foreground">By Month</h2>
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        {/* Desktop table */}
+        <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface sm:block">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
@@ -107,6 +108,32 @@ export default async function FiscalYearReportPage() {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="rounded-lg border border-border bg-surface sm:hidden">
+          {report.months.map((month) => {
+            const hasExpenses = month.expenseCount > 0;
+            return (
+              <div key={month.nepaliMonth} className={`border-b border-border p-4 last:border-b-0 ${hasExpenses ? "" : "text-muted"}`}>
+                <div className="flex items-start justify-between">
+                  <span className="font-medium">{month.nepaliMonth}</span>
+                  {hasExpenses ? (
+                    <span className="tabular-amount font-medium">{formatAmount(month.totalAmount)}</span>
+                  ) : (
+                    <span className="text-muted">--</span>
+                  )}
+                </div>
+                {hasExpenses && (
+                  <div className="mt-1 flex gap-4 text-xs text-muted">
+                    <span>{month.expenseCount} expense{month.expenseCount === 1 ? "" : "s"}</span>
+                    <span>Taxable {formatAmount(month.totalTaxableAmount)}</span>
+                    <span>VAT {formatAmount(month.totalVatAmount)}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
     </div>

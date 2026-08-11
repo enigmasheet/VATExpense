@@ -66,6 +66,8 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   const refresh = useCallback(() => {
     if (!companyId) return;

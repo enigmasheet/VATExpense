@@ -81,36 +81,56 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
         {report.categories.length === 0 ? (
           <p className="text-sm text-muted">No expenses for this month.</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                  <th className="px-4 py-3">Category</th>
-                  <th className="px-4 py-3 text-right">Expenses</th>
-                  <th className="px-4 py-3 text-right">Taxable</th>
-                  <th className="px-4 py-3 text-right">VAT</th>
-                  <th className="px-4 py-3 text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.categories.map((cat) => (
-                  <tr key={cat.categoryId} className="border-b border-border last:border-b-0">
-                    <td className="px-4 py-3 font-medium">{cat.categoryName}</td>
-                    <td className="tabular-amount px-4 py-3 text-right">{cat.expenseCount}</td>
-                    <td className="tabular-amount px-4 py-3 text-right">
-                      {formatAmount(cat.totalTaxableAmount)}
-                    </td>
-                    <td className="tabular-amount px-4 py-3 text-right">
-                      {formatAmount(cat.totalVatAmount)}
-                    </td>
-                    <td className="tabular-amount px-4 py-3 text-right font-medium">
-                      {formatAmount(cat.totalAmount)}
-                    </td>
+          <>
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface sm:block">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
+                    <th className="px-4 py-3">Category</th>
+                    <th className="px-4 py-3 text-right">Expenses</th>
+                    <th className="px-4 py-3 text-right">Taxable</th>
+                    <th className="px-4 py-3 text-right">VAT</th>
+                    <th className="px-4 py-3 text-right">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {report.categories.map((cat) => (
+                    <tr key={cat.categoryId} className="border-b border-border last:border-b-0">
+                      <td className="px-4 py-3 font-medium">{cat.categoryName}</td>
+                      <td className="tabular-amount px-4 py-3 text-right">{cat.expenseCount}</td>
+                      <td className="tabular-amount px-4 py-3 text-right">
+                        {formatAmount(cat.totalTaxableAmount)}
+                      </td>
+                      <td className="tabular-amount px-4 py-3 text-right">
+                        {formatAmount(cat.totalVatAmount)}
+                      </td>
+                      <td className="tabular-amount px-4 py-3 text-right font-medium">
+                        {formatAmount(cat.totalAmount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="rounded-lg border border-border bg-surface sm:hidden">
+              {report.categories.map((cat) => (
+                <div key={cat.categoryId} className="border-b border-border p-4 last:border-b-0">
+                  <div className="flex items-start justify-between">
+                    <span className="font-medium">{cat.categoryName}</span>
+                    <span className="tabular-amount font-medium">{formatAmount(cat.totalAmount)}</span>
+                  </div>
+                  <div className="mt-1 flex gap-4 text-xs text-muted">
+                    <span>{cat.expenseCount} expense{cat.expenseCount === 1 ? "" : "s"}</span>
+                    <span>Taxable {formatAmount(cat.totalTaxableAmount)}</span>
+                    <span>VAT {formatAmount(cat.totalVatAmount)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </section>
 

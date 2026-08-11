@@ -492,6 +492,11 @@ export function LedgerGrid({
   }, [enrichedRows]);
 
   const pendingCount = enrichedRows.filter((r) => r.status === "pending").length;
+  const savedCount = enrichedRows.filter((r) => r.status === "saved").length;
+
+  function clearSaved() {
+    setRows((prev) => prev.filter((r) => r.status !== "saved"));
+  }
 
   /**
    * Updates a ledger row and refreshes its derived values and editing state.
@@ -764,6 +769,11 @@ export function LedgerGrid({
       }
       setSaveResult({ saved: savedCount, errors: errorCount });
       setStatusMessage(`Saved ${savedCount} expense${savedCount > 1 ? "s" : ""}.${errorCount > 0 ? ` ${errorCount} error(s).` : ""}`);
+      if (savedCount > 0) {
+        setTimeout(() => {
+          setRows((prev) => prev.filter((r) => r.status !== "saved"));
+        }, 2000);
+      }
     } else {
       setRows((prev) =>
         prev.map((r) =>
@@ -1070,6 +1080,15 @@ export function LedgerGrid({
           <span className="text-sm text-muted-foreground">
             {saveResult.saved} saved{saveResult.errors > 0 ? `, ${saveResult.errors} error(s)` : ""}
           </span>
+        )}
+        {savedCount > 0 && (
+          <button
+            type="button"
+            onClick={clearSaved}
+            className="inline-flex items-center gap-1.5 rounded border border-border/50 px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+          >
+            Clear saved ({savedCount})
+          </button>
         )}
       </div>
     </div>
