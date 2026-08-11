@@ -19,7 +19,7 @@ import {
 } from "@/lib/api-response";
 import { parseMiti } from "@/lib/nepali-date";
 import { checkInvoiceDuplicate, findSuspiciousDuplicates } from "@/lib/expenses/duplicates";
-import { and, eq, ilike, or, sql, aliasedTable } from "drizzle-orm";
+import { and, eq, ilike, or, sql, aliasedTable, type SQL } from "drizzle-orm";
 
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 200;
@@ -45,7 +45,10 @@ export async function GET(request: Request) {
     Number.isFinite(rawPageSize) && rawPageSize >= 1 ? Math.floor(rawPageSize) : DEFAULT_PAGE_SIZE,
   );
 
-  const conditions = [eq(expenses.companyId, companyId), eq(expenses.isDeleted, false)];
+  const conditions: (SQL | undefined)[] = [
+    eq(expenses.companyId, companyId),
+    eq(expenses.isDeleted, false),
+  ];
   if (fiscalYearId) conditions.push(eq(expenses.fiscalYearId, fiscalYearId));
   if (partyId) conditions.push(eq(expenses.partyId, partyId));
   if (categoryId) conditions.push(eq(expenses.categoryId, categoryId));
@@ -62,7 +65,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const where = and(...conditions);
+    const where = and(
+      ...conditions.filter((c): c is SQL => c !== undefined),
+    );
 
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })
