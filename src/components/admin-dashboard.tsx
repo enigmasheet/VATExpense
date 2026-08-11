@@ -6,6 +6,7 @@ import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Alert } from "@/components/ui/alert";
 
 interface CompanyRow {
   id: string;

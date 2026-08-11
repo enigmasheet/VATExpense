@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 
 import { VAT_RATE } from "@/lib/constants";
+import { MessageList, type Message } from "@/components/ui/alert";
 const VAT_FACTOR = 1 + VAT_RATE / 100; // 1.13
 
 interface FormValues {
@@ -56,37 +57,6 @@ const emptyForm: FormValues = {
   totalAmount: "",
   remarks: "",
 };
-
-type Message =
-  | { kind: "success"; text: string }
-  | { kind: "warning"; text: string }
-  | { kind: "danger"; text: string }
-  | { kind: "info"; text: string };
-
-/**
- * Displays a styled list of messages based on the first message's severity.
- *
- * @param messages - The messages to display.
- */
-function MessageList({ messages }: { messages: Message[] }) {
-  if (messages.length === 0) return null;
-  const tone = messages[0].kind;
-  const toneClass =
-    tone === "danger"
-      ? "border-danger/30 bg-danger-bg text-danger"
-      : tone === "warning"
-        ? "border-warning/30 bg-warning-bg text-warning"
-        : tone === "success"
-          ? "border-success/30 bg-success-bg text-success"
-          : "border-border bg-surface text-muted";
-  return (
-    <div className={`flex flex-col gap-1 rounded-lg border p-4 text-sm ${toneClass}`}>
-      {messages.map((m, i) => (
-        <span key={i}>{m.text}</span>
-      ))}
-    </div>
-  );
-}
 
 /**
  * Renders a form for creating or editing an expense, including VAT and total calculations.

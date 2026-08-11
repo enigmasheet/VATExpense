@@ -4,6 +4,7 @@ import { NEPALI_MONTHS } from "@/lib/nepali-date";
 import { formatAmount } from "@/lib/format";
 import { MonthlyReportExport } from "@/components/monthly-report-export";
 import { MonthSelector } from "@/components/month-selector";
+import { StatCard } from "@/components/ui/stat-card";
 
 interface Props {
   searchParams: Promise<{ month?: string }>;
@@ -51,24 +52,9 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-border bg-surface p-5">
-          <p className="text-xs uppercase tracking-wide text-muted">Taxable</p>
-          <p className="tabular-amount mt-2 text-2xl font-semibold">
-            {formatAmount(report.totals.totalTaxableAmount)}
-          </p>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-5">
-          <p className="text-xs uppercase tracking-wide text-muted">VAT input credit</p>
-          <p className="tabular-amount mt-2 text-2xl font-semibold">
-            {formatAmount(report.totals.totalVatAmount)}
-          </p>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-5">
-          <p className="text-xs uppercase tracking-wide text-muted">Total purchases</p>
-          <p className="tabular-amount mt-2 text-2xl font-semibold text-primary">
-            {formatAmount(report.totals.totalAmount)}
-          </p>
-        </div>
+        <StatCard label="Taxable" value={formatAmount(report.totals.totalTaxableAmount)} />
+        <StatCard label="VAT input credit" value={formatAmount(report.totals.totalVatAmount)} />
+        <StatCard label="Total purchases" value={formatAmount(report.totals.totalAmount)} accent />
       </div>
 
       <p className="text-sm text-muted">

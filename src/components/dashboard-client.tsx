@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { formatAmount, nepaliGroupedNumber } from "@/lib/format";
+import { StatCard } from "@/components/ui/stat-card";
 
 interface RecentExpense {
   id: string;
@@ -64,18 +65,9 @@ export function DashboardClient({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-border bg-surface p-5">
-          <p className="text-xs uppercase tracking-wide text-muted">Taxable</p>
-          <p className="tabular-amount mt-2 text-2xl font-semibold">{formatAmount(taxable)}</p>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-5">
-          <p className="text-xs uppercase tracking-wide text-muted">VAT input credit</p>
-          <p className="tabular-amount mt-2 text-2xl font-semibold">{formatAmount(vat)}</p>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-5">
-          <p className="text-xs uppercase tracking-wide text-muted">Total purchases</p>
-          <p className="tabular-amount mt-2 text-2xl font-semibold text-primary">{formatAmount(total)}</p>
-        </div>
+        <StatCard label="Taxable" value={formatAmount(taxable)} />
+        <StatCard label="VAT input credit" value={formatAmount(vat)} />
+        <StatCard label="Total purchases" value={formatAmount(total)} accent />
       </div>
 
       <p className="text-sm text-muted">
