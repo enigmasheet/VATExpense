@@ -124,18 +124,6 @@ function getRowStatus(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Se
   return "pending";
 }
 
-function isComplete(row: LedgerRow): boolean {
-  return !!(
-    row.miti.trim() &&
-    row.partyResolved &&
-    row.partyId &&
-    row.invoiceNumber.trim() &&
-    row.categoryId &&
-    row.taxableAmount &&
-    parseFloat(row.taxableAmount) > 0
-  );
-}
-
 function isIssueRow(row: LedgerRow): boolean {
   return row.status === "error" || row.status === "duplicate" || row.status === "incomplete";
 }
@@ -146,9 +134,10 @@ interface PartyAutocompleteProps {
   partyId: string;
   partyResolved: boolean;
   onSelect: (party: Party) => void;
+  onSearchChange: (partyName: string) => void;
 }
 
-function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect }: PartyAutocompleteProps) {
+function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect, onSearchChange }: PartyAutocompleteProps) {
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<Party[]>([]);
   const [open, setOpen] = useState(false);
@@ -206,6 +195,13 @@ function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect
     onSelect(party);
   }
 
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value;
+    setQuery(val);
+    search(val);
+    onSearchChange(val);
+  }
+
   return (
     <div className="relative" ref={dropdownRef}>
       <div className="relative">
@@ -213,7 +209,7 @@ function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect
           ref={inputRef}
           type="text"
           value={query}
-          onChange={(e) => { setQuery(e.target.value); search(e.target.value); }}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           onFocus={() => { if (results.length > 0) setOpen(true); }}
           placeholder="Search party..."
@@ -364,7 +360,6 @@ export function LedgerGrid({
   }, [enrichedRows]);
 
   const pendingCount = enrichedRows.filter((r) => r.status === "pending").length;
-  const duplicateCount = enrichedRows.filter((r) => r.status === "duplicate").length;
 
   function updateRow(rowId: string, updates: Partial<LedgerRow>) {
     setRows((prev) =>
@@ -531,11 +526,6 @@ export function LedgerGrid({
     }
   }
 
-  function handleGridKeyDown(e: React.KeyboardEvent) {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); saveAll(); }
-    if ((e.ctrlKey || e.metaKey) && e.key === "d") { e.preventDefault(); if (activeCell) duplicateRow(activeCell.rowId); }
-  }
-
   async function saveAll() {
     const pending = enrichedRows.filter((r) => r.status === "pending");
     if (pending.length === 0) return;
@@ -650,13 +640,13 @@ export function LedgerGrid({
           <thead>
             <tr className="border-b border-border/50 bg-muted/30 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <th className="w-10 px-2 py-2 text-center">#</th>
-              <th className="w-[100px] px-2 py-2">Miti</th>
+              <th className="w-25 px-2 py-2">Miti</th>
               <th className="px-2 py-2">Party</th>
-              <th className="w-[120px] px-2 py-2">Invoice</th>
-              <th className="w-[140px] px-2 py-2">Category</th>
-              <th className="w-[110px] px-2 py-2 text-right">Excl. VAT</th>
-              <th className="w-[90px] px-2 py-2 text-right">VAT ({VAT_RATE}%)</th>
-              <th className="w-[110px] px-2 py-2 text-right">Incl. VAT</th>
+              <th className="w-30 px-2 py-2">Invoice</th>
+              <th className="w-35 px-2 py-2">Category</th>
+              <th className="w-27.5 px-2 py-2 text-right">Excl. VAT</th>
+              <th className="w-22.5 px-2 py-2 text-right">VAT ({VAT_RATE}%)</th>
+              <th className="w-27.5 px-2 py-2 text-right">Incl. VAT</th>
               <th className="w-20 px-2 py-2 text-center">Status</th>
               <th className="w-16 px-2 py-2"></th>
             </tr>
@@ -693,6 +683,7 @@ export function LedgerGrid({
                         partyResolved: true,
                         locationId: party.locationId, locationName: party.locationName,
                       })}
+                      onSearchChange={(partyName) => updatePartyName(row.id, partyName)}
                     />
                   </td>
 
