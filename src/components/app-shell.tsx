@@ -582,6 +582,12 @@ function useSidebarCollapsed() {
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const collapsed = useSidebarCollapsed();
+  const pathname = usePathname();
+  const isAuthPage = pathname.startsWith("/login");
+
+  if (isAuthPage) {
+    return <>{children}</>;
+  }
 
   return (
     <AuthProvider>
