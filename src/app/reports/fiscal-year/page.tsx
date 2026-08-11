@@ -3,6 +3,7 @@ import { getCompanyId, getActiveFiscalYear, getFiscalYearReport } from "@/lib/se
 import { formatAmount } from "@/lib/format";
 import { FiscalYearReportExport } from "@/components/fiscal-year-report-export";
 import { StatCard } from "@/components/ui/stat-card";
+import { DataTable } from "@/components/ui/data-table";
 
 /**
  * Displays the active fiscal year's report with summary totals and monthly expense details.
@@ -53,71 +54,73 @@ export default async function FiscalYearReportPage() {
 
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-semibold text-foreground">By Month</h2>
-        {/* Desktop table */}
-        <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface sm:block">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                <th className="px-4 py-3">Month</th>
-                <th className="px-4 py-3 text-right">Expenses</th>
-                <th className="px-4 py-3 text-right">Taxable</th>
-                <th className="px-4 py-3 text-right">VAT</th>
-                <th className="px-4 py-3 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.months.map((month) => {
-                const hasExpenses = month.expenseCount > 0;
-                return (
-                  <tr
-                    key={month.nepaliMonth}
-                    className={`border-b border-border last:border-b-0 ${
-                      hasExpenses ? "" : "text-muted"
-                    }`}
-                  >
-                    <td className="px-4 py-3 font-medium">{month.nepaliMonth}</td>
-                    <td className="tabular-amount px-4 py-3 text-right">{month.expenseCount}</td>
-                    <td className="tabular-amount px-4 py-3 text-right">
-                      {hasExpenses ? formatAmount(month.totalTaxableAmount) : "--"}
-                    </td>
-                    <td className="tabular-amount px-4 py-3 text-right">
-                      {hasExpenses ? formatAmount(month.totalVatAmount) : "--"}
-                    </td>
-                    <td className="tabular-amount px-4 py-3 text-right font-medium">
-                      {hasExpenses ? formatAmount(month.totalAmount) : "--"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile cards */}
-        <div className="rounded-lg border border-border bg-surface sm:hidden">
-          {report.months.map((month) => {
+        <DataTable
+          rowClassName={(month) => (month.expenseCount > 0 ? "" : "text-muted")}
+          columns={[
+            {
+              header: "Month",
+              cell: (month) => <span className="font-medium">{month.nepaliMonth}</span>,
+            },
+            {
+              header: "Expenses",
+              align: "right",
+              cell: (month) => <span className="tabular-amount">{month.expenseCount}</span>,
+            },
+            {
+              header: "Taxable",
+              align: "right",
+              cell: (month) => (
+                <span className="tabular-amount">
+                  {month.expenseCount > 0 ? formatAmount(month.totalTaxableAmount) : "--"}
+                </span>
+              ),
+            },
+            {
+              header: "VAT",
+              align: "right",
+              cell: (month) => (
+                <span className="tabular-amount">
+                  {month.expenseCount > 0 ? formatAmount(month.totalVatAmount) : "--"}
+                </span>
+              ),
+            },
+            {
+              header: "Total",
+              align: "right",
+              cell: (month) => (
+                <span className="tabular-amount font-medium">
+                  {month.expenseCount > 0 ? formatAmount(month.totalAmount) : "--"}
+                </span>
+              ),
+            },
+          ]}
+          rows={report.months}
+          getKey={(month) => month.nepaliMonth}
+          mobileCard={(month) => {
             const hasExpenses = month.expenseCount > 0;
             return (
-              <div key={month.nepaliMonth} className={`border-b border-border p-4 last:border-b-0 ${hasExpenses ? "" : "text-muted"}`}>
+              <div className={hasExpenses ? "" : "text-muted"}>
                 <div className="flex items-start justify-between">
                   <span className="font-medium">{month.nepaliMonth}</span>
                   {hasExpenses ? (
                     <span className="tabular-amount font-medium">{formatAmount(month.totalAmount)}</span>
                   ) : (
-                    <span className="text-muted">--</span>
+                    <span>--</span>
                   )}
                 </div>
                 {hasExpenses && (
                   <div className="mt-1 flex gap-4 text-xs text-muted">
-                    <span>{month.expenseCount} expense{month.expenseCount === 1 ? "" : "s"}</span>
+                    <span>
+                      {month.expenseCount} expense{month.expenseCount === 1 ? "" : "s"}
+                    </span>
                     <span>Taxable {formatAmount(month.totalTaxableAmount)}</span>
                     <span>VAT {formatAmount(month.totalVatAmount)}</span>
                   </div>
                 )}
               </div>
             );
-          })}
-        </div>
+          }}
+        />
       </section>
     </div>
   );

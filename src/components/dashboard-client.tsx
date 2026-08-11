@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { formatAmount, nepaliGroupedNumber } from "@/lib/format";
 import { StatCard } from "@/components/ui/stat-card";
+import { DataTable } from "@/components/ui/data-table";
 
 interface RecentExpense {
   id: string;
@@ -101,58 +102,44 @@ export function DashboardClient({
             </Link>
           </div>
         ) : (
-          <>
-            {/* Desktop table */}
-            <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface sm:block">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                    <th className="px-4 py-3">Miti</th>
-                    <th className="px-4 py-3">Invoice</th>
-                    <th className="px-4 py-3">Party</th>
-                    <th className="px-4 py-3">Item</th>
-                    <th className="px-4 py-3 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recent.map((e) => (
-                    <tr key={e.id} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
-                      <td className="px-4 py-3">
-                        <Link href={`/expenses/${e.id}`} className="font-medium text-primary hover:underline">
-                          {e.miti}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3">{e.invoiceNumber ?? "—"}</td>
-                      <td className="px-4 py-3">{e.partyName}</td>
-                      <td className="px-4 py-3">{e.item}</td>
-                      <td className="tabular-amount px-4 py-3 text-right font-medium">
-                        {formatAmount(e.totalAmount)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile card list */}
-            <div className="rounded-lg border border-border bg-surface sm:hidden">
-              {recent.map((e) => (
-                <div key={e.id} className="border-b border-border p-4 last:border-b-0">
-                  <div className="flex items-start justify-between">
-                    <Link href={`/expenses/${e.id}`} className="font-medium text-primary hover:underline">
-                      {e.partyName}
-                    </Link>
-                    <span className="tabular-amount font-medium">{formatAmount(e.totalAmount)}</span>
-                  </div>
-                  <p className="truncate text-sm text-muted">{e.item}</p>
-                  <p className="mt-1 text-xs text-muted">
+          <DataTable
+            rowClassName={() => "hover:bg-surface-subtle"}
+            columns={[
+              {
+                header: "Miti",
+                cell: (e) => (
+                  <Link href={`/expenses/${e.id}`} className="font-medium text-primary hover:underline">
                     {e.miti}
-                    {e.invoiceNumber ? ` · Inv: ${e.invoiceNumber}` : ""}
-                  </p>
+                  </Link>
+                ),
+              },
+              { header: "Invoice", cell: (e) => e.invoiceNumber ?? "—" },
+              { header: "Party", cell: (e) => e.partyName },
+              { header: "Item", cell: (e) => e.item },
+              {
+                header: "Total",
+                align: "right",
+                cell: (e) => <span className="tabular-amount font-medium">{formatAmount(e.totalAmount)}</span>,
+              },
+            ]}
+            rows={recent}
+            getKey={(e) => e.id}
+            mobileCard={(e) => (
+              <>
+                <div className="flex items-start justify-between">
+                  <Link href={`/expenses/${e.id}`} className="font-medium text-primary hover:underline">
+                    {e.partyName}
+                  </Link>
+                  <span className="tabular-amount font-medium">{formatAmount(e.totalAmount)}</span>
                 </div>
-              ))}
-            </div>
-          </>
+                <p className="truncate text-sm text-muted">{e.item}</p>
+                <p className="mt-1 text-xs text-muted">
+                  {e.miti}
+                  {e.invoiceNumber ? ` · Inv: ${e.invoiceNumber}` : ""}
+                </p>
+              </>
+            )}
+          />
         )}
       </section>
     </div>
