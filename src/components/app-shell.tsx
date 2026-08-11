@@ -147,7 +147,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: "Main",
     items: [
       { href: "/", label: "Dashboard", icon: "dashboard" },
-      { href: "/expenses/new", label: "Quick Add", icon: "quickAdd" },
+      { href: "/expenses/new", label: "Add Expense", icon: "quickAdd" },
       { href: "/expenses", label: "Expenses", icon: "expenses" },
       { href: "/import", label: "Import", icon: "import" },
     ],
