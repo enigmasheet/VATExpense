@@ -8,9 +8,7 @@ import {
   categories,
   locations,
 } from "@/lib/db/schema";
-import { and, eq, sql, aliasedTable } from "drizzle-orm";
-
-const locationAlias = aliasedTable(locations, "location");
+import { and, eq, sql } from "drizzle-orm";
 
 function requireCompanyId(sessionCompanyId: string | undefined): string | null {
   return sessionCompanyId ?? null;

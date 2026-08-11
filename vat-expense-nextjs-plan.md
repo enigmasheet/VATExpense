@@ -250,25 +250,47 @@ authoritative over the calculated ones.
 
 ---
 
-## 8. API routes ✅ core CRUD, ⬜ import/export/reports
+## 8. API routes ✅ core CRUD, ✅ Server Actions, ⬜ import/export
 
 ```text
-✅ GET/POST   /api/companies
-✅ GET/POST   /api/fiscal-years?companyId=
-✅ GET/POST   /api/locations?companyId=
-✅ GET/POST   /api/categories?companyId=
-✅ GET/POST   /api/parties?companyId=
-✅ GET/POST   /api/expenses?companyId=&fiscalYearId=&page=&pageSize=
+✅ GET        /api/companies
+✅ GET        /api/fiscal-years?companyId=
+✅ GET        /api/locations?companyId=
+✅ GET        /api/categories?companyId=
+✅ GET        /api/parties?companyId=
+✅ GET        /api/expenses?companyId=&fiscalYearId=&page=&pageSize=
 ✅ GET/PATCH/DELETE  /api/expenses/{id}
+
+✅ Server Actions (lib/actions/expenses.ts):
+   createExpense    — single expense creation
+   batchSaveExpenses — batch save (up to 200 rows, single transaction)
+   deleteExpense    — soft delete
+   updateExpense    — update with optimistic concurrency
+
+✅ Server Actions (lib/actions/masters.ts):
+   createParty / updateParty / deleteParty
+   createCategory / updateCategory / deleteCategory
+   createLocation / updateLocation / deleteLocation
+   createFiscalYear / updateFiscalYear / deleteFiscalYear
+
+✅ Server Data (lib/server-data.ts):
+   getCompanyId, getCompany, getFiscalYears, getActiveFiscalYear
+   getParties, getCategories, getLocations
+   getDashboardSummary (SQL aggregation)
+   getExpenses (paginated), getExpenseById
+   getMonthlyReport, getFiscalYearReport
 
 ⬜ POST   /api/import/excel          (upload + parse)
 ⬜ GET    /api/import/{batchId}/preview
 ⬜ POST   /api/import/{batchId}/confirm
-⬜ GET    /api/reports/monthly
-⬜ GET    /api/reports/fiscal-year
 ⬜ GET    /api/export/monthly
 ⬜ GET    /api/export/fiscal-year
 ```
+
+**Server Actions replace Route Handlers for all mutations.** The API routes
+above are retained for read-only queries used by client components that
+still need client-side fetching (e.g., existing invoice keys for duplicate
+detection in the ledger grid).
 
 **Standard error envelope** (`lib/api-response.ts`, loosely RFC 7807):
 ```json
@@ -294,21 +316,40 @@ removes the row.
 ## 9. Frontend pages
 
 ```text
-⬜ /                 dashboard — company/fiscal-year summary, shortcuts
-⬜ /expenses          list, paginated, filterable
-⬜ /expenses/new       add-expense form
-⬜ /expenses/[id]      view/edit (uses rowVersion for concurrency)
-⬜ /parties            list + add
-⬜ /categories         list + add
-⬜ /locations          list + add
-⬜ /fiscal-years       list + create
-⬜ /reports/monthly
-⬜ /reports/fiscal-year
+✅ /                 dashboard — Server Component, SQL aggregation for totals
+✅ /expenses          list — Server Component + client-side filtering/pagination
+✅ /expenses/new       batch entry — Server Component loads parties/categories,
+                        client grid with batch save via Server Action
+✅ /expenses/[id]      edit — Server Component + ExpenseForm client component
+✅ /parties            list + add — MasterPage client component
+✅ /categories         list + add — MasterPage client component
+✅ /locations          list + add — MasterPage client component
+✅ /fiscal-years       list + create — MasterPage client component
+✅ /reports/monthly    — Server Component + client export button
+✅ /reports/fiscal-year — Server Component + client export button
 ⬜ /import
 ```
 
-Folders `app/expenses/`, `app/expenses/new/`, `app/parties/`,
-`components/expenses/` exist but are currently empty — next build step.
+### Architecture notes
+
+```text
+Server Components (fetch data on server):
+  /                     → getDashboardSummary (SQL aggregation)
+  /expenses             → getExpenses (paginated query)
+  /expenses/new         → getParties + getCategories (preloaded)
+  /expenses/[id]        → getExpenseById
+  /reports/monthly      → getMonthlyReport (SQL aggregation)
+  /reports/fiscal-year  → getFiscalYearReport (SQL aggregation)
+
+Client Components (interactive only):
+  DashboardClient       — shortcuts, recent table
+  ExpensesListClient    — filters, pagination, delete
+  BatchEntry → LedgerGrid — multi-row entry, batch save
+  ExpenseForm           — single expense create/edit
+  MasterPage            — CRUD for parties/categories/locations/fiscal-years
+  MonthlyReportExport   — opens export URL
+  FiscalYearReportExport — opens export URL
+```
 
 ### 9.1 Design direction ✅ (tokens implemented in `app/globals.css`)
 
@@ -482,18 +523,31 @@ Phase 3  Expense API                                     ✅ done
   Create/list/update/soft-delete, duplicate detection,
   amount tolerance, pagination, concurrency
 
-Phase 3b Frontend pages                                  ⬜ next up
-  Dashboard, expenses list/new/edit, parties/categories/
-  locations pages, using the primitives already built
+Phase 3b Frontend pages                                  ✅ done
+  Dashboard (Server Component + SQL aggregation),
+  expenses list (Server + Client hybrid),
+  batch entry (Server Action batch save),
+  expenses edit, parties/categories/locations/fiscal-years pages
 
-Phase 4  Reports                                          ⬜ not started
+Phase 3c Server Actions & Server Components              ✅ done
+  batchSaveExpenses — single transaction for up to 200 rows
+  createExpense, deleteExpense, updateExpense
+  All master CRUD actions (party/category/location/fiscalYear)
+  Dashboard uses SQL aggregation (no row fetching)
+  Reports use SQL aggregation (monthly + fiscal year)
+  Party search optimized: load once, search locally in browser
+
+Phase 4  Reports                                          ✅ done
   Monthly + fiscal-year aggregation, category breakdown
+  Server Components with SQL aggregation
 
 Phase 5  Excel import/export                              ⬜ not started
   Upload, parse, preview, transactional confirm, export
 
-Phase 6  Auth & RBAC                                       ⬜ not started
-  Auth.js, Admin/DataEntry roles, company-scoped queries
+Phase 6  Auth & RBAC                                       ✅ partially done
+  Auth.js configured, credentials provider working
+  Admin/DataEntry roles in schema
+  Company-scoped queries enforced in all actions
 
 Phase 7  Data migration                                     ⬜ not started
   Run real historical Excel files through the Phase-5 pipeline
@@ -514,36 +568,74 @@ vat-expense-app/
 │   │   ├── locations/route.ts
 │   │   ├── categories/route.ts
 │   │   ├── parties/route.ts
+│   │   ├── parties/by-vat/route.ts
 │   │   └── expenses/
 │   │       ├── route.ts
 │   │       └── [id]/route.ts
-│   ├── expenses/            (scaffolded, empty — Phase 3b)
-│   ├── parties/             (scaffolded, empty — Phase 3b)
-│   ├── layout.tsx           ✅ nav shell, fonts, design tokens wired in
-│   ├── page.tsx             (default scaffold — Phase 3b)
-│   └── globals.css          ✅ design tokens
+│   │   └── import/ ...
+│   │   └── export/ ...
+│   │   └── reports/ ...
+│   ├── expenses/
+│   │   ├── page.tsx              ✅ Server Component + ExpensesListClient
+│   │   ├── new/page.tsx          ✅ Server Component (loads parties/categories)
+│   │   └── [id]/page.tsx         ✅ Server Component + ExpenseDetailClient
+│   ├── reports/
+│   │   ├── monthly/page.tsx      ✅ Server Component
+│   │   └── fiscal-year/page.tsx  ✅ Server Component
+│   ├── parties/page.tsx          ✅ MasterPage client component
+│   ├── categories/page.tsx       ✅ MasterPage client component
+│   ├── locations/page.tsx        ✅ MasterPage client component
+│   ├── fiscal-years/page.tsx     ✅ MasterPage client component
+│   ├── import/page.tsx           ✅ Client component
+│   ├── login/page.tsx            ✅ Client component
+│   ├── layout.tsx                ✅ nav shell, fonts, design tokens
+│   ├── page.tsx                  ✅ Server Component + DashboardClient
+│   └── globals.css               ✅ design tokens
 ├── components/
 │   ├── ui/
 │   │   ├── button.tsx
 │   │   ├── field.tsx
-│   │   └── badge.tsx
-│   └── expenses/            (scaffolded, empty — Phase 3b)
+│   │   ├── badge.tsx
+│   │   └── confirm-dialog.tsx
+│   ├── expenses/
+│   │   ├── batch-entry.tsx       ✅ Client (wraps LedgerGrid)
+│   │   ├── ledger-grid.tsx       ✅ Client (batch save via Server Action)
+│   │   └── expense-form.tsx      ✅ Client (single expense form)
+│   ├── dashboard-client.tsx      ✅ Client (dashboard interactive parts)
+│   ├── expenses-list-client.tsx  ✅ Client (filters, pagination, delete)
+│   ├── expense-detail-client.tsx ✅ Client (wraps ExpenseForm)
+│   ├── monthly-report-export.tsx ✅ Client (export button)
+│   ├── fiscal-year-report-export.tsx ✅ Client (export button)
+│   ├── master-page.tsx           ✅ Client (reusable CRUD component)
+│   └── app-shell.tsx             ✅ Client (layout shell)
 ├── lib/
 │   ├── db/
-│   │   ├── schema.ts        ✅
-│   │   └── index.ts         ✅ Neon client
+│   │   ├── schema.ts             ✅
+│   │   └── index.ts              ✅ Neon client
+│   ├── actions/
+│   │   ├── expenses.ts           ✅ Server Actions (batch save, CRUD)
+│   │   └── masters.ts            ✅ Server Actions (party/category/location/fy)
+│   ├── server-data.ts            ✅ Server-side data fetching functions
 │   ├── validation/
-│   │   ├── expense.ts       ✅
-│   │   └── masters.ts       ✅
-│   ├── nepali-date.ts       ✅
-│   ├── normalize.ts         ✅
-│   ├── format.ts            ✅
-│   └── api-response.ts      ✅
+│   │   ├── expense.ts            ✅
+│   │   ├── masters.ts            ✅
+│   │   └── utils.ts              ✅
+│   ├── expenses/
+│   │   └── duplicates.ts         ✅
+│   ├── nepali-date.ts            ✅
+│   ├── normalize.ts              ✅
+│   ├── format.ts                 ✅
+│   ├── money.ts                  ✅
+│   ├── constants.ts              ✅
+│   ├── api-response.ts           ✅
+│   ├── api-client.ts             ✅ (used by client components)
+│   ├── use-app.tsx               ✅ (client context for FY/company)
+│   └── auth-provider.tsx         ✅
 ├── scripts/
-│   └── seed.ts               ✅
-├── drizzle.config.ts          ✅
-├── .env.example                ✅ (placeholder only, never real creds)
-└── package.json                 ✅ db:generate/push/studio/seed scripts
+│   └── seed.ts                    ✅
+├── drizzle.config.ts              ✅
+├── .env.example                   ✅ (placeholder only, never real creds)
+└── package.json                   ✅ db:generate/push/studio/seed scripts
 ```
 
 ---
@@ -566,4 +658,14 @@ vat-expense-app/
     no persistent connection pool to manage.
 9.  Secrets live only in environment variables; nothing generated by
     this project ever contains a real credential.
+10. Server Components by default; Client Components only for interactive UI.
+11. Server Actions for all mutations (create/update/delete).
+12. Batch invoice save: one Server Action call for up to 200 rows,
+    single database transaction, not row-by-row API calls.
+13. Party/Category/Location master data loaded once per page,
+    searched locally in the browser — no per-keystroke DB queries.
+14. Dashboard and reports use SQL aggregation (SUM/COUNT/GROUP BY),
+    not fetching all rows into JavaScript.
+15. Database constraints enforce uniqueness; application code provides
+    user-friendly messages on top of the DB errors.
 ```

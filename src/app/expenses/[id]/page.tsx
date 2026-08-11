@@ -34,8 +34,6 @@ export default async function ExpenseDetailPage({ params }: Props) {
         remarks: expense.remarks,
         rowVersion: expense.rowVersion,
       }}
-      partyName={expense.partyName ?? ""}
-      categoryName={expense.categoryName ?? ""}
     />
   );
 }

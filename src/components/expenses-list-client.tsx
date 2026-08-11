@@ -164,9 +164,7 @@ export function ExpensesListClient({
       </form>
 
       <div className="rounded-lg border border-border bg-surface">
-        {loading ? (
-          <p className="p-6 text-sm text-muted">Loading...</p>
-        ) : rows.length === 0 ? (
+        {rows.length === 0 ? (
           <p className="p-6 text-sm text-muted">No expenses match. Record your first one.</p>
         ) : (
           <>
@@ -260,22 +258,22 @@ export function ExpensesListClient({
 
       <div className="flex items-center justify-between text-sm text-muted">
         <span>
-          Page {page} of {totalPages}
+          Page {initialPage} of {totalPages}
         </span>
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
-            disabled={page <= 1}
-            onClick={() => goToPage(page - 1)}
+            disabled={initialPage <= 1}
+            onClick={() => goToPage(initialPage - 1)}
           >
             Previous
           </Button>
           <Button
             variant="secondary"
             size="sm"
-            disabled={page >= totalPages}
-            onClick={() => goToPage(page + 1)}
+            disabled={initialPage >= totalPages}
+            onClick={() => goToPage(initialPage + 1)}
           >
             Next
           </Button>
