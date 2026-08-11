@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api, ApiError, apiUrl } from "@/lib/api-client";
 import { useApp } from "@/lib/use-app";
 import { NEPALI_MONTHS } from "@/lib/nepali-date";

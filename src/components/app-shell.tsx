@@ -153,8 +153,6 @@ function Sidebar() {
 function MobileHeader() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const { fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
-  const { data: session } = useSession();
 
     // Close menu on route change. Run asynchronously to avoid synchronous setState in effect.
     useEffect(() => {
