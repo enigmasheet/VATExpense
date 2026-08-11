@@ -165,6 +165,7 @@ export const expenses = pgTable(
     index("expenses_miti_idx").on(t.miti),
     index("expenses_fiscal_year_idx").on(t.companyId, t.fiscalYearId),
     index("expenses_party_idx").on(t.companyId, t.partyId),
+    index("expenses_fiscal_month_cat_idx").on(t.companyId, t.fiscalYearId, t.nepaliMonth, t.categoryId),
   ],
 );
 

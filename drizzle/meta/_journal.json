@@ -15,6 +15,13 @@
       "when": 1786429750966,
       "tag": "0001_hot_beyonder",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786456525124,
+      "tag": "0002_sweet_lionheart",
+      "breakpoints": true
     }
   ]
 }
