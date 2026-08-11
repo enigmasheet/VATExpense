@@ -9,6 +9,13 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Sends a JSON API request and parses the response body.
+ *
+ * @param url - The request URL
+ * @returns The parsed response body.
+ * @throws `ApiError` when the response status indicates failure.
+ */
 export async function api<T>(
   url: string,
   options?: RequestInit,
@@ -29,6 +36,13 @@ export async function api<T>(
   return body as T;
 }
 
+/**
+ * Builds an absolute URL from a path and optional query parameters.
+ *
+ * @param path - The URL path to resolve against the current window origin
+ * @param params - Query parameters to include when their values are non-empty
+ * @returns The resulting absolute URL
+ */
 export function apiUrl(path: string, params?: Record<string, string | number | null | undefined>): string {
   const url = new URL(path, window.location.origin);
   if (params) {

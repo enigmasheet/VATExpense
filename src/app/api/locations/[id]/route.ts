@@ -3,6 +3,13 @@ import { locations } from "@/lib/db/schema";
 import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
 import { eq } from "drizzle-orm";
 
+/**
+ * Updates a location identified by its route ID.
+ *
+ * @param request - The request containing a JSON body with valid `name` and/or `isActive` fields
+ * @param params - The route parameters containing the location ID
+ * @returns A success response with the updated location, or an error response for invalid input, a missing location, or a database failure
+ */
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -44,6 +51,12 @@ export async function PATCH(
   }
 }
 
+/**
+ * Deletes a location by its identifier.
+ *
+ * @param params - Route parameters containing the location identifier
+ * @returns A success response containing the deleted location ID, a not-found response, or an internal-error response
+ */
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },

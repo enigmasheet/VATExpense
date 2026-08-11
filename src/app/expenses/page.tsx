@@ -31,6 +31,9 @@ interface ListResponse {
   total: number;
 }
 
+/**
+ * Displays paginated expenses for the active company and fiscal year, with search, filtering, navigation, and deletion controls.
+ */
 export default function ExpensesPage() {
   const { companyId, fiscalYearId, activeFiscalYear } = useApp();
   const [rows, setRows] = useState<ExpenseRow[]>([]);

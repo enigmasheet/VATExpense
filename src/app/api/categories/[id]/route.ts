@@ -3,6 +3,12 @@ import { categories } from "@/lib/db/schema";
 import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
 import { eq } from "drizzle-orm";
 
+/**
+ * Updates a category with the provided valid fields.
+ *
+ * @param params - Route parameters containing the category ID
+ * @returns A response containing the updated category or an error status
+ */
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -44,6 +50,12 @@ export async function PATCH(
   }
 }
 
+/**
+ * Deletes the category identified by the route parameter.
+ *
+ * @param params - Route parameters containing the category ID
+ * @returns A success response containing the deleted category ID, or an error response if the category is missing or deletion fails
+ */
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },

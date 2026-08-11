@@ -41,6 +41,11 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 const FY_KEY = "vat-ledger:fiscalYearId";
 
+/**
+ * Provides authenticated company and fiscal-year state to descendant components.
+ *
+ * @returns The application context provider containing its children.
+ */
 export function AppProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -111,6 +116,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
+/**
+ * Provides access to the application context.
+ *
+ * @returns The current application context value
+ */
 export function useApp(): AppContextValue {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error("useApp must be used within AppProvider");

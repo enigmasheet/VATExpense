@@ -28,6 +28,9 @@ interface MonthlyReport {
   };
 }
 
+/**
+ * Displays monthly expense reports for the selected company, fiscal year, and Nepali month.
+ */
 export default function MonthlyReportPage() {
   const { companyId, fiscalYearId, loading } = useApp();
   const [report, setReport] = useState<MonthlyReport | null>(null);

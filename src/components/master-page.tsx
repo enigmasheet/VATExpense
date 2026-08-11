@@ -36,6 +36,17 @@ interface Option {
   label: string;
 }
 
+/**
+ * Renders a company-scoped master-record management page.
+ *
+ * @param title - The page title
+ * @param description - Optional text displayed below the title
+ * @param listUrl - API endpoint used to list and modify records
+ * @param fields - Definitions for fields in the add-record form
+ * @param columns - Custom columns rendered for each record
+ * @param buildPayload - Creates the API payload from the company ID and form values
+ * @param emptyHint - Message displayed when no records exist
+ */
 export function MasterPage<T extends { id: string; name: string; isActive: boolean }>({
   title,
   description,

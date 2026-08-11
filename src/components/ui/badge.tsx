@@ -9,6 +9,12 @@ const tones: Record<Tone, string> = {
   success: "bg-success-bg text-success",
 };
 
+/**
+ * Renders content in a styled label with the selected tone.
+ *
+ * @param tone - The visual tone of the badge.
+ * @param children - The content displayed inside the badge.
+ */
 export function Badge({
   tone = "default",
   children,

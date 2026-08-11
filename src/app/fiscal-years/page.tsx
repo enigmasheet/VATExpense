@@ -31,6 +31,9 @@ const columns: ColumnSpec<FiscalYearRow>[] = [
   },
 ];
 
+/**
+ * Renders the fiscal years management page.
+ */
 export default function FiscalYearsPage() {
   return (
     <MasterPage<FiscalYearRow>

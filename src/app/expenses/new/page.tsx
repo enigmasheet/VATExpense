@@ -2,6 +2,9 @@
 
 import { BatchEntry } from "@/components/expenses/batch-entry";
 
+/**
+ * Renders the page for creating a new expense.
+ */
 export default function NewExpensePage() {
   return (
     <div className="flex flex-col gap-6">

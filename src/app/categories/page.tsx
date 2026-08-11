@@ -2,6 +2,9 @@
 
 import { MasterPage } from "@/components/master-page";
 
+/**
+ * Renders the expense categories management page.
+ */
 export default function CategoriesPage() {
   return (
     <MasterPage

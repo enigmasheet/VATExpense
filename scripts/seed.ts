@@ -5,6 +5,11 @@ import { normalizeName } from "../src/lib/normalize";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
+/**
+ * Retrieves the AB Carriers company or creates it with a default VAT rate of 13%.
+ *
+ * @returns The existing or newly created AB Carriers company
+ */
 async function getOrCreateCompany() {
   const existing = await db.select().from(companies).where(eq(companies.name, "AB Carriers")).limit(1);
   if (existing.length > 0) return existing[0];
@@ -19,6 +24,12 @@ async function getOrCreateCompany() {
   return company;
 }
 
+/**
+ * Retrieves the admin user or creates it with the default credentials for the specified company.
+ *
+ * @param companyId - The company identifier assigned to a newly created admin user
+ * @returns The existing or newly created admin user
+ */
 async function getOrCreateUser(companyId: string) {
   const existing = await db.select().from(users).where(eq(users.email, "admin@gmail.com")).limit(1);
   if (existing.length > 0) return existing[0];
@@ -38,6 +49,13 @@ async function getOrCreateUser(companyId: string) {
   return user;
 }
 
+/**
+ * Retrieves a fiscal year for a company or creates it when no matching record exists.
+ *
+ * @param companyId - The company associated with the fiscal year
+ * @param data - The fiscal year's name, date range, and active status
+ * @returns The existing or newly created fiscal year
+ */
 async function getOrCreateFiscalYear(companyId: string, data: { name: string; startYear: number; endYear: number; isActive: boolean }) {
   const existing = await db
     .select()
@@ -50,6 +68,13 @@ async function getOrCreateFiscalYear(companyId: string, data: { name: string; st
   return fy;
 }
 
+/**
+ * Retrieves a company location by normalized name or creates it when no matching location exists.
+ *
+ * @param companyId - The company associated with the location
+ * @param name - The location's display name
+ * @returns The existing or newly created location
+ */
 async function getOrCreateLocation(companyId: string, name: string) {
   const normalizedName = normalizeName(name);
   const existing = await db
@@ -62,6 +87,12 @@ async function getOrCreateLocation(companyId: string, name: string) {
   return created;
 }
 
+/**
+ * Retrieves a company-specific category by name or creates it when none exists.
+ *
+ * @param name - The category name to normalize and store
+ * @returns The existing or newly created category
+ */
 async function getOrCreateCategory(companyId: string, name: string) {
   const normalizedName = normalizeName(name);
   const existing = await db
@@ -74,6 +105,13 @@ async function getOrCreateCategory(companyId: string, name: string) {
   return created;
 }
 
+/**
+ * Retrieves a company party by normalized name or creates it when no matching party exists.
+ *
+ * @param companyId - The company that owns the party
+ * @param data - The party's name, VAT number, and optional location
+ * @returns The existing or newly created party
+ */
 async function getOrCreateParty(companyId: string, data: { name: string; vatNumber: string | null; locationId: string | null }) {
   const normalizedName = normalizeName(data.name);
   const existing = await db
@@ -137,6 +175,11 @@ const EXPENSE_SEEDS = [
   { miti: "22/10/2082", invoice: "2876", party: "chitra oil stores", location: "lalgadh", vatNo: "607864492", item: "diesel", qty: "10.99", rate: "120.79646", taxable: "1327.55", vat: "172.58", total: "1500" },
 ];
 
+/**
+ * Initializes the company, administrative user, fiscal year, related entities, and expense records from the seed data.
+ *
+ * Invalid dates and existing expenses are skipped.
+ */
 async function main() {
   const company = await getOrCreateCompany();
   console.log(`Company: ${company.name} (${company.id})`);

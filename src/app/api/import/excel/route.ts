@@ -25,6 +25,15 @@ interface ParsedRow {
   remarks: string | null;
 }
 
+/**
+ * Maps a spreadsheet row to the normalized import format.
+ *
+ * Empty rows produce `null`. Recognized fields are matched by case-insensitive
+ * header text, with defaults applied for missing monetary values and VAT rate.
+ *
+ * @param row - Spreadsheet row keyed by its column headers
+ * @returns The normalized row, or `null` when the row contains no values
+ */
 function mapExcelRow(row: Record<string, unknown>): ParsedRow | null {
   const values = Object.values(row).map((v) => (v === null || v === undefined ? "" : String(v).trim()));
   if (values.every((v) => v === "")) return null;
@@ -51,6 +60,11 @@ function mapExcelRow(row: Record<string, unknown>): ParsedRow | null {
   };
 }
 
+/**
+ * Imports spreadsheet data from a multipart form request and creates a pending import batch.
+ *
+ * @returns A response containing the created batch metadata, or an error response for invalid form data, empty workbook content, or processing failures.
+ */
 export async function POST(request: Request) {
   let formData: FormData;
   try {

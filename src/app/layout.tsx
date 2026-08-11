@@ -24,6 +24,12 @@ export const metadata: Metadata = {
   description: "Purchase invoice ledger with Nepali fiscal-year reporting",
 };
 
+/**
+ * Defines the root layout for the VAT Expense Ledger application.
+ *
+ * @param children - The page content rendered within the application shell
+ * @returns The application’s HTML document structure
+ */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html

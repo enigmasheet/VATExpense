@@ -23,6 +23,11 @@ export const metadata: Metadata = {
   description: "Sign in to VAT Expense Ledger",
 };
 
+/**
+ * Renders the login page layout with configured fonts and full-height styling.
+ *
+ * @param children - The content rendered inside the layout
+ */
 export default function LoginLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
