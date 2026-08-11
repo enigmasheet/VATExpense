@@ -70,11 +70,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!companyId) {
-      setFiscalYears([]);
-      setFiscalYearIdState(null);
-      return;
-    }
+    if (!companyId) return;
     let cancelled = false;
     api<{ data: FiscalYear[] }>(`/api/fiscal-years?companyId=${companyId}`)
       .then(({ data }) => {

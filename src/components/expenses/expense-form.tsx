@@ -99,7 +99,25 @@ export function ExpenseForm({
 }) {
   const router = useRouter();
   const { companyId, fiscalYearId, fiscalYears } = useApp();
-  const [values, setValues] = useState<FormValues>(emptyForm);
+  const [values, setValues] = useState<FormValues>(() =>
+    mode === "edit" && initial
+      ? {
+          miti: initial.miti,
+          invoiceNumber: initial.invoiceNumber ?? "",
+          partyId: initial.partyId,
+          categoryId: initial.categoryId,
+          locationId: initial.locationId ?? "",
+          item: initial.item,
+          quantity: initial.quantity ?? "",
+          rate: initial.rate ?? "",
+          taxableAmount: initial.taxableAmount,
+          vatAmount: initial.vatAmount,
+          totalAmount: initial.totalAmount,
+          vatRate: initial.vatRate,
+          remarks: initial.remarks ?? "",
+        }
+      : emptyForm,
+  );
   const [messages, setMessages] = useState<Message[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -127,26 +145,6 @@ export function ExpenseForm({
       }
     });
   }, [companyId]);
-
-  useEffect(() => {
-    if (mode === "edit" && initial) {
-      setValues({
-        miti: initial.miti,
-        invoiceNumber: initial.invoiceNumber ?? "",
-        partyId: initial.partyId,
-        categoryId: initial.categoryId,
-        locationId: initial.locationId ?? "",
-        item: initial.item,
-        quantity: initial.quantity ?? "",
-        rate: initial.rate ?? "",
-        taxableAmount: initial.taxableAmount,
-        vatAmount: initial.vatAmount,
-        totalAmount: initial.totalAmount,
-        vatRate: initial.vatRate,
-        remarks: initial.remarks ?? "",
-      });
-    }
-  }, [mode, initial]);
 
   const set = useCallback(
     (field: keyof FormValues) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>

@@ -16,7 +16,7 @@ export interface FieldSpec {
   placeholder?: string;
 }
 
-interface ColumnSpec<T> {
+export interface ColumnSpec<T> {
   header: string;
   render: (item: T) => ReactNode;
 }

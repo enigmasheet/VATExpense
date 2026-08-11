@@ -1,69 +1,153 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { api, ApiError, apiUrl } from "@/lib/api-client";
+import { useApp } from "@/lib/use-app";
+import { formatAmount, nepaliGroupedNumber } from "@/lib/format";
+
+interface ExpenseSummary {
+  taxableAmount: string;
+  vatAmount: string;
+  totalAmount: string;
+  miti: string;
+  item: string;
+  invoiceNumber: string | null;
+  partyName: string;
+}
+
+interface Shortcut {
+  href: string;
+  label: string;
+  hint: string;
+}
+
+const SHORTCUTS: Shortcut[] = [
+  { href: "/expenses/new", label: "Record an expense", hint: "Enter a purchase invoice" },
+  { href: "/expenses", label: "Browse expenses", hint: "Search, filter and paginate" },
+  { href: "/parties", label: "Manage parties", hint: "Suppliers and their VAT numbers" },
+  { href: "/fiscal-years", label: "Fiscal years", hint: "2082/83 and beyond" },
+];
+
+export default function DashboardPage() {
+  const { companyId, fiscalYearId, activeFiscalYear, companies, loading } = useApp();
+  const [summary, setSummary] = useState<ExpenseSummary[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const company = companies.find((c) => c.id === companyId);
+
+  useEffect(() => {
+    if (!companyId || !fiscalYearId) return;
+    api<{ data: ExpenseSummary[] }>(
+      apiUrl("/api/expenses", { companyId, fiscalYearId, pageSize: 200 }),
+    )
+      .then(({ data }) => setSummary(data))
+      .catch((e: ApiError) => setError(e.detail));
+  }, [companyId, fiscalYearId]);
+
+  const totals = summary.reduce(
+    (acc, e) => ({
+      taxable: acc.taxable + Number(e.taxableAmount),
+      vat: acc.vat + Number(e.vatAmount),
+      total: acc.total + Number(e.totalAmount),
+    }),
+    { taxable: 0, vat: 0, total: 0 },
+  );
+
+  const recent = summary.slice(0, 5);
+
+  if (loading) return <p className="text-sm text-muted">Loading…</p>;
+  if (!companyId) {
+    return (
+      <p className="text-sm text-muted">
+        No company configured yet — create one via the API or the parties page flow.
+      </p>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-25"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/6 px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/8">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="flex flex-col gap-8">
+      <div className="flex items-baseline justify-between">
+        <h1 className="font-display text-3xl font-semibold text-foreground">
+          {company?.name ?? "VAT Expense Ledger"}
+        </h1>
+        <span className="text-sm text-muted">
+          {activeFiscalYear ? `FY ${activeFiscalYear.name}` : "No fiscal year"}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-lg border border-border bg-surface p-5">
+          <p className="text-xs uppercase tracking-wide text-muted">Taxable</p>
+          <p className="tabular-amount mt-2 text-2xl font-semibold">
+            {formatAmount(totals.taxable)}
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-39.5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-3.5 w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/8 px-5 transition-colors hover:border-transparent hover:bg-black/4 dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-39.5"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="rounded-lg border border-border bg-surface p-5">
+          <p className="text-xs uppercase tracking-wide text-muted">VAT input credit</p>
+          <p className="tabular-amount mt-2 text-2xl font-semibold">{formatAmount(totals.vat)}</p>
         </div>
-      </main>
+        <div className="rounded-lg border border-border bg-surface p-5">
+          <p className="text-xs uppercase tracking-wide text-muted">Total purchases</p>
+          <p className="tabular-amount mt-2 text-2xl font-semibold text-primary">
+            {formatAmount(totals.total)}
+          </p>
+        </div>
+      </div>
+
+      <p className="text-sm text-muted">
+        {summary.length} expense{summary.length === 1 ? "" : "s"} this fiscal year (
+        {nepaliGroupedNumber(totals.total)}).
+      </p>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {SHORTCUTS.map((s) => (
+          <Link
+            key={s.href}
+            href={s.href}
+            className="group rounded-lg border border-border bg-surface p-4 transition-colors hover:border-primary/40 hover:bg-[#f8f7f2]"
+          >
+            <p className="font-medium text-primary group-hover:underline">{s.label}</p>
+            <p className="mt-1 text-sm text-muted">{s.hint}</p>
+          </Link>
+        ))}
+      </div>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-display text-lg font-semibold text-foreground">Recent expenses</h2>
+        {error ? (
+          <p className="text-sm text-danger">{error}</p>
+        ) : recent.length === 0 ? (
+          <p className="text-sm text-muted">No expenses recorded yet.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
+                  <th className="px-4 py-3">Miti</th>
+                  <th className="px-4 py-3">Invoice</th>
+                  <th className="px-4 py-3">Party</th>
+                  <th className="px-4 py-3">Item</th>
+                  <th className="px-4 py-3 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.map((e, i) => (
+                  <tr key={i} className="border-b border-border last:border-b-0">
+                    <td className="px-4 py-3">{e.miti}</td>
+                    <td className="px-4 py-3">{e.invoiceNumber ?? "—"}</td>
+                    <td className="px-4 py-3">{e.partyName}</td>
+                    <td className="px-4 py-3">{e.item}</td>
+                    <td className="tabular-amount px-4 py-3 text-right font-medium">
+                      {formatAmount(e.totalAmount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
