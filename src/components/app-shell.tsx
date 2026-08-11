@@ -21,7 +21,8 @@ type IconName =
   | "chevronLeft"
   | "chevronRight"
   | "signOut"
-  | "calendarDays";
+  | "calendarDays"
+  | "management";
 
 const ICON_PATHS: Record<IconName, ReactNode> = {
   dashboard: (
@@ -114,6 +115,13 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
       d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
     />
   ),
+  management: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
+    />
+  ),
 };
 
 function NavIcon({ name, className = "h-5 w-5" }: { name: IconName; className?: string }) {
@@ -169,6 +177,19 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
 ];
+
+const ADMIN_NAV_GROUPS: NavGroup[] = [
+  {
+    title: "Management",
+    items: [
+      { href: "/admin", label: "Admin Dashboard", icon: "management" },
+    ],
+  },
+];
+
+function getNavGroups(role?: string): NavGroup[] {
+  return role === "SuperAdmin" ? ADMIN_NAV_GROUPS : NAV_GROUPS;
+}
 
 function SidebarLink({ href, label, icon, active, collapsed = false }: NavItem & { active: boolean; collapsed?: boolean }) {
   return (
@@ -249,7 +270,7 @@ function Sidebar({
 
       {/* Navigation */}
       <nav className={`flex-1 overflow-y-auto py-4 ${collapsed ? "flex flex-col items-center gap-4 px-2" : "px-3"}`}>
-        {NAV_GROUPS.map((group, gi) => (
+        {getNavGroups(session?.user?.role).map((group, gi) => (
           <div key={group.title} className={collapsed ? "" : "mb-6"}>
             {!collapsed && gi > 0 && (
               <div className="mb-4 border-t border-border/50" />
@@ -466,7 +487,7 @@ function MobileNavPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          {NAV_GROUPS.map((group) => (
+          {getNavGroups(session?.user?.role).map((group) => (
             <div key={group.title} className="mb-6">
               <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted">
                 {group.title}

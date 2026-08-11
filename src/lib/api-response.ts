@@ -51,3 +51,11 @@ export function conflict(
 export function internalError(detail = "An unexpected error occurred"): NextResponse<ApiErrorBody> {
   return apiError({ title: "Internal Server Error", detail, status: 500 });
 }
+
+export function unauthorized(detail = "Authentication required"): NextResponse<ApiErrorBody> {
+  return apiError({ title: "Unauthorized", detail, status: 401 });
+}
+
+export function forbidden(detail = "Access denied"): NextResponse<ApiErrorBody> {
+  return apiError({ title: "Forbidden", detail, status: 403 });
+}

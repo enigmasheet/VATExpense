@@ -1,14 +1,17 @@
 import { redirect } from "next/navigation";
-import { getCompanyId, getCompany, getActiveFiscalYear, getDashboardSummary } from "@/lib/server-data";
+import { getCompanyId, getSessionUser, getCompany, getActiveFiscalYear, getDashboardSummary } from "@/lib/server-data";
 import { DashboardClient } from "@/components/dashboard-client";
 
 /**
  * Renders the company dashboard for the active fiscal year.
  *
- * Redirects to the login page when no company is available and prompts the user
- * to configure a fiscal year when none is active.
+ * Redirects superadmins to the admin area. Redirects unauthenticated users to login.
+ * Prompts to configure a fiscal year when none is active.
  */
 export default async function DashboardPage() {
+  const sessionUser = await getSessionUser();
+  if (sessionUser?.role === "SuperAdmin") redirect("/admin");
+
   const companyId = await getCompanyId();
   if (!companyId) redirect("/login");
 

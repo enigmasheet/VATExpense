@@ -31,6 +31,36 @@ export async function getCompanyId(): Promise<string | null> {
 }
 
 /**
+ * Returns the current session user's role and optional company ID.
+ *
+ * @returns The session user's role and companyId, or null if unauthenticated.
+ */
+export async function getSessionUser(): Promise<{ role: string; companyId?: string } | null> {
+  const session = await auth();
+  if (!session?.user) return null;
+  return {
+    role: session.user.role,
+    companyId: (session.user as { companyId?: string }).companyId,
+  };
+}
+
+/**
+ * Retrieves all companies ordered by name (admin listing).
+ */
+export async function getAllCompanies() {
+  return db
+    .select({
+      id: companies.id,
+      name: companies.name,
+      vatNumber: companies.vatNumber,
+      defaultVatRate: companies.defaultVatRate,
+      createdAt: companies.createdAt,
+    })
+    .from(companies)
+    .orderBy(companies.name);
+}
+
+/**
  * Retrieves a company by its ID.
  *
  * @param companyId - The company's unique identifier
