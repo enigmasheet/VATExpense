@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Spectral } from "next/font/google";
-import "./globals.css";
-import { AppShell } from "@/components/app-shell";
+import "../globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,19 +19,17 @@ const spectral = Spectral({
 });
 
 export const metadata: Metadata = {
-  title: "VAT Expense Ledger",
-  description: "Purchase invoice ledger with Nepali fiscal-year reporting",
+  title: "VAT Expense Ledger - Login",
+  description: "Sign in to VAT Expense Ledger",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function LoginLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${spectral.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <AppShell>{children}</AppShell>
-      </body>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

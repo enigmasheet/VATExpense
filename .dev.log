@@ -1,0 +1,37 @@
+
+> vatexpense-temp@0.1.0 dev
+> next dev
+
+⚠ Port 3000 is in use by process 23268, using available port 3001 instead.
+▲ Next.js 16.3.0 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://192.168.1.34:3001
+- Environments: .env.local, .env
+✓ Ready in 557ms
+✓ Running next.config.ts took 33ms
+
+ GET /api/auth/providers 200 in 1401ms (next.js: 1050ms, proxy.ts: 287ms, application-code: 65ms)
+[31m[auth][error][0m MissingCSRF: CSRF token was missing during an action callback. Read more at https://errors.authjs.dev#missingcsrf
+    at validateCSRF (D:\PersonalProjects\VATExpense\.next\dev\server\chunks\node_modules_@auth_core_0gltlle._.js:1892:11)
+    at AuthInternal (D:\PersonalProjects\VATExpense\.next\dev\server\chunks\node_modules_@auth_core_0gltlle._.js:2510:222)
+    at async Auth (D:\PersonalProjects\VATExpense\.next\dev\server\chunks\node_modules_@auth_core_0gltlle._.js:350:34)
+    at async AppRouteRouteModule.do (D:\PersonalProjects\VATExpense\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:42791)
+    at async AppRouteRouteModule.handle (D:\PersonalProjects\VATExpense\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:50709)
+    at async responseGenerator (D:\PersonalProjects\VATExpense\.next\dev\server\chunks\node_modules_next_1t77v-r._.js:5328:30)
+    at async AppRouteRouteModule.handleResponse (D:\PersonalProjects\VATExpense\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:248823)
+    at async handleResponse (D:\PersonalProjects\VATExpense\.next\dev\server\chunks\node_modules_next_1t77v-r._.js:5400:32)
+    at async Module.handler (D:\PersonalProjects\VATExpense\.next\dev\server\chunks\node_modules_next_1t77v-r._.js:5520:9)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\PersonalProjects\VATExpense\node_modules\next\dist\server\base-server.js:1537:9)
+    at async DevServer.renderPageComponent (D:\PersonalProjects\VATExpense\node_modules\next\dist\server\base-server.js:1589:24)
+    at async DevServer.renderToResponseImpl (D:\PersonalProjects\VATExpense\node_modules\next\dist\server\base-server.js:1639:32)
+    at async DevServer.pipeImpl (D:\PersonalProjects\VATExpense\node_modules\next\dist\server\base-server.js:1088:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\PersonalProjects\VATExpense\node_modules\next\dist\server\next-server.js:338:17)
+    at async DevServer.handleRequestImpl (D:\PersonalProjects\VATExpense\node_modules\next\dist\server\base-server.js:979:17)
+    at async D:\PersonalProjects\VATExpense\node_modules\next\dist\server\dev\next-dev-server.js:426:20
+    at async Span.traceAsyncFn (D:\PersonalProjects\VATExpense\node_modules\next\dist\trace\trace.js:164:20)
+    at async DevServer.handleRequest (D:\PersonalProjects\VATExpense\node_modules\next\dist\server\dev\next-dev-server.js:422:24)
+    at async invokeRender (D:\PersonalProjects\VATExpense\node_modules\next\dist\server\lib\router-server.js:306:21)
+    at async handleRequest (D:\PersonalProjects\VATExpense\node_modules\next\dist\server\lib\router-server.js:508:24)
+    at async requestHandlerImpl (D:\PersonalProjects\VATExpense\node_modules\next\dist\server\lib\router-server.js:565:13)
+    at async Server.requestListener (D:\PersonalProjects\VATExpense\node_modules\next\dist\server\lib\start-server.js:225:13)
+ POST /api/auth/callback/credentials 302 in 52ms (next.js: 16ms, proxy.ts: 8ms, application-code: 28ms)
