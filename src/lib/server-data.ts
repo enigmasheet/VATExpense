@@ -436,3 +436,46 @@ export async function getFiscalYearReport(companyId: string, fiscalYearId: strin
 
   return { fiscalYearId, companyId, months, totals };
 }
+
+/**
+ * Retrieves the purchase totals per party for a fiscal year, keeping only parties
+ * whose purchases exceed the given threshold (based on the selected amount basis).
+ *
+ * @param companyId - The identifier of the company
+ * @param fiscalYearId - The identifier of the fiscal year
+ * @param basis - Which amount column drives the threshold filter and ordering
+ * @param threshold - Minimum purchase total (inclusive comparison uses strict >) to include a party
+ * @returns The qualifying parties with their aggregated expense totals
+ */
+export async function getPartyPurchaseReport(
+  companyId: string,
+  fiscalYearId: string,
+  basis: "taxable" | "total",
+  threshold = 100000,
+) {
+  const basisColumn =
+    basis === "taxable" ? expenses.taxableAmount : expenses.totalAmount;
+
+  return db
+    .select({
+      partyId: parties.id,
+      partyName: parties.name,
+      vatNumber: parties.vatNumber,
+      expenseCount: sql<number>`count(*)::int`,
+      totalTaxableAmount: sql<string>`coalesce(sum(${expenses.taxableAmount}::numeric), 0)`,
+      totalVatAmount: sql<string>`coalesce(sum(${expenses.vatAmount}::numeric), 0)`,
+      totalAmount: sql<string>`coalesce(sum(${expenses.totalAmount}::numeric), 0)`,
+    })
+    .from(expenses)
+    .innerJoin(parties, eq(parties.id, expenses.partyId))
+    .where(
+      and(
+        eq(expenses.companyId, companyId),
+        eq(expenses.fiscalYearId, fiscalYearId),
+        eq(expenses.isDeleted, false),
+      ),
+    )
+    .groupBy(parties.id, parties.name, parties.vatNumber)
+    .having(sql`sum(${basisColumn}::numeric) > ${threshold}`)
+    .orderBy(sql`sum(${basisColumn}::numeric) desc`);
+}
