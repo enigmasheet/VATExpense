@@ -7,6 +7,7 @@ vi.mock("@/lib/db", () => ({
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    transaction: vi.fn(),
   },
 }));
 
@@ -41,6 +42,22 @@ function mockDeleteReturn(rows: any[]) {
 describe("fiscal-years service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default transaction mock: execute the callback with a mock tx
+    vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
+      const tx = {
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ id: "fy-1", name: "2080/81" }]),
+          }),
+        }),
+      };
+      return fn(tx);
+    });
   });
 
   describe("createFiscalYear", () => {
@@ -68,15 +85,13 @@ describe("fiscal-years service", () => {
 
     it("deactivates existing active years when activating new one", async () => {
       vi.mocked(db.select).mockReturnValue(mockChainReturn([]) as any);
-      vi.mocked(db.update).mockReturnValue(mockUpdateReturn([]) as any);
-      vi.mocked(db.insert).mockReturnValue(mockInsertReturn([{ id: "fy-1" }]) as any);
       await createFiscalYear("comp-1", {
         name: "2080/81",
         startYear: 2080,
         endYear: 2081,
         isActive: true,
       });
-      expect(db.update).toHaveBeenCalled();
+      expect(db.transaction).toHaveBeenCalled();
     });
   });
 

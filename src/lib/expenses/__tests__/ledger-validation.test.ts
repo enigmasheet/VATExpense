@@ -73,7 +73,7 @@ describe("validateLedgerRow", () => {
       emptyInvoices,
       "2080/81",
     );
-    expect(result.status).toBe("duplicate");
+    expect(result.status).toBe("error");
     expect(result.error).toBe("Miti required");
   });
 
@@ -84,7 +84,7 @@ describe("validateLedgerRow", () => {
       emptyInvoices,
       "2080/81",
     );
-    expect(result.status).toBe("duplicate");
+    expect(result.status).toBe("error");
     expect(result.error).toBe("Invalid date");
   });
 
@@ -95,7 +95,7 @@ describe("validateLedgerRow", () => {
       emptyInvoices,
       "2080/81",
     );
-    expect(result.status).toBe("duplicate");
+    expect(result.status).toBe("error");
     expect(result.error).toContain("Date falls in FY");
   });
 
@@ -106,7 +106,7 @@ describe("validateLedgerRow", () => {
       emptyInvoices,
       "2080/81",
     );
-    expect(result.status).toBe("duplicate");
+    expect(result.status).toBe("error");
     expect(result.error).toBe("Select a valid party");
   });
 
@@ -117,7 +117,7 @@ describe("validateLedgerRow", () => {
       emptyInvoices,
       "2080/81",
     );
-    expect(result.status).toBe("duplicate");
+    expect(result.status).toBe("error");
     expect(result.error).toBe("Invoice number required");
   });
 
@@ -134,7 +134,7 @@ describe("validateLedgerRow", () => {
       emptyInvoices,
       "2080/81",
     );
-    expect(result.status).toBe("duplicate");
+    expect(result.status).toBe("error");
     expect(result.error).toBe("Category required");
   });
 
@@ -152,7 +152,7 @@ describe("validateLedgerRow", () => {
       emptyInvoices,
       "2080/81",
     );
-    expect(result.status).toBe("duplicate");
+    expect(result.status).toBe("error");
     expect(result.error).toContain("Taxable amount");
   });
 
