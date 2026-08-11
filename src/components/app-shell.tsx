@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { type ReactNode, useState, useEffect } from "react";
+import { type ReactNode, useState, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { AppProvider, useApp } from "@/lib/use-app";
 import { AuthProvider } from "@/lib/auth-provider";
@@ -63,9 +63,8 @@ function SidebarLink({ href, label, icon, active }: NavItem & { active: boolean 
 
 function Sidebar() {
   const pathname = usePathname();
-  const { companyId, fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
+  const { fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
   const { data: session } = useSession();
-  const company = fiscalYears.length > 0 ? null : null; // placeholder
 
   return (
     <aside className="flex h-full w-64 flex-col border-r border-border bg-surface">
@@ -148,10 +147,12 @@ function MobileHeader() {
   const { fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
   const { data: session } = useSession();
 
-  // Close menu on route change
-  useEffect(() => {
+  // Close menu on route change via ref-based approach
+  const prevPathname = useRef(pathname);
+  if (prevPathname.current !== pathname) {
+    prevPathname.current = pathname;
     setOpen(false);
-  }, [pathname]);
+  }
 
   return (
     <>

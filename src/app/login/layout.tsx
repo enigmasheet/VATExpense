@@ -29,7 +29,7 @@ export default function LoginLayout({ children }: { children: React.ReactNode })
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${spectral.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-background">{children}</body>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

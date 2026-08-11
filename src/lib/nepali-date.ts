@@ -68,8 +68,8 @@ export function fyName(fiscalYear: number): string {
  * clamping, and checks the day length against the package's lookup table.
  */
 export function parseMiti(miti: string): ParsedMiti {
-  const normalized = normalizeMiti(miti);
-  const match = MITI_RE.exec(normalized);
+  const normalMiti = normalizeMiti(miti);
+  const match = MITI_RE.exec(normalMiti);
   if (!match) {
     return { ok: false, error: "Miti must be in YYYY-MM-DD or DD/MM/YYYY format" };
   }
@@ -94,10 +94,10 @@ export function parseMiti(miti: string): ParsedMiti {
     };
   }
 
-  const normalized = `${year}-${pad(month)}-${pad(day)}`;
+  const normalizedDate = `${year}-${pad(month)}-${pad(day)}`;
   try {
-    const parsed = new NepaliDate(normalized, "YYYY-MM-DD");
-    if (parsed.format("YYYY-MM-DD") !== normalized) {
+    const parsed = new NepaliDate(normalizedDate, "YYYY-MM-DD");
+    if (parsed.format("YYYY-MM-DD") !== normalizedDate) {
       return { ok: false, error: "Could not parse this date reliably" };
     }
   } catch {
