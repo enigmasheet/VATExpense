@@ -26,7 +26,7 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
   if (!activeFiscalYear) {
     return (
       <div className="flex flex-col gap-6">
-        <h1 className="font-display text-3xl font-semibold text-foreground">Monthly Report</h1>
+        <h1 className="font-display text-2xl font-semibold text-foreground">Monthly Report</h1>
         <p className="text-sm text-muted">No fiscal year configured — create one first.</p>
       </div>
     );
@@ -38,7 +38,7 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
     <div className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between">
         <div>
-          <h1 className="font-display text-3xl font-semibold text-foreground">Monthly Report</h1>
+          <h1 className="font-display text-2xl font-semibold text-foreground">Monthly Report</h1>
           <p className="mt-1 text-sm text-muted">
             Category breakdown for {nepaliMonth} · FY {activeFiscalYear.name}
           </p>

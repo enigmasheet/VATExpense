@@ -54,6 +54,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
   return (
     <ExpensesListClient
+      key={`${params.page ?? ""}-${params.q ?? ""}-${params.partyId ?? ""}-${params.categoryId ?? ""}-${params.month ?? ""}`}
       initialData={result.data.map((r) => ({
         ...r,
         partyName: r.partyName ?? "",

@@ -118,7 +118,7 @@ export function ExpensesListClient({
           </p>
         </div>
         <Link href="/expenses/new">
-          <Button>New expense</Button>
+          <Button>Add Expense</Button>
         </Link>
       </div>
 

@@ -59,7 +59,7 @@ export function DashboardClient({
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-baseline justify-between">
-        <h1 className="font-display text-3xl font-semibold text-foreground">{companyName}</h1>
+        <h1 className="font-display text-2xl font-semibold text-foreground">{companyName}</h1>
         <span className="text-sm text-muted">FY {fiscalYearName}</span>
       </div>
 

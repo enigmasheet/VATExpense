@@ -30,7 +30,7 @@ export default async function FiscalYearReportPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between">
         <div>
-          <h1 className="font-display text-3xl font-semibold text-foreground">
+          <h1 className="font-display text-2xl font-semibold text-foreground">
             Fiscal Year Report
           </h1>
           <p className="mt-1 text-sm text-muted">
