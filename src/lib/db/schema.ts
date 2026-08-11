@@ -238,3 +238,27 @@ export const importBatchRows = pgTable(
 
 export type ImportBatchRow = typeof importBatchRows.$inferSelect;
 export type NewImportBatchRow = typeof importBatchRows.$inferInsert;
+
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    name: text("name").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    role: text("role").notNull().default("DataEntry"), // Admin | DataEntry
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("users_company_email_uq").on(t.companyId, t.email),
+    index("users_company_idx").on(t.companyId),
+  ],
+);
+
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;

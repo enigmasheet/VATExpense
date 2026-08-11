@@ -1,8 +1,9 @@
 import { db } from "../src/lib/db";
-import { companies, fiscalYears, locations, categories, parties, expenses } from "../src/lib/db/schema";
+import { companies, fiscalYears, locations, categories, parties, expenses, users } from "../src/lib/db/schema";
 import { parseMiti } from "../src/lib/nepali-date";
 import { normalizeName, normalizeVatNumber } from "../src/lib/normalize";
 import { eq, and, isNull } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 async function getOrCreateCompany() {
   const existing = await db.select().from(companies).limit(1);
@@ -20,6 +21,25 @@ async function getOrCreateCompany() {
     })
     .returning();
   return company;
+}
+
+async function getOrCreateUser(companyId: string) {
+  const existing = await db.select().from(users).where(eq(users.companyId, companyId)).limit(1);
+  if (existing.length > 0) return existing[0];
+
+  const passwordHash = await bcrypt.hash("admin123", 10);
+  const [user] = await db
+    .insert(users)
+    .values({
+      companyId,
+      email: "admin@nephardware.com.np",
+      name: "Admin",
+      passwordHash,
+      role: "Admin",
+    })
+    .returning();
+  console.log("Created admin user: admin@nephardware.com.np / admin123");
+  return user;
 }
 
 async function getOrCreateLocation(companyId: string, name: string) {
@@ -103,6 +123,8 @@ async function getOrCreateFiscalYear(
 async function main() {
   const company = await getOrCreateCompany();
   console.log(`Company: ${company.name} (${company.id})`);
+
+  await getOrCreateUser(company.id);
 
   const previousFy = await getOrCreateFiscalYear(company.id, {
     name: "2081/82",

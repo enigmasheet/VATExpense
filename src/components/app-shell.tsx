@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode } from "react";
+import { useSession, signOut } from "next-auth/react";
 import { AppProvider, useApp } from "@/lib/use-app";
+import { AuthProvider } from "@/lib/auth-provider";
 
 const NAV = [
   { href: "/", label: "Dashboard" },
@@ -32,6 +34,7 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
 
 function ContextBar() {
   const { companies, companyId, setCompanyId, fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
+  const { data: session } = useSession();
   return (
     <div className="flex items-center gap-3">
       {companyId && (
@@ -61,6 +64,17 @@ function ContextBar() {
             </option>
           ))}
         </select>
+      )}
+      {session?.user && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted">{session.user.name}</span>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="rounded-md px-2 py-1 text-xs text-muted hover:bg-[#efeee8] hover:text-foreground"
+          >
+            Sign out
+          </button>
+        </div>
       )}
     </div>
   );
@@ -104,14 +118,16 @@ function Header() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <AppProvider>
-      <div className="flex min-h-screen flex-col">
-        <Header />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
-        <footer className="border-t border-border py-4 text-center text-xs text-muted">
-          VAT Expense Ledger · Nepali fiscal-year purchase register
-        </footer>
-      </div>
-    </AppProvider>
+    <AuthProvider>
+      <AppProvider>
+        <div className="flex min-h-screen flex-col">
+          <Header />
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+          <footer className="border-t border-border py-4 text-center text-xs text-muted">
+            VAT Expense Ledger · Nepali fiscal-year purchase register
+          </footer>
+        </div>
+      </AppProvider>
+    </AuthProvider>
   );
 }
