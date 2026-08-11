@@ -3,7 +3,7 @@ import { getCompanyId, getParties, getCategories } from "@/lib/server-data";
 import { BatchEntry } from "@/components/expenses/batch-entry";
 
 /**
- * Renders the page for quickly entering multiple invoices.
+ * Renders the page for entering multiple expenses.
  */
 export default async function NewExpensePage() {
   const companyId = await getCompanyId();
