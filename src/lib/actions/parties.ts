@@ -1,12 +1,9 @@
 "use server";
 
-import { db } from "@/lib/db";
-import { parties } from "@/lib/db/schema";
-import { createPartySchema } from "@/lib/validation/masters";
-import { normalizeName, normalizeVatNumber } from "@/lib/normalize";
-import { safeParse } from "@/lib/validation/utils";
-import { eq, and, sql } from "drizzle-orm";
 import { requireCompanyId, type ActionResult } from "./common";
+import { createParty as createPartyService, updateParty as updatePartyService, deleteParty as deletePartyService, type Party } from "@/lib/services/parties";
+
+export type { ActionResult };
 
 /**
  * Creates a company-scoped party after validating its details and enforcing unique name and VAT number values.
@@ -18,7 +15,7 @@ export async function createParty(input: {
   name: string;
   vatNumber?: string | null;
   locationId?: string | null;
-}): Promise<ActionResult<typeof parties.$inferSelect>> {
+}): Promise<ActionResult<Party>> {
   let companyId: string;
   try {
     companyId = await requireCompanyId();
@@ -26,56 +23,9 @@ export async function createParty(input: {
     return { ok: false, error: "Not authenticated" };
   }
 
-  const parsed = safeParse(createPartySchema, { ...input, companyId });
-  if (!parsed.ok) return { ok: false, error: "Validation failed", errors: parsed.errors };
-
-  const data = parsed.data;
-  const normalizedName = normalizeName(data.name);
-  const normalizedVat = normalizeVatNumber(data.vatNumber);
-
-  try {
-    const existing = (
-      await db
-        .select()
-        .from(parties)
-        .where(and(eq(parties.companyId, companyId), eq(parties.normalizedName, normalizedName)))
-        .limit(1)
-    )[0];
-    if (existing) return { ok: false, error: `Party "${existing.name}" already exists` };
-
-    if (normalizedVat) {
-      const vatExisting = (
-        await db
-          .select()
-          .from(parties)
-          .where(
-            and(
-              eq(parties.companyId, companyId),
-              eq(parties.normalizedVatNumber, normalizedVat),
-            ),
-          )
-          .limit(1)
-      )[0];
-      if (vatExisting) return { ok: false, error: `VAT number already used by "${vatExisting.name}"` };
-    }
-
-    const [created] = await db
-      .insert(parties)
-      .values({
-        companyId,
-        name: data.name,
-        normalizedName,
-        vatNumber: data.vatNumber ?? null,
-        normalizedVatNumber: normalizedVat,
-        locationId: data.locationId ?? null,
-      })
-      .returning();
-
-    return { ok: true, data: created };
-  } catch (err) {
-    console.error("createParty failed", err);
-    return { ok: false, error: "Failed to create party" };
-  }
+  const result = await createPartyService(companyId, input);
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, data: result.data };
 }
 
 /**
@@ -88,7 +38,7 @@ export async function createParty(input: {
 export async function updateParty(
   id: string,
   changes: { name?: string; isActive?: boolean },
-): Promise<ActionResult<typeof parties.$inferSelect>> {
+): Promise<ActionResult<Party>> {
   let companyId: string;
   try {
     companyId = await requireCompanyId();
@@ -96,34 +46,9 @@ export async function updateParty(
     return { ok: false, error: "Not authenticated" };
   }
 
-  try {
-    const current = (
-      await db
-        .select()
-        .from(parties)
-        .where(and(eq(parties.id, id), eq(parties.companyId, companyId)))
-        .limit(1)
-    )[0];
-    if (!current) return { ok: false, error: "Party not found" };
-
-    const values: Record<string, unknown> = {};
-    if (changes.name !== undefined) {
-      values.name = changes.name;
-      values.normalizedName = normalizeName(changes.name);
-    }
-    if (changes.isActive !== undefined) values.isActive = changes.isActive;
-
-    const [updated] = await db
-      .update(parties)
-      .set({ ...values, updatedAt: sql`now()` })
-      .where(eq(parties.id, id))
-      .returning();
-
-    return { ok: true, data: updated };
-  } catch (err) {
-    console.error("updateParty failed", err);
-    return { ok: false, error: "Failed to update party" };
-  }
+  const result = await updatePartyService(id, companyId, changes);
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, data: result.data };
 }
 
 /**
@@ -140,13 +65,7 @@ export async function deleteParty(id: string): Promise<ActionResult<{ id: string
     return { ok: false, error: "Not authenticated" };
   }
 
-  try {
-    await db
-      .delete(parties)
-      .where(and(eq(parties.id, id), eq(parties.companyId, companyId)));
-    return { ok: true, data: { id } };
-  } catch (err) {
-    console.error("deleteParty failed", err);
-    return { ok: false, error: "Failed to delete party" };
-  }
+  const result = await deletePartyService(id, companyId);
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, data: result.data };
 }

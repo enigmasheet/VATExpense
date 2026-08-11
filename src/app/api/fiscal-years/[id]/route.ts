@@ -1,7 +1,10 @@
-import { db } from "@/lib/db";
-import { fiscalYears } from "@/lib/db/schema";
 import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
-import { eq, and } from "drizzle-orm";
+import * as fiscalYearService from "@/lib/services/fiscal-years";
+
+function getCompanyId(url: URL): string | null {
+  const value = url.searchParams.get("companyId");
+  return value && value.length > 0 ? value : null;
+}
 
 /**
  * Updates a fiscal year by ID.
@@ -16,6 +19,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const companyId = getCompanyId(new URL(request.url));
+  if (!companyId) return badRequest("companyId query parameter is required");
+
   let body: unknown;
   try {
     body = await request.json();
@@ -24,40 +30,18 @@ export async function PATCH(
   }
 
   const data = body as Record<string, unknown>;
-  const updates: Record<string, unknown> = {};
+  const changes: { name?: string; isActive?: boolean } = {};
+  if (typeof data.name === "string") changes.name = data.name;
+  if (typeof data.isActive === "boolean") changes.isActive = data.isActive;
 
-  if (typeof data.name === "string") updates.name = data.name;
-  if (typeof data.startYear === "number") updates.startYear = data.startYear;
-  if (typeof data.endYear === "number") updates.endYear = data.endYear;
-
-  if (typeof data.isActive === "boolean") {
-    updates.isActive = data.isActive;
-    if (data.isActive === true) {
-      const fy = (
-        await db.select().from(fiscalYears).where(eq(fiscalYears.id, id)).limit(1)
-      )[0];
-      if (fy) {
-        await db
-          .update(fiscalYears)
-          .set({ isActive: false })
-          .where(and(eq(fiscalYears.companyId, fy.companyId), eq(fiscalYears.isActive, true)));
-      }
-    }
-  }
-
-  if (Object.keys(updates).length === 0) {
+  if (Object.keys(changes).length === 0) {
     return badRequest("No valid fields to update");
   }
 
   try {
-    const [updated] = await db
-      .update(fiscalYears)
-      .set(updates)
-      .where(eq(fiscalYears.id, id))
-      .returning();
-
-    if (!updated) return notFound("Fiscal year not found");
-    return apiOk({ data: updated });
+    const result = await fiscalYearService.updateFiscalYear(id, companyId, changes);
+    if (!result.ok) return notFound(result.error);
+    return apiOk({ data: result.data });
   } catch (err) {
     console.error("PATCH /api/fiscal-years/[id] failed", err);
     return internalError();
@@ -67,23 +51,22 @@ export async function PATCH(
 /**
  * Deletes a fiscal year by ID.
  *
- * @param _request - The incoming HTTP request.
+ * @param request - The incoming HTTP request.
  * @param params - Route parameters containing the fiscal year ID.
  * @returns The deleted fiscal year ID, or an error response if the fiscal year is not found or deletion fails.
  */
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  try {
-    const [deleted] = await db
-      .delete(fiscalYears)
-      .where(eq(fiscalYears.id, id))
-      .returning();
+  const companyId = getCompanyId(new URL(request.url));
+  if (!companyId) return badRequest("companyId query parameter is required");
 
-    if (!deleted) return notFound("Fiscal year not found");
-    return apiOk({ data: { id: deleted.id } });
+  try {
+    const result = await fiscalYearService.deleteFiscalYear(id, companyId);
+    if (!result.ok) return notFound(result.error);
+    return apiOk({ data: result.data });
   } catch (err) {
     console.error("DELETE /api/fiscal-years/[id] failed", err);
     return internalError();

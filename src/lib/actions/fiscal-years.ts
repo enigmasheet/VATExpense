@@ -1,11 +1,9 @@
 "use server";
 
-import { db } from "@/lib/db";
-import { fiscalYears } from "@/lib/db/schema";
-import { createFiscalYearSchema } from "@/lib/validation/masters";
-import { safeParse } from "@/lib/validation/utils";
-import { eq, and, sql } from "drizzle-orm";
 import { requireCompanyId, type ActionResult } from "./common";
+import { createFiscalYear as createFiscalYearService, updateFiscalYear as updateFiscalYearService, deleteFiscalYear as deleteFiscalYearService, type FiscalYear } from "@/lib/services/fiscal-years";
+
+export type { ActionResult };
 
 /**
  * Creates a company-scoped fiscal year.
@@ -20,7 +18,7 @@ export async function createFiscalYear(input: {
   startYear: number;
   endYear: number;
   isActive?: boolean;
-}): Promise<ActionResult<typeof fiscalYears.$inferSelect>> {
+}): Promise<ActionResult<FiscalYear>> {
   let companyId: string;
   try {
     companyId = await requireCompanyId();
@@ -28,35 +26,9 @@ export async function createFiscalYear(input: {
     return { ok: false, error: "Not authenticated" };
   }
 
-  const parsed = safeParse(createFiscalYearSchema, { ...input, companyId });
-  if (!parsed.ok) return { ok: false, error: "Validation failed", errors: parsed.errors };
-
-  const data = parsed.data;
-
-  try {
-    if (data.isActive) {
-      await db
-        .update(fiscalYears)
-        .set({ isActive: false, updatedAt: sql`now()` })
-        .where(eq(fiscalYears.companyId, companyId));
-    }
-
-    const [created] = await db
-      .insert(fiscalYears)
-      .values({
-        companyId,
-        name: data.name,
-        startYear: data.startYear,
-        endYear: data.endYear,
-        isActive: data.isActive,
-      })
-      .returning();
-
-    return { ok: true, data: created };
-  } catch (err) {
-    console.error("createFiscalYear failed", err);
-    return { ok: false, error: "Failed to create fiscal year" };
-  }
+  const result = await createFiscalYearService(companyId, input);
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, data: result.data };
 }
 
 /**
@@ -69,7 +41,7 @@ export async function createFiscalYear(input: {
 export async function updateFiscalYear(
   id: string,
   changes: { name?: string; isActive?: boolean },
-): Promise<ActionResult<typeof fiscalYears.$inferSelect>> {
+): Promise<ActionResult<FiscalYear>> {
   let companyId: string;
   try {
     companyId = await requireCompanyId();
@@ -77,30 +49,9 @@ export async function updateFiscalYear(
     return { ok: false, error: "Not authenticated" };
   }
 
-  try {
-    if (changes.isActive) {
-      await db
-        .update(fiscalYears)
-        .set({ isActive: false, updatedAt: sql`now()` })
-        .where(and(eq(fiscalYears.companyId, companyId), eq(fiscalYears.isActive, true)));
-    }
-
-    const values: Record<string, unknown> = {};
-    if (changes.name !== undefined) values.name = changes.name;
-    if (changes.isActive !== undefined) values.isActive = changes.isActive;
-
-    const [updated] = await db
-      .update(fiscalYears)
-      .set({ ...values, updatedAt: sql`now()` })
-      .where(and(eq(fiscalYears.id, id), eq(fiscalYears.companyId, companyId)))
-      .returning();
-
-    if (!updated) return { ok: false, error: "Fiscal year not found" };
-    return { ok: true, data: updated };
-  } catch (err) {
-    console.error("updateFiscalYear failed", err);
-    return { ok: false, error: "Failed to update fiscal year" };
-  }
+  const result = await updateFiscalYearService(id, companyId, changes);
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, data: result.data };
 }
 
 /**
@@ -117,13 +68,7 @@ export async function deleteFiscalYear(id: string): Promise<ActionResult<{ id: s
     return { ok: false, error: "Not authenticated" };
   }
 
-  try {
-    await db
-      .delete(fiscalYears)
-      .where(and(eq(fiscalYears.id, id), eq(fiscalYears.companyId, companyId)));
-    return { ok: true, data: { id } };
-  } catch (err) {
-    console.error("deleteFiscalYear failed", err);
-    return { ok: false, error: "Failed to delete fiscal year" };
-  }
+  const result = await deleteFiscalYearService(id, companyId);
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, data: result.data };
 }

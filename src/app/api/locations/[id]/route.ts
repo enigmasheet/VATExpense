@@ -1,7 +1,10 @@
-import { db } from "@/lib/db";
-import { locations } from "@/lib/db/schema";
 import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
-import { eq } from "drizzle-orm";
+import * as locationService from "@/lib/services/locations";
+
+function getCompanyId(url: URL): string | null {
+  const value = url.searchParams.get("companyId");
+  return value && value.length > 0 ? value : null;
+}
 
 /**
  * Updates a location identified by its route ID.
@@ -15,6 +18,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const companyId = getCompanyId(new URL(request.url));
+  if (!companyId) return badRequest("companyId query parameter is required");
+
   let body: unknown;
   try {
     body = await request.json();
@@ -23,28 +29,18 @@ export async function PATCH(
   }
 
   const data = body as Record<string, unknown>;
-  const updates: Record<string, unknown> = {};
+  const changes: { name?: string; isActive?: boolean } = {};
+  if ("name" in data && typeof data.name === "string") changes.name = data.name;
+  if ("isActive" in data && typeof data.isActive === "boolean") changes.isActive = data.isActive;
 
-  if ("name" in data && typeof data.name === "string") {
-    updates.name = data.name;
-  }
-  if ("isActive" in data && typeof data.isActive === "boolean") {
-    updates.isActive = data.isActive;
-  }
-
-  if (Object.keys(updates).length === 0) {
+  if (Object.keys(changes).length === 0) {
     return badRequest("No valid fields to update");
   }
 
   try {
-    const [updated] = await db
-      .update(locations)
-      .set(updates)
-      .where(eq(locations.id, id))
-      .returning();
-
-    if (!updated) return notFound("Location not found");
-    return apiOk({ data: updated });
+    const result = await locationService.updateLocation(id, companyId, changes);
+    if (!result.ok) return notFound(result.error);
+    return apiOk({ data: result.data });
   } catch (err) {
     console.error("PATCH /api/locations/[id] failed", err);
     return internalError();
@@ -54,22 +50,22 @@ export async function PATCH(
 /**
  * Deletes a location by its identifier.
  *
+ * @param request - The incoming HTTP request
  * @param params - Route parameters containing the location identifier
  * @returns A success response containing the deleted location ID, a not-found response, or an internal-error response
  */
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  try {
-    const [deleted] = await db
-      .delete(locations)
-      .where(eq(locations.id, id))
-      .returning();
+  const companyId = getCompanyId(new URL(request.url));
+  if (!companyId) return badRequest("companyId query parameter is required");
 
-    if (!deleted) return notFound("Location not found");
-    return apiOk({ data: { id: deleted.id } });
+  try {
+    const result = await locationService.deleteLocation(id, companyId);
+    if (!result.ok) return notFound(result.error);
+    return apiOk({ data: result.data });
   } catch (err) {
     console.error("DELETE /api/locations/[id] failed", err);
     return internalError();

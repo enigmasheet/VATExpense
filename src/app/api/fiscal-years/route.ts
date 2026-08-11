@@ -3,7 +3,7 @@ import { fiscalYears } from "@/lib/db/schema";
 import { createFiscalYearSchema } from "@/lib/validation/masters";
 import { safeParse } from "@/lib/validation/utils";
 import { apiOk, badRequest, conflict, unprocessableEntity, internalError } from "@/lib/api-response";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 function getCompanyId(url: URL): string | null {
   const value = url.searchParams.get("companyId");
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     if (isActive) {
       await db
         .update(fiscalYears)
-        .set({ isActive: false })
+        .set({ isActive: false, updatedAt: sql`now()` })
         .where(eq(fiscalYears.companyId, companyId));
     }
 

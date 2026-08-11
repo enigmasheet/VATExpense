@@ -1,12 +1,9 @@
 "use server";
 
-import { db } from "@/lib/db";
-import { locations } from "@/lib/db/schema";
-import { createLocationSchema } from "@/lib/validation/masters";
-import { normalizeName } from "@/lib/normalize";
-import { safeParse } from "@/lib/validation/utils";
-import { eq, and, sql } from "drizzle-orm";
 import { requireCompanyId, type ActionResult } from "./common";
+import { createLocation as createLocationService, updateLocation as updateLocationService, deleteLocation as deleteLocationService, type Location } from "@/lib/services/locations";
+
+export type { ActionResult };
 
 /**
  * Creates a company-scoped location.
@@ -16,7 +13,7 @@ import { requireCompanyId, type ActionResult } from "./common";
  */
 export async function createLocation(input: {
   name: string;
-}): Promise<ActionResult<typeof locations.$inferSelect>> {
+}): Promise<ActionResult<Location>> {
   let companyId: string;
   try {
     companyId = await requireCompanyId();
@@ -24,31 +21,9 @@ export async function createLocation(input: {
     return { ok: false, error: "Not authenticated" };
   }
 
-  const parsed = safeParse(createLocationSchema, { ...input, companyId });
-  if (!parsed.ok) return { ok: false, error: "Validation failed", errors: parsed.errors };
-
-  const normalizedName = normalizeName(parsed.data.name);
-
-  try {
-    const existing = (
-      await db
-        .select()
-        .from(locations)
-        .where(and(eq(locations.companyId, companyId), eq(locations.normalizedName, normalizedName)))
-        .limit(1)
-    )[0];
-    if (existing) return { ok: false, error: `Location "${existing.name}" already exists` };
-
-    const [created] = await db
-      .insert(locations)
-      .values({ companyId, name: parsed.data.name, normalizedName })
-      .returning();
-
-    return { ok: true, data: created };
-  } catch (err) {
-    console.error("createLocation failed", err);
-    return { ok: false, error: "Failed to create location" };
-  }
+  const result = await createLocationService(companyId, input);
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, data: result.data };
 }
 
 /**
@@ -61,7 +36,7 @@ export async function createLocation(input: {
 export async function updateLocation(
   id: string,
   changes: { name?: string; isActive?: boolean },
-): Promise<ActionResult<typeof locations.$inferSelect>> {
+): Promise<ActionResult<Location>> {
   let companyId: string;
   try {
     companyId = await requireCompanyId();
@@ -69,26 +44,9 @@ export async function updateLocation(
     return { ok: false, error: "Not authenticated" };
   }
 
-  try {
-    const values: Record<string, unknown> = {};
-    if (changes.name !== undefined) {
-      values.name = changes.name;
-      values.normalizedName = normalizeName(changes.name);
-    }
-    if (changes.isActive !== undefined) values.isActive = changes.isActive;
-
-    const [updated] = await db
-      .update(locations)
-      .set({ ...values, updatedAt: sql`now()` })
-      .where(and(eq(locations.id, id), eq(locations.companyId, companyId)))
-      .returning();
-
-    if (!updated) return { ok: false, error: "Location not found" };
-    return { ok: true, data: updated };
-  } catch (err) {
-    console.error("updateLocation failed", err);
-    return { ok: false, error: "Failed to update location" };
-  }
+  const result = await updateLocationService(id, companyId, changes);
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, data: result.data };
 }
 
 /**
@@ -105,13 +63,7 @@ export async function deleteLocation(id: string): Promise<ActionResult<{ id: str
     return { ok: false, error: "Not authenticated" };
   }
 
-  try {
-    await db
-      .delete(locations)
-      .where(and(eq(locations.id, id), eq(locations.companyId, companyId)));
-    return { ok: true, data: { id } };
-  } catch (err) {
-    console.error("deleteLocation failed", err);
-    return { ok: false, error: "Failed to delete location" };
-  }
+  const result = await deleteLocationService(id, companyId);
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, data: result.data };
 }

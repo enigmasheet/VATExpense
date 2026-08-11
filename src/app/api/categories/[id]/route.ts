@@ -1,7 +1,10 @@
-import { db } from "@/lib/db";
-import { categories } from "@/lib/db/schema";
 import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
-import { eq } from "drizzle-orm";
+import * as categoryService from "@/lib/services/categories";
+
+function getCompanyId(url: URL): string | null {
+  const value = url.searchParams.get("companyId");
+  return value && value.length > 0 ? value : null;
+}
 
 /**
  * Updates a category with the provided valid fields.
@@ -14,6 +17,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const companyId = getCompanyId(new URL(request.url));
+  if (!companyId) return badRequest("companyId query parameter is required");
+
   let body: unknown;
   try {
     body = await request.json();
@@ -22,28 +28,18 @@ export async function PATCH(
   }
 
   const data = body as Record<string, unknown>;
-  const updates: Record<string, unknown> = {};
+  const changes: { name?: string; isActive?: boolean } = {};
+  if ("name" in data && typeof data.name === "string") changes.name = data.name;
+  if ("isActive" in data && typeof data.isActive === "boolean") changes.isActive = data.isActive;
 
-  if ("name" in data && typeof data.name === "string") {
-    updates.name = data.name;
-  }
-  if ("isActive" in data && typeof data.isActive === "boolean") {
-    updates.isActive = data.isActive;
-  }
-
-  if (Object.keys(updates).length === 0) {
+  if (Object.keys(changes).length === 0) {
     return badRequest("No valid fields to update");
   }
 
   try {
-    const [updated] = await db
-      .update(categories)
-      .set(updates)
-      .where(eq(categories.id, id))
-      .returning();
-
-    if (!updated) return notFound("Category not found");
-    return apiOk({ data: updated });
+    const result = await categoryService.updateCategory(id, companyId, changes);
+    if (!result.ok) return notFound(result.error);
+    return apiOk({ data: result.data });
   } catch (err) {
     console.error("PATCH /api/categories/[id] failed", err);
     return internalError();
@@ -57,18 +53,17 @@ export async function PATCH(
  * @returns A success response containing the deleted category ID, or an error response if the category is missing or deletion fails
  */
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  try {
-    const [deleted] = await db
-      .delete(categories)
-      .where(eq(categories.id, id))
-      .returning();
+  const companyId = getCompanyId(new URL(request.url));
+  if (!companyId) return badRequest("companyId query parameter is required");
 
-    if (!deleted) return notFound("Category not found");
-    return apiOk({ data: { id: deleted.id } });
+  try {
+    const result = await categoryService.deleteCategory(id, companyId);
+    if (!result.ok) return notFound(result.error);
+    return apiOk({ data: result.data });
   } catch (err) {
     console.error("DELETE /api/categories/[id] failed", err);
     return internalError();
