@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api-client";
 import { useApp } from "@/lib/use-app";
@@ -80,10 +80,6 @@ function MessageList({ messages }: { messages: Message[] }) {
       ))}
     </div>
   );
-}
-
-function num(value: string): string {
-  return value.trim() === "" ? "" : String(Number(value));
 }
 
 export function ExpenseForm({

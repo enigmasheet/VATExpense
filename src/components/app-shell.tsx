@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode } from "react";
 import { AppProvider, useApp } from "@/lib/use-app";
-import { Select } from "@/components/ui/field";
 
 const NAV = [
   { href: "/", label: "Dashboard" },

@@ -37,7 +37,7 @@ export default function ExpensesPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pageSize] = useState(50);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [q, setQ] = useState("");
@@ -58,39 +58,49 @@ export default function ExpensesPage() {
     );
   }, [companyId]);
 
-  const refresh = useCallback(() => {
+  const load = useCallback(async () => {
     if (!companyId || !fiscalYearId) return;
-    setLoading(true);
-    setError(null);
-    api<ListResponse>(
-      apiUrl("/api/expenses", {
-        companyId,
-        fiscalYearId,
-        page,
-        pageSize,
-        q,
-        partyId,
-        categoryId,
-        month,
-      }),
-    )
-      .then((res) => {
-        setRows(res.data);
-        setTotal(res.total);
-      })
-      .catch((e: ApiError) => setError(e.detail))
-      .finally(() => setLoading(false));
+    try {
+      const res = await api<ListResponse>(
+        apiUrl("/api/expenses", {
+          companyId,
+          fiscalYearId,
+          page,
+          pageSize,
+          q,
+          partyId,
+          categoryId,
+          month,
+        }),
+      );
+      setRows(res.data);
+      setTotal(res.total);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.detail : "Failed to load expenses");
+    } finally {
+      setLoading(false);
+    }
   }, [companyId, fiscalYearId, page, pageSize, q, partyId, categoryId, month]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { load(); }, [load]);
+
+  function applyFilters(next: { q: string; partyId: string; categoryId: string; month: string }) {
+    setQ(next.q);
+    setPartyId(next.partyId);
+    setCategoryId(next.categoryId);
+    setMonth(next.month);
+    setPage(1);
+    setLoading(true);
+  }
 
   async function removeExpense(id: string, item: string) {
     if (!window.confirm(`Delete "${item}"? This can be undone from the database only.`)) return;
     try {
       await api(`/api/expenses/${id}`, { method: "DELETE" });
-      refresh();
+      setLoading(true);
+      load();
     } catch (e) {
       setError(e instanceof ApiError ? e.detail : "Failed to delete");
     }
@@ -117,8 +127,7 @@ export default function ExpensesPage() {
         className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-5"
         onSubmit={(e) => {
           e.preventDefault();
-          setPage(1);
-          refresh();
+          applyFilters({ q, partyId, categoryId, month });
         }}
       >
         <Field label="Search" htmlFor="filter-q">
@@ -164,14 +173,9 @@ export default function ExpensesPage() {
           <Button
             type="button"
             variant="ghost"
-            onClick={() => {
-              setQ("");
-              setPartyId("");
-              setCategoryId("");
-              setMonth("");
-              setPage(1);
-              refresh();
-            }}
+            onClick={() =>
+              applyFilters({ q: "", partyId: "", categoryId: "", month: "" })
+            }
           >
             Reset
           </Button>
@@ -184,9 +188,7 @@ export default function ExpensesPage() {
         {loading ? (
           <p className="p-6 text-sm text-muted">Loading…</p>
         ) : rows.length === 0 ? (
-          <p className="p-6 text-sm text-muted">
-            No expenses match. Record your first one.
-          </p>
+          <p className="p-6 text-sm text-muted">No expenses match. Record your first one.</p>
         ) : (
           <table className="w-full text-left text-sm">
             <thead>
@@ -205,7 +207,10 @@ export default function ExpensesPage() {
               {rows.map((row) => (
                 <tr key={row.id} className="border-b border-border last:border-b-0 hover:bg-[#f8f7f2]">
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <Link href={`/expenses/${row.id}`} className="font-medium text-primary hover:underline">
+                    <Link
+                      href={`/expenses/${row.id}`}
+                      className="font-medium text-primary hover:underline"
+                    >
                       {row.miti}
                     </Link>
                   </td>
@@ -246,14 +251,25 @@ export default function ExpensesPage() {
           Page {page} of {totalPages}
         </span>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => {
+              setPage((p) => p - 1);
+              setLoading(true);
+            }}
+          >
             Previous
           </Button>
           <Button
             variant="secondary"
             size="sm"
             disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
+            onClick={() => {
+              setPage((p) => p + 1);
+              setLoading(true);
+            }}
           >
             Next
           </Button>
