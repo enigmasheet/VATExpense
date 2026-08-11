@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCompanyId, getActiveFiscalYear, getFiscalYearReport } from "@/lib/server-data";
 import { formatAmount } from "@/lib/format";
 import { FiscalYearReportExport } from "@/components/fiscal-year-report-export";
+import { StatCard } from "@/components/ui/stat-card";
 
 /**
  * Displays the active fiscal year's report with summary totals and monthly expense details.
@@ -44,28 +45,10 @@ export default async function FiscalYearReportPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-        <div className="rounded-lg border border-border bg-surface p-5">
-          <p className="text-xs uppercase tracking-wide text-muted">Total Expenses</p>
-          <p className="mt-2 text-2xl font-semibold">{report.totals.expenseCount}</p>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-5">
-          <p className="text-xs uppercase tracking-wide text-muted">Taxable</p>
-          <p className="tabular-amount mt-2 text-2xl font-semibold">
-            {formatAmount(report.totals.totalTaxableAmount)}
-          </p>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-5">
-          <p className="text-xs uppercase tracking-wide text-muted">VAT input credit</p>
-          <p className="tabular-amount mt-2 text-2xl font-semibold">
-            {formatAmount(report.totals.totalVatAmount)}
-          </p>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-5">
-          <p className="text-xs uppercase tracking-wide text-muted">Total purchases</p>
-          <p className="tabular-amount mt-2 text-2xl font-semibold text-primary">
-            {formatAmount(report.totals.totalAmount)}
-          </p>
-        </div>
+        <StatCard label="Total Expenses" value={report.totals.expenseCount} />
+        <StatCard label="Taxable" value={formatAmount(report.totals.totalTaxableAmount)} />
+        <StatCard label="VAT input credit" value={formatAmount(report.totals.totalVatAmount)} />
+        <StatCard label="Total purchases" value={formatAmount(report.totals.totalAmount)} accent />
       </div>
 
       <section className="flex flex-col gap-3">

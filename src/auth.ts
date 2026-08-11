@@ -17,11 +17,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
+        const email = credentials.email as string;
+        const password = credentials.password as string;
+
+        // Superadmin: env-based credentials, no DB row
+        const saEmail = process.env.SUPERADMIN_EMAIL;
+        const saPassword = process.env.SUPERADMIN_PASSWORD;
+        if (saEmail && saPassword && email === saEmail && password === saPassword) {
+          return {
+            id: "superadmin",
+            email: saEmail,
+            name: "Super Admin",
+            companyId: null,
+            role: "SuperAdmin",
+          };
+        }
+
         const user = (
           await db
             .select()
             .from(users)
-            .where(eq(users.email, credentials.email as string))
+            .where(eq(users.email, email))
             .limit(1)
         )[0];
 
@@ -47,7 +63,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.companyId = (user as unknown as { companyId: string }).companyId;
+        token.companyId = (user as unknown as { companyId?: string }).companyId;
         token.role = (user as unknown as { role: string }).role;
       }
       return token;
@@ -55,7 +71,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (token) {
         session.user.id = token.sub as string;
-        session.user.companyId = token.companyId as string;
+        session.user.companyId = token.companyId as string | undefined;
         session.user.role = token.role as string;
       }
       return session;

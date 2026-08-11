@@ -1,170 +1,18 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { batchSaveExpenses, type BatchRowInput } from "@/lib/actions/expenses";
-import { round2 } from "@/lib/money";
+import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useLedgerSave } from "@/hooks/expenses/use-ledger-save";
 import { formatAmount } from "@/lib/format";
-import { parseMiti } from "@/lib/nepali-date";
 import { VAT_RATE } from "@/lib/constants";
-
-const VAT_FACTOR = 1 + VAT_RATE / 100;
-
-interface Party {
-  id: string;
-  name: string;
-  vatNumber: string | null;
-  locationId: string | null;
-  locationName: string | null;
-}
-
-interface Category {
-  id: string;
-  name: string;
-}
-
-interface LedgerRow {
-  id: string;
-  miti: string;
-  partyId: string;
-  partyName: string;
-  partyResolved: boolean;
-  locationId: string | null;
-  locationName: string | null;
-  invoiceNumber: string;
-  categoryId: string;
-  categoryName: string;
-  taxableAmount: string;
-  vatAmount: string;
-  totalAmount: string;
-  status: "pending" | "saving" | "saved" | "error" | "duplicate" | "incomplete";
-  error?: string;
-  warnings?: string[];
-}
-
-type CellField = "miti" | "partySearch" | "invoiceNumber" | "categoryId" | "taxableAmount" | "totalAmount";
-const FIELD_ORDER: CellField[] = ["miti", "partySearch", "invoiceNumber", "categoryId", "taxableAmount", "totalAmount"];
-
-/**
- * Calculates VAT and the total amount from a taxable amount.
- *
- * @param taxable - The taxable amount before VAT
- * @returns The rounded VAT amount and VAT-inclusive total
- */
-function calcFromTaxable(taxable: number): { vat: number; total: number } {
-  const vat = round2(taxable * VAT_RATE / 100);
-  const total = round2(taxable + vat);
-  return { vat, total };
-}
-
-/**
- * Derives taxable and VAT amounts from a VAT-inclusive total.
- *
- * @param total - The VAT-inclusive total amount
- * @returns The rounded taxable amount and VAT amount
- */
-function calcFromTotal(total: number): { taxable: number; vat: number } {
-  const taxable = round2(total / VAT_FACTOR);
-  const vat = round2(total - taxable);
-  return { taxable, vat };
-}
-
-let nextId = 1;
-
-/**
- * Generates a unique identifier for a ledger row.
- *
- * @returns A sequential ledger-row identifier
- */
-function genId() {
-  return `row-${nextId++}`;
-}
-
-/**
- * Creates an incomplete ledger row, carrying forward selected fields from a previous row when provided.
- *
- * @param prev - The previous row whose date, location, and category values should be carried forward
- * @returns A new ledger row with a generated identifier and empty expense-entry fields
- */
-function createEmptyRow(prev?: LedgerRow): LedgerRow {
-  return {
-    id: genId(),
-    miti: prev?.miti ?? "",
-    partyId: "",
-    partyName: "",
-    partyResolved: false,
-    locationId: prev?.locationId ?? null,
-    locationName: prev?.locationName ?? null,
-    invoiceNumber: "",
-    categoryId: prev?.categoryId ?? "",
-    categoryName: prev?.categoryName ?? "",
-    taxableAmount: "",
-    vatAmount: "",
-    totalAmount: "",
-    status: "incomplete",
-  };
-}
-
-/**
- * Validates a ledger row against required fields, fiscal year constraints, existing invoices, and duplicates within the current batch.
- *
- * @param row - The ledger row to validate
- * @param allRows - All rows in the current batch
- * @param existingInvoices - Existing invoice keys in the format `partyId|invoiceNumber`
- * @param fyName - The selected fiscal year name
- * @returns Validation error messages for the row
- */
-function validateRow(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set<string>, fyName: string): string[] {
-  const errors: string[] = [];
-  if (!row.miti) {
-    errors.push("Miti required");
-  } else {
-    const parsed = parseMiti(row.miti);
-    if (!parsed.ok) {
-      errors.push("Invalid date");
-    } else {
-      const startMonth = 7;
-      const fy = parsed.month >= startMonth ? parsed.year : parsed.year - 1;
-      const rowFyName = `${fy}/${String((fy % 100) + 1).padStart(2, "0")}`;
-      if (rowFyName !== fyName) {
-        errors.push(`Date falls in FY ${rowFyName}`);
-      }
-    }
-  }
-  if (!row.partyResolved || !row.partyId) errors.push("Select a valid party");
-  if (!row.invoiceNumber.trim()) errors.push("Invoice number required");
-  if (!row.categoryId) errors.push("Category required");
-  if (!row.taxableAmount || parseFloat(row.taxableAmount) <= 0) errors.push("Taxable amount must be greater than 0");
-  if (row.invoiceNumber && row.partyId) {
-    const key = `${row.partyId}|${row.invoiceNumber}`;
-    if (existingInvoices.has(key)) {
-      errors.push(`Invoice ${row.invoiceNumber} already exists for this party`);
-    }
-    const dupesInBatch = allRows.filter(
-      (r) => r.id !== row.id && r.partyId === row.partyId && r.invoiceNumber === row.invoiceNumber && r.invoiceNumber !== "",
-    );
-    if (dupesInBatch.length > 0) {
-      errors.push("Duplicate in batch");
-    }
-  }
-  return errors;
-}
-
-/**
- * Determines the current status of an expense ledger row.
- *
- * @param row - The ledger row to evaluate
- * @param allRows - All ledger rows used to detect duplicates
- * @param existingInvoices - Invoice numbers already recorded for the fiscal year
- * @param fyName - The fiscal year name used for validation
- * @returns The row status: `incomplete` for an empty row, `duplicate` when validation errors exist, or `pending` otherwise
- */
-function getRowStatus(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Set<string>, fyName: string): LedgerRow["status"] {
-  if (!row.miti && !row.partyId && !row.taxableAmount) return "incomplete";
-  const errors = validateRow(row, allRows, existingInvoices, fyName);
-  if (errors.length > 0) return "duplicate";
-  return "pending";
-}
+import { ledgerReducer } from "@/lib/expenses/ledger-reducer";
+import { createLedgerRow, getInvoiceKey } from "@/lib/expenses/ledger-utils";
+import { validateLedgerRow, buildDuplicateIndex } from "@/lib/expenses/ledger-validation";
+import type { Party, Category, LedgerRow } from "@/lib/expenses/ledger-types";
+import { FIELD_ORDER, type CellField } from "@/lib/expenses/ledger-types";
+import { PartyAutocomplete } from "./party-autocomplete";
+import { StatusBadge } from "./status-badge";
+import { LedgerSummary } from "./ledger-summary";
+import { LedgerActions } from "./ledger-actions";
 
 /**
  * Determines whether a ledger row requires attention.
@@ -174,252 +22,6 @@ function getRowStatus(row: LedgerRow, allRows: LedgerRow[], existingInvoices: Se
  */
 function isIssueRow(row: LedgerRow): boolean {
   return row.status === "error" || row.status === "duplicate" || row.status === "incomplete";
-}
-
-interface PartyAutocompleteProps {
-  allParties: Party[];
-  value: string;
-  partyId: string;
-  partyResolved: boolean;
-  rowId: string;
-  onSelect: (party: Party) => void;
-  onSearchChange: (partyName: string) => void;
-  onGridKeyDown: (e: React.KeyboardEvent, field: CellField) => void;
-}
-
-/**
- * Provides searchable party selection with keyboard navigation and resolved-party status.
- *
- * @param allParties - The parties available for search
- * @param value - The current party name
- * @param partyId - The selected party identifier
- * @param partyResolved - Whether the current party value resolves to a party
- * @param rowId - The ledger row this field belongs to
- * @param onSelect - Called when a party is selected
- * @param onSearchChange - Called when the party search query changes
- * @param onGridKeyDown - Forwards keys the autocomplete does not consume to the grid navigation handler
- */
-function PartyAutocomplete({ allParties, value, partyId, partyResolved, rowId, onSelect, onSearchChange, onGridKeyDown }: PartyAutocompleteProps) {
-  const [query, setQuery] = useState(value);
-  const [results, setResults] = useState<Party[]>([]);
-  const [open, setOpen] = useState(false);
-  const [highlightIdx, setHighlightIdx] = useState(-1);
-  const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const prevValueRef = useRef(value);
-
-  if (prevValueRef.current !== value) {
-    prevValueRef.current = value;
-    setQuery(value);
-  }
-
-  const updatePosition = useCallback(() => {
-    const rect = inputRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setPosition({ top: rect.bottom + 4, left: rect.left, width: rect.width });
-  }, []);
-
-  const search = useCallback(
-    (q: string) => {
-      if (q.length < 1) { setResults([]); setOpen(false); return; }
-      const lower = q.toLowerCase();
-      const isVat = /\d{5,}/.test(q);
-      let matched: Party[];
-      if (isVat) {
-        matched = allParties.filter((p) => p.vatNumber?.includes(q));
-      } else {
-        matched = allParties.filter(
-          (p) =>
-            p.name.toLowerCase().includes(lower) ||
-            (p.vatNumber && p.vatNumber.includes(q)),
-        );
-      }
-      setResults(matched.slice(0, 8));
-      setOpen(matched.length > 0);
-      setHighlightIdx(-1);
-    },
-    [allParties],
-  );
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
-  }, [open, updatePosition]);
-
-  /**
-   * Handles keyboard navigation and selection for the party autocomplete and ledger grid.
-   *
-   * @param e - The keyboard event from the party search input
-   */
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (open) {
-      if (e.key === "ArrowDown") { e.preventDefault(); setHighlightIdx((i) => Math.min(i + 1, results.length - 1)); return; }
-      if (e.key === "ArrowUp") { e.preventDefault(); setHighlightIdx((i) => Math.max(i - 1, 0)); return; }
-      if (e.key === "Enter" && highlightIdx >= 0) { e.preventDefault(); e.stopPropagation(); selectParty(results[highlightIdx]); return; }
-      if (e.key === "Escape") { setOpen(false); return; }
-      if (e.key === "Tab") { setOpen(false); }
-    }
-    onGridKeyDown(e, "partySearch");
-  }
-
-  /**
-   * Selects a party from the autocomplete results and notifies the parent.
-   */
-  function selectParty(party: Party) {
-    setQuery(party.name);
-    setOpen(false);
-    onSelect(party);
-  }
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value;
-    setQuery(val);
-    search(val);
-    onSearchChange(val);
-  }
-
-  function handleFocus() {
-    if (results.length > 0) {
-      updatePosition();
-      setOpen(true);
-    } else if (query.length > 0) {
-      search(query);
-      updatePosition();
-      setOpen(results.length > 0);
-    }
-  }
-
-  const showDropdown = open && results.length > 0 && position;
-
-  return (
-    <div className="relative w-full" ref={dropdownRef}>
-      <div className="relative">
-        <input
-          ref={inputRef}
-          type="text"
-          data-row={rowId}
-          data-field="partySearch"
-          value={query}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onFocus={handleFocus}
-          placeholder="Search party..."
-          className={`h-10 w-full rounded border bg-transparent px-3 pr-8 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
-            !partyResolved && query ? "border-destructive bg-destructive/5 focus:ring-destructive/40" : "border-border/50"
-          }`}
-        />
-        {partyResolved && (
-          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-emerald-500">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-            </svg>
-          </span>
-        )}
-      </div>
-      {showDropdown &&
-        createPortal(
-          <div
-            role="listbox"
-            className="fixed max-h-48 overflow-y-auto rounded-lg border border-border/50 bg-surface py-1 shadow-lg"
-            style={{ top: position.top, left: position.left, width: position.width, zIndex: 50 }}
-          >
-            {results.map((party, idx) => (
-              <button
-                key={party.id}
-                type="button"
-                role="option"
-                aria-selected={party.id === partyId}
-                className={`block w-full px-3 py-2.5 text-left text-sm hover:bg-surface-hover ${
-                  idx === highlightIdx ? "bg-surface-hover" : ""
-                } ${party.id === partyId ? "font-medium text-primary" : "text-foreground"}`}
-                onMouseDown={(e) => { e.preventDefault(); selectParty(party); }}
-              >
-                <span className="font-medium">{party.name}</span>
-                {party.vatNumber && <span className="ml-2 text-muted">VAT: {party.vatNumber}</span>}
-                {party.locationName && <span className="ml-2 text-muted">&middot; {party.locationName}</span>}
-              </button>
-            ))}
-          </div>,
-          document.body,
-        )}
-    </div>
-  );
-}
-
-/**
- * Renders a visual status badge for a ledger row.
- *
- * @param status - The ledger row status to display
- */
-function StatusBadge({ status }: { status: LedgerRow["status"] }) {
-  if (status === "saved") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-        </svg>
-        Saved
-      </span>
-    );
-  }
-  if (status === "saving") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
-        <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-        Saving...
-      </span>
-    );
-  }
-  if (status === "error") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-        Error
-      </span>
-    );
-  }
-  if (status === "duplicate") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
-        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-        </svg>
-        Issue
-      </span>
-    );
-  }
-  if (status === "incomplete") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-        Incomplete
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-      Pending
-    </span>
-  );
 }
 
 interface LedgerGridProps {
@@ -446,37 +48,65 @@ export function LedgerGrid({
   allParties,
   allCategories,
 }: LedgerGridProps) {
-  const [rows, setRows] = useState<LedgerRow[]>(() => [createEmptyRow()]);
+  const [rows, dispatch] = useReducer(ledgerReducer, [createLedgerRow()]);
   const [existingInvoices, setExistingInvoices] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
-  const [saveResult, setSaveResult] = useState<{ saved: number; errors: number } | null>(null);
-  const [statusMessage, setStatusMessage] = useState("");
+  const [existingInvoicesError, setExistingInvoicesError] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!companyId || !fiscalYearId) return;
-    fetch(`/api/expenses?companyId=${companyId}&fiscalYearId=${fiscalYearId}&pageSize=500`)
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    fetch(
+      `/api/expenses/invoice-keys?companyId=${companyId}&fiscalYearId=${fiscalYearId}`,
+      { signal: controller.signal },
+    )
       .then((r) => r.json())
-      .then((res: { data: { partyId: string; invoiceNumber: string | null }[] }) => {
-        const keys = new Set<string>();
-        for (const e of res.data) {
-          if (e.invoiceNumber) keys.add(`${e.partyId}|${e.invoiceNumber}`);
-        }
-        setExistingInvoices(keys);
-      })
-      .catch(() => {});
+      .then(
+        (res: {
+          data: { partyId: string; invoiceNumber: string }[];
+        }) => {
+          if (cancelled) return;
+          const keys = new Set<string>();
+          for (const e of res.data) {
+            keys.add(getInvoiceKey(e.partyId, e.invoiceNumber));
+          }
+          setExistingInvoices(keys);
+          setExistingInvoicesError(false);
+        },
+      )
+      .catch((err) => {
+        if (cancelled || err.name === "AbortError") return;
+        console.error("Failed to load existing invoices:", err);
+        setExistingInvoicesError(true);
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [companyId, fiscalYearId]);
+
+  const duplicateIndex = useMemo(() => buildDuplicateIndex(rows), [rows]);
 
   const enrichedRows = useMemo(() => {
     return rows.map((row) => {
       if (row.status === "saving" || row.status === "saved" || row.status === "error") {
         return row;
       }
-      const errors = validateRow(row, rows, existingInvoices, fiscalYearName);
-      const status = getRowStatus(row, rows, existingInvoices, fiscalYearName);
-      return { ...row, status, error: errors[0] };
+      const result = validateLedgerRow(row, duplicateIndex, existingInvoices, fiscalYearName);
+      return { ...row, status: result.status, error: result.error, warnings: result.warnings };
     });
-  }, [rows, existingInvoices, fiscalYearName]);
+  }, [rows, duplicateIndex, existingInvoices, fiscalYearName]);
+
+  const { saving, saveResult, statusMessage, saveAll } = useLedgerSave({
+    enrichedRows,
+    fiscalYearId,
+    dispatch,
+    setExistingInvoices,
+  });
 
   const totals = useMemo(() => {
     const valid = enrichedRows.filter((r) => r.status === "pending" || r.status === "saving" || r.status === "saved");
@@ -494,160 +124,69 @@ export function LedgerGrid({
   const pendingCount = enrichedRows.filter((r) => r.status === "pending").length;
   const savedCount = enrichedRows.filter((r) => r.status === "saved").length;
 
-  function clearSaved() {
-    setRows((prev) => prev.filter((r) => r.status !== "saved"));
+  function updateField(rowId: string, field: string, value: string, categoryName?: string) {
+    dispatch({ type: "UPDATE_FIELD", rowId, field, value, categoryName });
   }
 
-  /**
-   * Updates a ledger row and refreshes its derived values and editing state.
-   *
-   * @param rowId - The identifier of the row to update
-   * @param updates - The row fields to change
-   */
-  function updateRow(rowId: string, updates: Partial<LedgerRow>) {
-    setRows((prev) =>
-      prev.map((r) => {
-        if (r.id !== rowId) return r;
-        const next = { ...r, ...updates };
-        if (r.status === "saved" || r.status === "error" || r.status === "saving") {
-          next.status = "pending";
-          next.error = undefined;
-        }
-        if (updates.totalAmount !== undefined) {
-          const total = Number(updates.totalAmount) || 0;
-          if (total > 0) {
-            const calc = calcFromTotal(total);
-            next.taxableAmount = String(calc.taxable);
-            next.vatAmount = String(calc.vat);
-          } else {
-            next.taxableAmount = "";
-            next.vatAmount = "";
-          }
-        }
-        if (updates.taxableAmount !== undefined) {
-          const taxable = Number(updates.taxableAmount) || 0;
-          if (taxable > 0) {
-            const calc = calcFromTaxable(taxable);
-            next.vatAmount = String(calc.vat);
-            next.totalAmount = String(calc.total);
-          } else {
-            next.vatAmount = "";
-            next.totalAmount = "";
-          }
-        }
-        if (updates.categoryId !== undefined) {
-          const cat = allCategories.find((c) => c.id === updates.categoryId);
-          next.categoryName = cat?.name ?? "";
-        }
-        return next;
-      }),
-    );
+  function selectParty(rowId: string, party: Party) {
+    dispatch({
+      type: "SELECT_PARTY",
+      rowId,
+      partyId: party.id,
+      partyName: party.name,
+      locationId: party.locationId,
+      locationName: party.locationName,
+    });
   }
 
-  /**
-   * Updates a row's party details by matching the entered name against available parties.
-   *
-   * @param rowId - The identifier of the row to update
-   * @param partyName - The party name to resolve
-   */
-  function updatePartyName(rowId: string, partyName: string) {
-    setRows((prev) =>
-      prev.map((r) => {
-        if (r.id !== rowId) return r;
-        const base = { ...r };
-        if (r.status === "saved" || r.status === "error" || r.status === "saving") {
-          base.status = "pending";
-          base.error = undefined;
-        }
-        const match = allParties.find(
-          (p) => p.name.toLowerCase() === partyName.toLowerCase()
-        );
-        if (match) {
-          return {
-            ...base,
-            partyId: match.id,
-            partyName: match.name,
-            partyResolved: true,
-            locationId: match.locationId,
-            locationName: match.locationName,
-          };
-        }
-        return {
-          ...base,
-          partyId: "",
-          partyName,
-          partyResolved: false,
-          locationId: null,
-          locationName: null,
-        };
-      }),
-    );
+  function searchParty(rowId: string, partyName: string) {
+    const match = allParties.find((p) => p.name.toLowerCase() === partyName.toLowerCase());
+    if (match) {
+      dispatch({
+        type: "UPDATE_PARTY_SEARCH",
+        rowId,
+        partyName: match.name,
+        partyId: match.id,
+        locationId: match.locationId,
+        locationName: match.locationName,
+      });
+    } else {
+      dispatch({ type: "UPDATE_PARTY_SEARCH", rowId, partyName });
+    }
   }
 
-  /**
-   * Inserts a new empty ledger row after the specified row or at the end of the ledger.
-   *
-   * @param afterId - The ID of the row after which to insert the new row
-   * @returns The ID of the inserted row
-   */
   function addRow(afterId?: string): string {
     const idx = afterId ? rows.findIndex((r) => r.id === afterId) : rows.length - 1;
     const prevRow = idx >= 0 ? rows[idx] : undefined;
-    const newRow = createEmptyRow(prevRow);
-    setRows((prev) => {
-      const next = [...prev];
-      next.splice(idx + 1, 0, newRow);
-      return next;
-    });
+    const newRow = createLedgerRow(prevRow);
+    dispatch({ type: "ADD_ROW", afterId, newRow });
     return newRow.id;
   }
 
-  /**
-   * Removes a ledger row while preserving one empty row in the ledger.
-   *
-   * @param rowId - The identifier of the row to remove
-   */
-  function removeRow(rowId: string) {
-    setRows((prev) => {
-      if (prev.length <= 1) return [createEmptyRow()];
-      return prev.filter((r) => r.id !== rowId);
-    });
-  }
-
   function duplicateRow(rowId: string) {
-    setRows((prev) => {
-      const idx = prev.findIndex((r) => r.id === rowId);
-      if (idx < 0) return prev;
-      const src = prev[idx];
-      const newRow: LedgerRow = {
-        ...createEmptyRow(src),
-        partyId: src.partyId,
-        partyName: src.partyName,
-        partyResolved: src.partyResolved,
-        locationId: src.locationId,
-        locationName: src.locationName,
-        invoiceNumber: "",
-        categoryId: src.categoryId,
-        categoryName: src.categoryName,
-        taxableAmount: src.taxableAmount,
-        vatAmount: src.vatAmount,
-        totalAmount: src.totalAmount,
-        status: "pending",
-        error: undefined,
-        warnings: undefined,
-      };
-      const next = [...prev];
-      next.splice(idx + 1, 0, newRow);
-      return next;
-    });
+    const idx = rows.findIndex((r) => r.id === rowId);
+    if (idx < 0) return;
+    const src = rows[idx];
+    const newRow: LedgerRow = {
+      ...createLedgerRow(src),
+      partyId: src.partyId,
+      partyName: src.partyName,
+      partyResolved: src.partyResolved,
+      locationId: src.locationId,
+      locationName: src.locationName,
+      invoiceNumber: "",
+      categoryId: src.categoryId,
+      categoryName: src.categoryName,
+      taxableAmount: src.taxableAmount,
+      vatAmount: src.vatAmount,
+      totalAmount: src.totalAmount,
+      status: "pending",
+      error: undefined,
+      warnings: undefined,
+    };
+    dispatch({ type: "DUPLICATE_ROW", newRow, sourceIdx: idx });
   }
 
-  /**
-   * Focuses and selects the input for a specified ledger cell.
-   *
-   * @param rowId - The identifier of the row containing the cell
-   * @param field - The cell field to focus
-   */
   function focusField(rowId: string, field: CellField) {
     setTimeout(() => {
       const el = gridRef.current?.querySelector<HTMLElement>(
@@ -680,7 +219,7 @@ export function LedgerGrid({
       }
     } else if (e.key === "Enter" && e.shiftKey) {
       e.preventDefault();
-      removeRow(rowId);
+      dispatch({ type: "REMOVE_ROW", rowId });
     } else if (e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
       if (fieldIdx < FIELD_ORDER.length - 1) {
@@ -705,90 +244,6 @@ export function LedgerGrid({
     }
   }
 
-  /**
-   * Saves all pending expense rows and updates their statuses with the batch results.
-   */
-  async function saveAll() {
-    const pending = enrichedRows.filter((r) => r.status === "pending");
-    if (pending.length === 0) return;
-    setSaving(true);
-    setSaveResult(null);
-    setStatusMessage(`Saving ${pending.length} row${pending.length > 1 ? "s" : ""}...`);
-
-    setRows((prev) =>
-      prev.map((r) => (r.status === "pending" ? { ...r, status: "saving" as const } : r)),
-    );
-
-    const batchInputs: BatchRowInput[] = pending.map((row) => ({
-      fiscalYearId,
-      partyId: row.partyId,
-      categoryId: row.categoryId,
-      locationId: row.locationId,
-      miti: row.miti,
-      invoiceNumber: row.invoiceNumber || null,
-      item: row.categoryName,
-      taxableAmount: row.taxableAmount,
-      vatAmount: row.vatAmount,
-      totalAmount: row.totalAmount,
-      vatRate: "13.00",
-    }));
-
-    const result = await batchSaveExpenses(batchInputs);
-
-    if (result.ok) {
-      let savedCount = 0;
-      let errorCount = 0;
-      const newlySaved: string[] = [];
-      for (const r of result.data) {
-        const rowId = pending[r.index].id;
-        if (r.ok) {
-          savedCount++;
-          if (pending[r.index].invoiceNumber) {
-            newlySaved.push(`${pending[r.index].partyId}|${pending[r.index].invoiceNumber}`);
-          }
-          setRows((prev) =>
-            prev.map((row) =>
-              row.id === rowId
-                ? { ...row, status: "saved" as const, error: undefined, warnings: r.warnings }
-                : row,
-            ),
-          );
-        } else {
-          errorCount++;
-          setRows((prev) =>
-            prev.map((row) =>
-              row.id === rowId
-                ? { ...row, status: "error" as const, error: r.error }
-                : row,
-            ),
-          );
-        }
-      }
-      if (newlySaved.length > 0) {
-        setExistingInvoices((prev) => new Set([...prev, ...newlySaved]));
-      }
-      setSaveResult({ saved: savedCount, errors: errorCount });
-      setStatusMessage(`Saved ${savedCount} expense${savedCount > 1 ? "s" : ""}.${errorCount > 0 ? ` ${errorCount} error(s).` : ""}`);
-      if (savedCount > 0) {
-        setTimeout(() => {
-          setRows((prev) => prev.filter((r) => r.status !== "saved"));
-        }, 2000);
-      }
-    } else {
-      setRows((prev) =>
-        prev.map((r) =>
-          r.status === "saving"
-            ? { ...r, status: "error" as const, error: result.error }
-            : r,
-        ),
-      );
-      setSaveResult({ saved: 0, errors: pending.length });
-      setStatusMessage(`Failed to save: ${result.error}`);
-    }
-
-    setSaving(false);
-  }
-
   function cellBg(status: LedgerRow["status"]) {
     switch (status) {
       case "saved": return "bg-emerald-500/5";
@@ -808,6 +263,13 @@ export function LedgerGrid({
       <div className="sr-only text-[11px] text-muted-foreground">
         Use Tab or Enter to move between fields, Ctrl+Enter to save all, F2 to duplicate a row, Esc to delete a row.
       </div>
+
+      {/* Invoice index load error */}
+      {existingInvoicesError && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+          Unable to load existing invoices — duplicate detection may be incomplete. Please refresh to retry.
+        </div>
+      )}
 
       {/* Table */}
       <div className="overflow-x-auto rounded-lg border border-border/50">
@@ -838,7 +300,7 @@ export function LedgerGrid({
                       data-row={row.id}
                       data-field="miti"
                       value={row.miti}
-                      onChange={(e) => updateRow(row.id, { miti: e.target.value })}
+                      onChange={(e) => updateField(row.id, "miti", e.target.value)}
                       onKeyDown={(e) => handleCellKeyDown(e, row.id, "miti")}
                       placeholder="2082-05-27"
                       className={`h-10 w-full rounded border bg-transparent px-3 text-sm tabular-amount focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
@@ -856,12 +318,8 @@ export function LedgerGrid({
                       partyId={row.partyId}
                       partyResolved={row.partyResolved}
                       rowId={row.id}
-                      onSelect={(party) => updateRow(row.id, {
-                        partyId: party.id, partyName: party.name,
-                        partyResolved: true,
-                        locationId: party.locationId, locationName: party.locationName,
-                      })}
-                      onSearchChange={(partyName) => updatePartyName(row.id, partyName)}
+                      onSelect={(party) => selectParty(row.id, party)}
+                      onSearchChange={(partyName) => searchParty(row.id, partyName)}
                       onGridKeyDown={(e, field) => handleCellKeyDown(e, row.id, field)}
                     />
                   </td>
@@ -872,7 +330,7 @@ export function LedgerGrid({
                       data-row={row.id}
                       data-field="invoiceNumber"
                       value={row.invoiceNumber}
-                      onChange={(e) => updateRow(row.id, { invoiceNumber: e.target.value })}
+                      onChange={(e) => updateField(row.id, "invoiceNumber", e.target.value)}
                       onKeyDown={(e) => handleCellKeyDown(e, row.id, "invoiceNumber")}
                       placeholder="INV-001"
                       className={`h-10 w-full rounded border bg-transparent px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
@@ -890,7 +348,7 @@ export function LedgerGrid({
                       value={row.categoryId}
                       onChange={(e) => {
                         const cat = allCategories.find((c) => c.id === e.target.value);
-                        updateRow(row.id, { categoryId: e.target.value, categoryName: cat?.name ?? "" });
+                        updateField(row.id, "categoryId", e.target.value, cat?.name ?? "");
                       }}
                       onKeyDown={(e) => handleCellKeyDown(e, row.id, "categoryId")}
                       className={`h-10 w-full rounded border bg-transparent px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
@@ -915,7 +373,7 @@ export function LedgerGrid({
                       data-row={row.id}
                       data-field="taxableAmount"
                       value={row.taxableAmount}
-                      onChange={(e) => updateRow(row.id, { taxableAmount: e.target.value })}
+                      onChange={(e) => updateField(row.id, "taxableAmount", e.target.value)}
                       onKeyDown={(e) => handleCellKeyDown(e, row.id, "taxableAmount")}
                       placeholder="0.00"
                       min="0"
@@ -939,7 +397,7 @@ export function LedgerGrid({
                       data-row={row.id}
                       data-field="totalAmount"
                       value={row.totalAmount}
-                      onChange={(e) => updateRow(row.id, { totalAmount: e.target.value })}
+                      onChange={(e) => updateField(row.id, "totalAmount", e.target.value)}
                       onKeyDown={(e) => handleCellKeyDown(e, row.id, "totalAmount")}
                       placeholder="0.00"
                       min="0"
@@ -971,7 +429,7 @@ export function LedgerGrid({
                       </button>
                       <button
                         type="button"
-                        onClick={() => removeRow(row.id)}
+                        onClick={() => dispatch({ type: "REMOVE_ROW", rowId: row.id })}
                         title="Delete row (Esc)"
                         aria-label="Delete row"
                         className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
@@ -996,15 +454,7 @@ export function LedgerGrid({
                         <span>{row.error}</span>
                         <button
                           type="button"
-                          onClick={() => {
-                            setRows((prev) =>
-                              prev.map((r) =>
-                                r.id === row.id
-                                  ? { ...r, status: "pending" as const, error: undefined }
-                                  : r
-                              )
-                            );
-                          }}
+                          onClick={() => dispatch({ type: "RESET_STATUS", rowId: row.id })}
                           className="ml-2 text-sm font-medium text-primary hover:underline"
                         >
                           Fix
@@ -1019,80 +469,19 @@ export function LedgerGrid({
         </table>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
-          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Taxable (Excl. VAT)
-          </div>
-          <div className="mt-1 text-lg font-semibold tabular-nums">
-            {formatAmount(totals.taxable)}
-          </div>
-        </div>
-        <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
-          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            VAT ({VAT_RATE}%)
-          </div>
-          <div className="mt-1 text-lg font-semibold tabular-nums text-muted-foreground">
-            {formatAmount(totals.vat)}
-          </div>
-        </div>
-        <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
-          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Total (Incl. VAT)
-          </div>
-          <div className="mt-1 text-lg font-semibold tabular-nums">
-            {formatAmount(totals.total)}
-          </div>
-        </div>
-      </div>
-
-      {/* Row count */}
-      <div className="text-xs text-muted-foreground">
-        {enrichedRows.length} row{enrichedRows.length !== 1 ? "s" : ""} — {totals.count} ready to save
-      </div>
+      {/* Summary */}
+      <LedgerSummary totals={totals} rowCount={enrichedRows.length} />
 
       {/* Actions */}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => addRow()}
-          className="inline-flex items-center gap-1.5 rounded border border-dashed border-border/50 px-3 py-1.5 text-sm text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          Add row
-        </button>
-        <button
-          type="button"
-          onClick={saveAll}
-          disabled={saving || pendingCount === 0}
-          className="inline-flex items-center gap-1.5 rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-          </svg>
-          {saving ? "Saving..." : `Save ${pendingCount} row${pendingCount === 1 ? "" : "s"}`}
-          <kbd className="ml-2 rounded border border-primary-foreground/30 px-1.5 py-0.5 font-mono text-[10px]">
-            Ctrl+Enter
-          </kbd>
-        </button>
-        {saveResult && (
-          <span className="text-sm text-muted-foreground">
-            {saveResult.saved} saved{saveResult.errors > 0 ? `, ${saveResult.errors} error(s)` : ""}
-          </span>
-        )}
-        {savedCount > 0 && (
-          <button
-            type="button"
-            onClick={clearSaved}
-            className="inline-flex items-center gap-1.5 rounded border border-border/50 px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-          >
-            Clear saved ({savedCount})
-          </button>
-        )}
-      </div>
+      <LedgerActions
+        saving={saving}
+        pendingCount={pendingCount}
+        savedCount={savedCount}
+        saveResult={saveResult}
+        onAddRow={() => addRow()}
+        onSave={saveAll}
+        onClearSaved={() => dispatch({ type: "CLEAR_SAVED" })}
+      />
     </div>
   );
 }
