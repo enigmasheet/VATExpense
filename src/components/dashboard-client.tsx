@@ -99,7 +99,15 @@ export function DashboardClient({
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-semibold text-foreground">Recent expenses</h2>
         {recent.length === 0 ? (
-          <p className="text-sm text-muted">No expenses recorded yet.</p>
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-surface p-8 text-center">
+            <p className="text-sm text-muted">No expenses recorded yet.</p>
+            <Link
+              href="/expenses/new"
+              className="inline-flex items-center gap-1.5 rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Add your first expense
+            </Link>
+          </div>
         ) : (
           <>
             {/* Desktop table */}

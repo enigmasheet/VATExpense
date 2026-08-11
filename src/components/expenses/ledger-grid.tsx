@@ -962,6 +962,7 @@ export function LedgerGrid({
                         type="button"
                         onClick={() => duplicateRow(row.id)}
                         title="Duplicate row (F2)"
+                        aria-label="Duplicate row"
                         className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                       >
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
@@ -972,6 +973,7 @@ export function LedgerGrid({
                         type="button"
                         onClick={() => removeRow(row.id)}
                         title="Delete row (Esc)"
+                        aria-label="Delete row"
                         className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       >
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">

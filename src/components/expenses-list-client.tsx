@@ -177,7 +177,15 @@ export function ExpensesListClient({
 
       <div className="rounded-lg border border-border bg-surface">
         {rows.length === 0 ? (
-          <p className="p-6 text-sm text-muted">No expenses match. Record your first one.</p>
+          <div className="flex flex-col items-center gap-3 p-6 text-center">
+            <p className="text-sm text-muted">No expenses match. Record your first one.</p>
+            <Link
+              href="/expenses/new"
+              className="inline-flex items-center gap-1.5 rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Add Expense
+            </Link>
+          </div>
         ) : (
           <>
             {/* Desktop table */}

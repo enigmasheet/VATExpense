@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCompanyId, getExpenses, getParties, getCategories, getActiveFiscalYear } from "@/lib/server-data";
 import { ExpensesListClient } from "@/components/expenses-list-client";
 
@@ -37,6 +38,12 @@ export default async function ExpensesPage({ searchParams }: Props) {
       <div className="flex flex-col gap-6">
         <h1 className="font-display text-2xl font-semibold text-foreground">Expenses</h1>
         <p className="text-sm text-muted">No fiscal year configured — create one first.</p>
+        <Link
+          href="/fiscal-years"
+          className="inline-flex items-center gap-1.5 rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 w-fit"
+        >
+          Create fiscal year
+        </Link>
       </div>
     );
   }
