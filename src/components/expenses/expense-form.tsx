@@ -204,7 +204,7 @@ export function ExpenseForm({
     calcFromTotal(val);
   }
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!companyId) return;
     setSubmitting(true);
