@@ -51,6 +51,8 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
   const [options, setOptions] = useState<Record<string, Option[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<Record<string, string>>({});
 
   const refresh = useCallback(() => {
     if (!companyId) return;
@@ -95,6 +97,59 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
       setError(err instanceof ApiError ? err.detail : "Failed to save");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function startEdit(item: T) {
+    setEditingId(item.id);
+    setEditValues({ name: item.name });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditValues({});
+  }
+
+  async function saveEdit(id: string) {
+    if (!companyId) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await api(`${listUrl}/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: editValues.name }),
+      });
+      setEditingId(null);
+      setEditValues({});
+      refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "Failed to update");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function toggleActive(item: T) {
+    if (!companyId) return;
+    try {
+      await api(`${listUrl}/${item.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive: !item.isActive }),
+      });
+      refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "Failed to update status");
+    }
+  }
+
+  async function deleteItem(id: string, name: string) {
+    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    if (!companyId) return;
+    try {
+      await api(`${listUrl}/${id}`, { method: "DELETE" });
+      refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "Failed to delete");
     }
   }
 
@@ -181,21 +236,69 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
                   </th>
                 ))}
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item.id} className="border-b border-border last:border-b-0">
-                  <td className="px-4 py-3 font-medium">{item.name}</td>
+                  <td className="px-4 py-3">
+                    {editingId === item.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editValues.name ?? ""}
+                          onChange={(e) => setEditValues((v) => ({ ...v, name: e.target.value }))}
+                          className="h-8 rounded-md border border-border bg-background px-2 text-sm"
+                          autoFocus
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => saveEdit(item.id)}
+                          disabled={submitting}
+                        >
+                          Save
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={cancelEdit}>
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="font-medium">{item.name}</span>
+                    )}
+                  </td>
                   {columns.map((col) => (
                     <td key={col.header} className="px-4 py-3 text-muted">
                       {col.render(item)}
                     </td>
                   ))}
                   <td className="px-4 py-3">
-                    <Badge tone={item.isActive ? "success" : "default"}>
-                      {item.isActive ? "Active" : "Inactive"}
-                    </Badge>
+                    <button
+                      onClick={() => toggleActive(item)}
+                      className="cursor-pointer"
+                    >
+                      <Badge tone={item.isActive ? "success" : "default"}>
+                        {item.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {editingId !== item.id && (
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          className="text-sm text-primary hover:underline"
+                          onClick={() => startEdit(item)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="text-sm text-danger hover:underline"
+                          onClick={() => deleteItem(item.id, item.name)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

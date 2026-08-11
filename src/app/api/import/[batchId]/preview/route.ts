@@ -55,6 +55,18 @@ export async function GET(
           errors.push(`Category "${row.rawCategoryName}" not found`);
         }
 
+        // Resolve location if provided
+        let resolvedLocationId: string | null = null;
+        let resolvedLocationName: string | null = null;
+        if (row.rawLocationName) {
+          const locationNorm = normalizeName(row.rawLocationName);
+          const location = locationMap.get(locationNorm);
+          if (location) {
+            resolvedLocationId = location.id;
+            resolvedLocationName = location.name;
+          }
+        }
+
         const mitiResult = parseMiti(row.rawMiti ?? "");
         if (!mitiResult.ok) {
           errors.push(`Invalid miti: ${mitiResult.error}`);

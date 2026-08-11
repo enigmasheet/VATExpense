@@ -218,6 +218,7 @@ export const importBatchRows = pgTable(
     rawTotalAmount: text("raw_total_amount"),
     rawVatRate: text("raw_vat_rate"),
     rawRemarks: text("raw_remarks"),
+    rawLocationName: text("raw_location_name"),
     resolvedPartyId: uuid("resolved_party_id"),
     resolvedCategoryId: uuid("resolved_category_id"),
     resolvedLocationId: uuid("resolved_location_id"),

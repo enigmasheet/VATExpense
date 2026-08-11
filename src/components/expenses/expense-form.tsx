@@ -8,6 +8,9 @@ import { round2 } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 
+const VAT_RATE = 13;
+const VAT_FACTOR = 1 + VAT_RATE / 100; // 1.13
+
 interface FormValues {
   miti: string;
   invoiceNumber: string;
@@ -20,7 +23,6 @@ interface FormValues {
   taxableAmount: string;
   vatAmount: string;
   totalAmount: string;
-  vatRate: string;
   remarks: string;
 }
 
@@ -52,7 +54,6 @@ const emptyForm: FormValues = {
   taxableAmount: "",
   vatAmount: "",
   totalAmount: "",
-  vatRate: "",
   remarks: "",
 };
 
@@ -109,7 +110,6 @@ export function ExpenseForm({
           taxableAmount: initial.taxableAmount,
           vatAmount: initial.vatAmount,
           totalAmount: initial.totalAmount,
-          vatRate: initial.vatRate,
           remarks: initial.remarks ?? "",
         }
       : emptyForm,
@@ -120,7 +120,6 @@ export function ExpenseForm({
   const [parties, setParties] = useState<{ id: string; name: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
-  const [companyDefaultVatRate, setCompanyDefaultVatRate] = useState("13.00");
 
   useEffect(() => {
     if (!companyId) return;
@@ -133,13 +132,6 @@ export function ExpenseForm({
     api<{ data: { id: string; name: string }[] }>(`/api/locations?companyId=${companyId}`).then(
       ({ data }) => setLocations(data),
     );
-    api<{ data: { id: string; defaultVatRate: string }[] }>(`/api/companies`).then(({ data }) => {
-      const match = data.find((c) => c.id === companyId);
-      if (match) {
-        setCompanyDefaultVatRate(match.defaultVatRate);
-        setValues((v) => (v.vatRate ? v : { ...v, vatRate: match.defaultVatRate }));
-      }
-    });
   }, [companyId]);
 
   const set = useCallback(
@@ -148,16 +140,55 @@ export function ExpenseForm({
     [],
   );
 
-  function recalculate() {
-    const taxable = Number(values.taxableAmount);
-    const vatRate = Number(values.vatRate);
-    if (!Number.isFinite(taxable) || !Number.isFinite(vatRate)) return;
-    const vat = round2((taxable * vatRate) / 100);
+  function calcFromTaxable(taxableStr: string) {
+    const taxable = Number(taxableStr);
+    if (!Number.isFinite(taxable) || taxable <= 0) return;
+    const vat = round2((taxable * VAT_RATE) / 100);
+    const total = round2(taxable + vat);
     setValues((v) => ({
       ...v,
       vatAmount: String(vat),
-      totalAmount: String(round2(taxable + vat)),
+      totalAmount: String(total),
     }));
+  }
+
+  function calcFromTotal(totalStr: string) {
+    const total = Number(totalStr);
+    if (!Number.isFinite(total) || total <= 0) return;
+    const taxable = round2(total / VAT_FACTOR);
+    const vat = round2(total - taxable);
+    setValues((v) => ({
+      ...v,
+      taxableAmount: String(taxable),
+      vatAmount: String(vat),
+    }));
+  }
+
+  function calcFromQtyRate() {
+    const qty = Number(values.quantity);
+    const rate = Number(values.rate);
+    if (!Number.isFinite(qty) || !Number.isFinite(rate)) return;
+    const taxable = round2(qty * rate);
+    const vat = round2((taxable * VAT_RATE) / 100);
+    const total = round2(taxable + vat);
+    setValues((v) => ({
+      ...v,
+      taxableAmount: String(taxable),
+      vatAmount: String(vat),
+      totalAmount: String(total),
+    }));
+  }
+
+  function onTaxableChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value;
+    setValues((v) => ({ ...v, taxableAmount: val }));
+    calcFromTaxable(val);
+  }
+
+  function onTotalChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value;
+    setValues((v) => ({ ...v, totalAmount: val }));
+    calcFromTotal(val);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -180,7 +211,7 @@ export function ExpenseForm({
       taxableAmount: values.taxableAmount,
       vatAmount: values.vatAmount,
       totalAmount: values.totalAmount,
-      vatRate: values.vatRate,
+      vatRate: "13.00",
       remarks: values.remarks || null,
     };
 
@@ -195,7 +226,7 @@ export function ExpenseForm({
         } else {
           setMessages([{ kind: "success", text: "Expense recorded." }]);
         }
-        setValues({ ...emptyForm, vatRate: companyDefaultVatRate });
+        setValues(emptyForm);
       } else {
         const res = await api<{ data: unknown; warnings?: string[] }>(`/api/expenses/${expenseId}`, {
           method: "PATCH",
@@ -241,6 +272,7 @@ export function ExpenseForm({
       )}
       <MessageList messages={messages} />
 
+      {/* Invoice Details */}
       <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4">
         <h2 className="font-display text-lg font-semibold">Invoice details</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -248,13 +280,12 @@ export function ExpenseForm({
             <Input
               id="e-miti"
               required
-              placeholder="2082-04-05"
-              pattern="\d{4}-\d{2}-\d{2}"
+              placeholder="2082-04-05 or 04/05/2082"
               value={values.miti}
               onChange={set("miti")}
             />
           </Field>
-          <Field label="Invoice number" htmlFor="e-invoice" hint="Leave blank for cash memos without one">
+          <Field label="Invoice number" htmlFor="e-invoice" hint="Leave blank for cash memos">
             <Input
               id="e-invoice"
               placeholder="HH-001"
@@ -304,56 +335,58 @@ export function ExpenseForm({
         </div>
       </section>
 
+      {/* Amounts - VAT Calculator */}
       <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold">Amounts</h2>
-          <Button type="button" variant="secondary" size="sm" onClick={recalculate}>
-            Recalculate VAT &amp; total
-          </Button>
-        </div>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+        <h2 className="font-display text-lg font-semibold">Amounts</h2>
+        <p className="text-xs text-muted">
+          VAT rate: {VAT_RATE}% (Nepal government rate). Enter either the taxable amount or the total — the other fields calculate automatically.
+        </p>
+
+        {/* Qty & Rate row */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-2">
           <Field label="Quantity" htmlFor="e-qty">
             <Input id="e-qty" inputMode="decimal" value={values.quantity} onChange={set("quantity")} />
           </Field>
           <Field label="Rate" htmlFor="e-rate">
             <Input id="e-rate" inputMode="decimal" value={values.rate} onChange={set("rate")} />
           </Field>
-          <Field label="Taxable (Rs.)" htmlFor="e-taxable">
+        </div>
+        <Button type="button" variant="secondary" size="sm" onClick={calcFromQtyRate} className="w-fit">
+          Calculate from Qty × Rate
+        </Button>
+
+        {/* Main amounts */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Field label="Taxable amount (Rs.)" htmlFor="e-taxable" hint="Enter this OR total below">
             <Input
               id="e-taxable"
               required
               inputMode="decimal"
               value={values.taxableAmount}
-              onChange={set("taxableAmount")}
+              onChange={onTaxableChange}
             />
           </Field>
-          <Field label="VAT rate (%)" htmlFor="e-vatrate">
-            <Input
-              id="e-vatrate"
-              inputMode="decimal"
-              value={values.vatRate}
-              onChange={set("vatRate")}
-            />
-          </Field>
-          <Field label="VAT (Rs.)" htmlFor="e-vat">
+          <Field label="VAT @ 13% (Rs.)" htmlFor="e-vat">
             <Input
               id="e-vat"
               required
               inputMode="decimal"
               value={values.vatAmount}
-              onChange={set("vatAmount")}
+              readOnly
+              className="bg-[#f3f2ec]"
             />
           </Field>
-          <Field label="Total (Rs.)" htmlFor="e-total">
+          <Field label="Total amount (Rs.)" htmlFor="e-total" hint="Enter this OR taxable above">
             <Input
               id="e-total"
               required
               inputMode="decimal"
               value={values.totalAmount}
-              onChange={set("totalAmount")}
+              onChange={onTotalChange}
             />
           </Field>
         </div>
+
         <Field label="Remarks" htmlFor="e-remarks">
           <Input id="e-remarks" value={values.remarks} onChange={set("remarks")} />
         </Field>

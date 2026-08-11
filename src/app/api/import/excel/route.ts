@@ -14,6 +14,7 @@ interface ParsedRow {
   invoiceNumber: string | null;
   partyName: string;
   categoryName: string;
+  locationName: string | null;
   item: string;
   quantity: string | null;
   rate: string | null;
@@ -38,6 +39,7 @@ function mapExcelRow(row: Record<string, unknown>): ParsedRow | null {
     invoiceNumber: get("invoice") || null,
     partyName: get("party") || get("supplier") || get("vendor"),
     categoryName: get("category") || "",
+    locationName: get("location") || get("place") || null,
     item: get("item") || get("description") || "",
     quantity: get("qty") || get("quantity") || null,
     rate: get("rate") || null,
@@ -115,6 +117,7 @@ export async function POST(request: Request) {
       rawTotalAmount: string;
       rawVatRate: string;
       rawRemarks: string | null;
+      rawLocationName: string | null;
     }> = [];
 
     for (let i = 0; i < rows.length; i++) {
@@ -135,6 +138,7 @@ export async function POST(request: Request) {
         rawTotalAmount: row.totalAmount,
         rawVatRate: row.vatRate,
         rawRemarks: row.remarks,
+        rawLocationName: row.locationName,
       });
     }
 
