@@ -3,7 +3,6 @@ import { companies } from "@/lib/db/schema";
 import { createCompanySchema } from "@/lib/validation/masters";
 import { safeParse } from "@/lib/validation/utils";
 import { apiOk, badRequest, conflict, unprocessableEntity, internalError } from "@/lib/api-response";
-import { normalizeName } from "@/lib/normalize";
 import { ilike } from "drizzle-orm";
 
 export async function GET() {
@@ -27,7 +26,6 @@ export async function POST(request: Request) {
   if (!parsed.ok) return unprocessableEntity("Validation failed", parsed.errors);
 
   try {
-    const key = normalizeName(parsed.data.name);
     const existing = await db
       .select({ id: companies.id, name: companies.name })
       .from(companies)
