@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useApp } from "@/lib/use-app";
 import { api, ApiError } from "@/lib/api-client";
 import { formatAmount } from "@/lib/format";
@@ -60,6 +60,11 @@ export default function ImportPage() {
   const [confirming, setConfirming] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasFile, setHasFile] = useState(false);
+
+  const handleFileChange = useCallback(() => {
+    setHasFile(!!fileRef.current?.files?.[0]);
+  }, []);
 
   const handleUpload = async () => {
     const file = fileRef.current?.files?.[0];
@@ -143,13 +148,14 @@ export default function ImportPage() {
               ref={fileRef}
               type="file"
               accept=".xlsx,.xls"
+              onChange={handleFileChange}
               className="mt-2 block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
             />
           </div>
 
           <button
             onClick={handleUpload}
-            disabled={uploading || !fileRef.current?.files?.[0]}
+            disabled={uploading || !hasFile}
             className="inline-flex w-auto items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {uploading ? "Uploading…" : "Upload & Preview"}
