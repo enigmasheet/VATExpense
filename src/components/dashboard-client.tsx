@@ -59,7 +59,7 @@ export function DashboardClient({
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-baseline justify-between">
-        <h1 className="font-display text-3xl font-semibold text-foreground">{companyName}</h1>
+        <h1 className="font-display text-2xl font-semibold text-foreground">{companyName}</h1>
         <span className="text-sm text-muted">FY {fiscalYearName}</span>
       </div>
 
@@ -99,7 +99,15 @@ export function DashboardClient({
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-semibold text-foreground">Recent expenses</h2>
         {recent.length === 0 ? (
-          <p className="text-sm text-muted">No expenses recorded yet.</p>
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-surface p-8 text-center">
+            <p className="text-sm text-muted">No expenses recorded yet.</p>
+            <Link
+              href="/expenses/new"
+              className="inline-flex items-center gap-1.5 rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Add your first expense
+            </Link>
+          </div>
         ) : (
           <>
             {/* Desktop table */}
@@ -116,8 +124,12 @@ export function DashboardClient({
                 </thead>
                 <tbody>
                   {recent.map((e) => (
-                    <tr key={e.id} className="border-b border-border last:border-b-0">
-                      <td className="px-4 py-3">{e.miti}</td>
+                    <tr key={e.id} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
+                      <td className="px-4 py-3">
+                        <Link href={`/expenses/${e.id}`} className="font-medium text-primary hover:underline">
+                          {e.miti}
+                        </Link>
+                      </td>
                       <td className="px-4 py-3">{e.invoiceNumber ?? "—"}</td>
                       <td className="px-4 py-3">{e.partyName}</td>
                       <td className="px-4 py-3">{e.item}</td>
@@ -135,7 +147,9 @@ export function DashboardClient({
               {recent.map((e) => (
                 <div key={e.id} className="border-b border-border p-4 last:border-b-0">
                   <div className="flex items-start justify-between">
-                    <span className="font-medium">{e.partyName}</span>
+                    <Link href={`/expenses/${e.id}`} className="font-medium text-primary hover:underline">
+                      {e.partyName}
+                    </Link>
                     <span className="tabular-amount font-medium">{formatAmount(e.totalAmount)}</span>
                   </div>
                   <p className="truncate text-sm text-muted">{e.item}</p>

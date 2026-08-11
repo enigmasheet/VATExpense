@@ -181,8 +181,10 @@ interface PartyAutocompleteProps {
   value: string;
   partyId: string;
   partyResolved: boolean;
+  rowId: string;
   onSelect: (party: Party) => void;
   onSearchChange: (partyName: string) => void;
+  onGridKeyDown: (e: React.KeyboardEvent, field: CellField) => void;
 }
 
 /**
@@ -192,10 +194,12 @@ interface PartyAutocompleteProps {
  * @param value - The current party name
  * @param partyId - The selected party identifier
  * @param partyResolved - Whether the current party value resolves to a party
+ * @param rowId - The ledger row this field belongs to
  * @param onSelect - Called when a party is selected
  * @param onSearchChange - Called when the party search query changes
+ * @param onGridKeyDown - Forwards keys the autocomplete does not consume to the grid navigation handler
  */
-function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect, onSearchChange }: PartyAutocompleteProps) {
+function PartyAutocomplete({ allParties, value, partyId, partyResolved, rowId, onSelect, onSearchChange, onGridKeyDown }: PartyAutocompleteProps) {
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<Party[]>([]);
   const [open, setOpen] = useState(false);
@@ -257,14 +261,25 @@ function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect
     };
   }, [open, updatePosition]);
 
+  /**
+   * Handles keyboard navigation and selection for the party autocomplete and ledger grid.
+   *
+   * @param e - The keyboard event from the party search input
+   */
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (!open) return;
-    if (e.key === "ArrowDown") { e.preventDefault(); setHighlightIdx((i) => Math.min(i + 1, results.length - 1)); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setHighlightIdx((i) => Math.max(i - 1, 0)); }
-    else if (e.key === "Enter" && highlightIdx >= 0) { e.preventDefault(); e.stopPropagation(); selectParty(results[highlightIdx]); }
-    else if (e.key === "Escape") { setOpen(false); }
+    if (open) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setHighlightIdx((i) => Math.min(i + 1, results.length - 1)); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); setHighlightIdx((i) => Math.max(i - 1, 0)); return; }
+      if (e.key === "Enter" && highlightIdx >= 0) { e.preventDefault(); e.stopPropagation(); selectParty(results[highlightIdx]); return; }
+      if (e.key === "Escape") { setOpen(false); return; }
+      if (e.key === "Tab") { setOpen(false); }
+    }
+    onGridKeyDown(e, "partySearch");
   }
 
+  /**
+   * Selects a party from the autocomplete results and notifies the parent.
+   */
   function selectParty(party: Party) {
     setQuery(party.name);
     setOpen(false);
@@ -297,13 +312,15 @@ function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect
         <input
           ref={inputRef}
           type="text"
+          data-row={rowId}
+          data-field="partySearch"
           value={query}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           placeholder="Search party..."
           className={`h-10 w-full rounded border bg-transparent px-3 pr-8 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
-            !partyResolved && query ? "border-destructive/50" : "border-border/50"
+            !partyResolved && query ? "border-destructive bg-destructive/5 focus:ring-destructive/40" : "border-border/50"
           }`}
         />
         {partyResolved && (
@@ -452,6 +469,9 @@ export function LedgerGrid({
 
   const enrichedRows = useMemo(() => {
     return rows.map((row) => {
+      if (row.status === "saving" || row.status === "saved" || row.status === "error") {
+        return row;
+      }
       const errors = validateRow(row, rows, existingInvoices, fiscalYearName);
       const status = getRowStatus(row, rows, existingInvoices, fiscalYearName);
       return { ...row, status, error: errors[0] };
@@ -472,12 +492,27 @@ export function LedgerGrid({
   }, [enrichedRows]);
 
   const pendingCount = enrichedRows.filter((r) => r.status === "pending").length;
+  const savedCount = enrichedRows.filter((r) => r.status === "saved").length;
 
+  function clearSaved() {
+    setRows((prev) => prev.filter((r) => r.status !== "saved"));
+  }
+
+  /**
+   * Updates a ledger row and refreshes its derived values and editing state.
+   *
+   * @param rowId - The identifier of the row to update
+   * @param updates - The row fields to change
+   */
   function updateRow(rowId: string, updates: Partial<LedgerRow>) {
     setRows((prev) =>
       prev.map((r) => {
         if (r.id !== rowId) return r;
         const next = { ...r, ...updates };
+        if (r.status === "saved" || r.status === "error" || r.status === "saving") {
+          next.status = "pending";
+          next.error = undefined;
+        }
         if (updates.totalAmount !== undefined) {
           const total = Number(updates.totalAmount) || 0;
           if (total > 0) {
@@ -509,16 +544,27 @@ export function LedgerGrid({
     );
   }
 
+  /**
+   * Updates a row's party details by matching the entered name against available parties.
+   *
+   * @param rowId - The identifier of the row to update
+   * @param partyName - The party name to resolve
+   */
   function updatePartyName(rowId: string, partyName: string) {
     setRows((prev) =>
       prev.map((r) => {
         if (r.id !== rowId) return r;
+        const base = { ...r };
+        if (r.status === "saved" || r.status === "error" || r.status === "saving") {
+          base.status = "pending";
+          base.error = undefined;
+        }
         const match = allParties.find(
           (p) => p.name.toLowerCase() === partyName.toLowerCase()
         );
         if (match) {
           return {
-            ...r,
+            ...base,
             partyId: match.id,
             partyName: match.name,
             partyResolved: true,
@@ -527,7 +573,7 @@ export function LedgerGrid({
           };
         }
         return {
-          ...r,
+          ...base,
           partyId: "",
           partyName,
           partyResolved: false,
@@ -538,17 +584,29 @@ export function LedgerGrid({
     );
   }
 
-  function addRow(afterId?: string) {
+  /**
+   * Inserts a new empty ledger row after the specified row or at the end of the ledger.
+   *
+   * @param afterId - The ID of the row after which to insert the new row
+   * @returns The ID of the inserted row
+   */
+  function addRow(afterId?: string): string {
+    const idx = afterId ? rows.findIndex((r) => r.id === afterId) : rows.length - 1;
+    const prevRow = idx >= 0 ? rows[idx] : undefined;
+    const newRow = createEmptyRow(prevRow);
     setRows((prev) => {
-      const idx = afterId ? prev.findIndex((r) => r.id === afterId) : prev.length - 1;
-      const prevRow = idx >= 0 ? prev[idx] : undefined;
-      const newRow = createEmptyRow(prevRow);
       const next = [...prev];
       next.splice(idx + 1, 0, newRow);
       return next;
     });
+    return newRow.id;
   }
 
+  /**
+   * Removes a ledger row while preserving one empty row in the ledger.
+   *
+   * @param rowId - The identifier of the row to remove
+   */
   function removeRow(rowId: string) {
     setRows((prev) => {
       if (prev.length <= 1) return [createEmptyRow()];
@@ -584,16 +642,29 @@ export function LedgerGrid({
     });
   }
 
+  /**
+   * Focuses and selects the input for a specified ledger cell.
+   *
+   * @param rowId - The identifier of the row containing the cell
+   * @param field - The cell field to focus
+   */
   function focusField(rowId: string, field: CellField) {
     setTimeout(() => {
-      const el = gridRef.current?.querySelector<HTMLInputElement>(
+      const el = gridRef.current?.querySelector<HTMLElement>(
         `[data-row="${rowId}"][data-field="${field}"]`,
       );
       el?.focus();
-      el?.select();
+      if (el instanceof HTMLInputElement) el.select();
     }, 0);
   }
 
+  /**
+   * Handles keyboard navigation and row actions for an editable ledger cell.
+   *
+   * @param e - The keyboard event from the cell
+   * @param rowId - The identifier of the row containing the cell
+   * @param field - The cell field receiving the event
+   */
   function handleCellKeyDown(e: React.KeyboardEvent, rowId: string, field: CellField) {
     const fieldIdx = FIELD_ORDER.indexOf(field);
 
@@ -604,10 +675,8 @@ export function LedgerGrid({
       } else if (fieldIdx < FIELD_ORDER.length - 1) {
         focusField(rowId, FIELD_ORDER[fieldIdx + 1]);
       } else {
-        addRow(rowId);
-        const rowIdx = rows.findIndex((r) => r.id === rowId);
-        const nextRowId = rows[rowIdx + 1]?.id;
-        if (nextRowId) setTimeout(() => focusField(nextRowId, "miti"), 10);
+        const newId = addRow(rowId);
+        setTimeout(() => focusField(newId, "miti"), 10);
       }
     } else if (e.key === "Enter" && e.shiftKey) {
       e.preventDefault();
@@ -636,6 +705,9 @@ export function LedgerGrid({
     }
   }
 
+  /**
+   * Saves all pending expense rows and updates their statuses with the batch results.
+   */
   async function saveAll() {
     const pending = enrichedRows.filter((r) => r.status === "pending");
     if (pending.length === 0) return;
@@ -666,10 +738,14 @@ export function LedgerGrid({
     if (result.ok) {
       let savedCount = 0;
       let errorCount = 0;
+      const newlySaved: string[] = [];
       for (const r of result.data) {
         const rowId = pending[r.index].id;
         if (r.ok) {
           savedCount++;
+          if (pending[r.index].invoiceNumber) {
+            newlySaved.push(`${pending[r.index].partyId}|${pending[r.index].invoiceNumber}`);
+          }
           setRows((prev) =>
             prev.map((row) =>
               row.id === rowId
@@ -688,8 +764,16 @@ export function LedgerGrid({
           );
         }
       }
+      if (newlySaved.length > 0) {
+        setExistingInvoices((prev) => new Set([...prev, ...newlySaved]));
+      }
       setSaveResult({ saved: savedCount, errors: errorCount });
       setStatusMessage(`Saved ${savedCount} expense${savedCount > 1 ? "s" : ""}.${errorCount > 0 ? ` ${errorCount} error(s).` : ""}`);
+      if (savedCount > 0) {
+        setTimeout(() => {
+          setRows((prev) => prev.filter((r) => r.status !== "saved"));
+        }, 2000);
+      }
     } else {
       setRows((prev) =>
         prev.map((r) =>
@@ -721,27 +805,8 @@ export function LedgerGrid({
       </div>
 
       {/* Keyboard hints */}
-      <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-        <span className="inline-flex items-center gap-1">
-          <kbd className="rounded border border-border/50 bg-muted/50 px-1.5 py-0.5 font-mono text-[10px]">Tab</kbd>
-          Next field
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <kbd className="rounded border border-border/50 bg-muted/50 px-1.5 py-0.5 font-mono text-[10px]">Enter</kbd>
-          Next field or row
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <kbd className="rounded border border-border/50 bg-muted/50 px-1.5 py-0.5 font-mono text-[10px]">Ctrl+Enter</kbd>
-          Save all
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <kbd className="rounded border border-border/50 bg-muted/50 px-1.5 py-0.5 font-mono text-[10px]">F2</kbd>
-          Duplicate row
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <kbd className="rounded border border-border/50 bg-muted/50 px-1.5 py-0.5 font-mono text-[10px]">Esc</kbd>
-          Delete row
-        </span>
+      <div className="sr-only text-[11px] text-muted-foreground">
+        Use Tab or Enter to move between fields, Ctrl+Enter to save all, F2 to duplicate a row, Esc to delete a row.
       </div>
 
       {/* Table */}
@@ -777,7 +842,9 @@ export function LedgerGrid({
                       onKeyDown={(e) => handleCellKeyDown(e, row.id, "miti")}
                       placeholder="2082-05-27"
                       className={`h-10 w-full rounded border bg-transparent px-3 text-sm tabular-amount focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
-                        !row.miti.trim() && row.status !== "pending" ? "border-destructive/50" : "border-border/50"
+                        !row.miti.trim() && row.status !== "pending"
+                          ? "border-destructive bg-destructive/5 focus:ring-destructive/40"
+                          : "border-border/50"
                       }`}
                     />
                   </td>
@@ -788,12 +855,14 @@ export function LedgerGrid({
                       value={row.partyName}
                       partyId={row.partyId}
                       partyResolved={row.partyResolved}
+                      rowId={row.id}
                       onSelect={(party) => updateRow(row.id, {
                         partyId: party.id, partyName: party.name,
                         partyResolved: true,
                         locationId: party.locationId, locationName: party.locationName,
                       })}
                       onSearchChange={(partyName) => updatePartyName(row.id, partyName)}
+                      onGridKeyDown={(e, field) => handleCellKeyDown(e, row.id, field)}
                     />
                   </td>
 
@@ -807,7 +876,9 @@ export function LedgerGrid({
                       onKeyDown={(e) => handleCellKeyDown(e, row.id, "invoiceNumber")}
                       placeholder="INV-001"
                       className={`h-10 w-full rounded border bg-transparent px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
-                        !row.invoiceNumber.trim() && row.status !== "pending" ? "border-destructive/50" : "border-border/50"
+                        !row.invoiceNumber.trim() && row.status !== "pending"
+                          ? "border-destructive bg-destructive/5 focus:ring-destructive/40"
+                          : "border-border/50"
                       }`}
                     />
                   </td>
@@ -823,7 +894,11 @@ export function LedgerGrid({
                       }}
                       onKeyDown={(e) => handleCellKeyDown(e, row.id, "categoryId")}
                       className={`h-10 w-full rounded border bg-transparent px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
-                        !row.categoryId ? "text-muted-foreground border-border/50" : "border-border/50"
+                        !row.categoryId && (row.miti || row.partyResolved || row.invoiceNumber || row.taxableAmount)
+                          ? "text-muted-foreground border-destructive bg-destructive/5 focus:ring-destructive/40"
+                          : !row.categoryId
+                            ? "text-muted-foreground border-border/50"
+                            : "border-border/50"
                       }`}
                     >
                       <option value="">Select...</option>
@@ -887,6 +962,7 @@ export function LedgerGrid({
                         type="button"
                         onClick={() => duplicateRow(row.id)}
                         title="Duplicate row (F2)"
+                        aria-label="Duplicate row"
                         className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                       >
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
@@ -897,6 +973,7 @@ export function LedgerGrid({
                         type="button"
                         onClick={() => removeRow(row.id)}
                         title="Delete row (Esc)"
+                        aria-label="Delete row"
                         className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       >
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
@@ -1005,6 +1082,15 @@ export function LedgerGrid({
           <span className="text-sm text-muted-foreground">
             {saveResult.saved} saved{saveResult.errors > 0 ? `, ${saveResult.errors} error(s)` : ""}
           </span>
+        )}
+        {savedCount > 0 && (
+          <button
+            type="button"
+            onClick={clearSaved}
+            className="inline-flex items-center gap-1.5 rounded border border-border/50 px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+          >
+            Clear saved ({savedCount})
+          </button>
         )}
       </div>
     </div>

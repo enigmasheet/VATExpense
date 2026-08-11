@@ -66,12 +66,15 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   const refresh = useCallback(() => {
     if (!companyId) return;
     api<{ data: T[] }>(`${listUrl}?companyId=${companyId}`)
       .then(({ data }) => setItems(data))
-      .catch((e: ApiError) => setError(e.detail));
+      .catch((e: ApiError) => setError(e.detail))
+      .finally(() => setLoading(false));
   }, [companyId, listUrl]);
 
   useEffect(() => {
@@ -240,27 +243,48 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
       </form>
 
       <div className="rounded-lg border border-border bg-surface">
-        {items.length === 0 ? (
+        {/* Search filter */}
+        {items.length > 0 && (
+          <div className="border-b border-border px-4 py-3">
+            <input
+              type="text"
+              placeholder={`Search ${title.toLowerCase()}...`}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring focus:outline-none"
+            />
+          </div>
+        )}
+
+        {loading ? (
+          <div className="p-6 text-center text-sm text-muted">Loading...</div>
+        ) : items.length === 0 ? (
           <p className="p-6 text-sm text-muted">{emptyHint}</p>
-        ) : (
-          <>
-            {/* Desktop table */}
-            <div className="hidden overflow-x-auto sm:block">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                    <th className="px-4 py-3">Name</th>
-                    {columns.map((col) => (
-                      <th key={col.header} className="px-4 py-3">
-                        {col.header}
-                      </th>
-                    ))}
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item) => (
+        ) : (() => {
+          const filtered = search
+            ? items.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()))
+            : items;
+          return filtered.length === 0 ? (
+            <p className="p-6 text-sm text-muted">No results for &ldquo;{search}&rdquo;</p>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
+                      <th className="px-4 py-3">Name</th>
+                      {columns.map((col) => (
+                        <th key={col.header} className="px-4 py-3">
+                          {col.header}
+                        </th>
+                      ))}
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((item) => (
                     <tr key={item.id} className="border-b border-border last:border-b-0">
                       <td className="px-4 py-3">
                         {editingId === item.id ? (
@@ -329,7 +353,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
 
             {/* Mobile card list */}
             <div className="sm:hidden">
-              {items.map((item) => (
+              {filtered.map((item) => (
                 <div key={item.id} className="border-b border-border p-4 last:border-b-0">
                   {editingId === item.id ? (
                     <div className="flex flex-col gap-3">
@@ -392,7 +416,8 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
               ))}
             </div>
           </>
-        )}
+        );
+        })()}
       </div>
 
       <ConfirmDialog
