@@ -33,7 +33,7 @@ export default function ExpenseDetailPage({
       <div>
         <h1 className="font-display text-2xl font-semibold text-foreground">Edit expense</h1>
         <p className="mt-1 text-sm text-muted">
-          {expense.item} · {formatAmount(expense.totalAmount)} · version {expense.rowVersion}
+          {expense.item} · {formatAmount(expense.totalAmount)}
         </p>
       </div>
       <ExpenseForm

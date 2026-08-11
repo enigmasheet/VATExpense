@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
 
 /**
  * Provides a responsive sign-in page for credential-based authentication.
@@ -99,37 +101,29 @@ export default function LoginPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div>
-                <label className="text-sm font-medium text-foreground" htmlFor="email">
-                  Email
-                </label>
-                <input
+              <Field label="Email" htmlFor="email">
+                <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-2 focus:outline-offset-1 focus:outline-primary"
                   placeholder="you@example.com"
                   autoComplete="email"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="text-sm font-medium text-foreground" htmlFor="password">
-                  Password
-                </label>
-                <input
+              <Field label="Password" htmlFor="password">
+                <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:outline-2 focus:outline-offset-1 focus:outline-primary"
                   placeholder="••••••••"
                   autoComplete="current-password"
                 />
-              </div>
+              </Field>
 
               {error && (
                 <div className="rounded-lg border border-danger/30 bg-danger-bg p-3 text-sm text-danger">
@@ -137,13 +131,9 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
+              <Button type="submit" disabled={loading} className="mt-2 w-full">
                 {loading ? "Signing in…" : "Sign in"}
-              </button>
+              </Button>
             </form>
           </div>
 

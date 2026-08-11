@@ -8,7 +8,7 @@ import { round2 } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 
-const VAT_RATE = 13;
+import { VAT_RATE } from "@/lib/constants";
 const VAT_FACTOR = 1 + VAT_RATE / 100; // 1.13
 
 interface FormValues {
@@ -204,7 +204,7 @@ export function ExpenseForm({
     calcFromTotal(val);
   }
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!companyId) return;
     setSubmitting(true);
@@ -386,7 +386,7 @@ export function ExpenseForm({
               inputMode="decimal"
               value={values.vatAmount}
               readOnly
-              className="bg-[#f3f2ec]"
+              className="bg-surface-muted"
             />
           </Field>
           <Field label="Total amount (Rs.)" htmlFor="e-total" hint="Enter this OR taxable above">

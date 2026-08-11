@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { useApp } from "@/lib/use-app";
 import { api, ApiError } from "@/lib/api-client";
 import { formatAmount } from "@/lib/format";
+import { Button } from "@/components/ui/button";
 
 interface BatchRow {
   id: string;
@@ -156,13 +157,12 @@ export default function ImportPage() {
             />
           </div>
 
-          <button
+          <Button
             onClick={handleUpload}
             disabled={uploading || !hasFile}
-            className="inline-flex w-auto items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {uploading ? "Uploading…" : "Upload & Preview"}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -187,13 +187,12 @@ export default function ImportPage() {
                 {preview.rowCount} rows · {preview.errorCount} errors
               </p>
             </div>
-            <button
+            <Button
               onClick={handleConfirm}
               disabled={confirming || preview.errorCount === preview.rowCount}
-              className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {confirming ? "Confirming…" : `Confirm Import (${preview.rowCount - preview.errorCount} valid)`}
-            </button>
+            </Button>
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-border bg-surface">
