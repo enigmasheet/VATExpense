@@ -41,6 +41,11 @@ interface DashboardClientProps {
   recent: RecentExpense[];
 }
 
+/**
+ * Displays fiscal-year purchase totals, navigation shortcuts, and recent expenses for a company.
+ *
+ * @param props - Company, fiscal-year, summary, and recent-expense data displayed on the dashboard.
+ */
 export function DashboardClient({
   companyName,
   fiscalYearName,

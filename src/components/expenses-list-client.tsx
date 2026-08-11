@@ -36,6 +36,17 @@ interface ExpensesListClientProps {
   categories: { id: string; name: string }[];
 }
 
+/**
+ * Displays a filterable, paginated list of expenses with responsive layouts and deletion controls.
+ *
+ * @param initialData - The expenses shown on the initial page
+ * @param initialPage - The current page number
+ * @param initialTotal - The total number of matching expenses
+ * @param pageSize - The number of expenses displayed per page
+ * @param fiscalYearName - The fiscal year associated with the expenses
+ * @param parties - Parties available for filtering
+ * @param categories - Categories available for filtering
+ */
 export function ExpensesListClient({
   initialData,
   initialPage,

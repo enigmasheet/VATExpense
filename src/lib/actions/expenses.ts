@@ -26,6 +26,12 @@ export interface ActionOk<T> {
 
 export type ActionResult<T> = ActionOk<T> | ActionError;
 
+/**
+ * Retrieves the authenticated user's company ID.
+ *
+ * @returns The authenticated user's company ID
+ * @throws If no authenticated company ID is available
+ */
 async function requireCompanyId(): Promise<string> {
   const session = await auth();
   const companyId = (session?.user as { companyId?: string })?.companyId;
@@ -51,7 +57,10 @@ export interface ExpenseInput {
 }
 
 /**
- * Create a single expense via Server Action.
+ * Creates an expense for the authenticated user's company.
+ *
+ * @param input - The expense details to validate and save
+ * @returns The created expense record with any duplicate or amount-validation warnings
  */
 export async function createExpense(
   input: ExpenseInput,
@@ -212,6 +221,12 @@ export interface BatchRowResult {
   warnings?: string[];
 }
 
+/**
+ * Saves multiple expenses while reporting validation and processing results for each input row.
+ *
+ * @param rows - Expense rows to validate and save, limited to 200 entries
+ * @returns Per-row success or error results, including created IDs and warnings where applicable
+ */
 export async function batchSaveExpenses(
   rows: BatchRowInput[],
 ): Promise<ActionResult<BatchRowResult[]>> {
@@ -390,7 +405,10 @@ export async function batchSaveExpenses(
 }
 
 /**
- * Soft-delete an expense via Server Action.
+ * Soft-deletes an expense belonging to the authenticated user's company.
+ *
+ * @param id - The expense identifier
+ * @returns The deleted expense identifier, or an error result if the user is unauthenticated, the expense is unavailable, or deletion fails.
  */
 export async function deleteExpense(
   id: string,
@@ -427,7 +445,11 @@ export async function deleteExpense(
 }
 
 /**
- * Update an expense via Server Action.
+ * Updates an existing expense with optimistic concurrency protection.
+ *
+ * @param id - The expense identifier
+ * @param changes - The fields to update and the expected current row version
+ * @returns The updated expense with any amount-validation warnings, or an error result
  */
 export async function updateExpense(
   id: string,

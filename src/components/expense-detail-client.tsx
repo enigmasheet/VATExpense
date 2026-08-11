@@ -8,6 +8,12 @@ interface ExpenseDetailClientProps {
   initial: ExpenseInitial & { rowVersion: number };
 }
 
+/**
+ * Renders the expense editing interface with the current expense details.
+ *
+ * @param id - The identifier of the expense being edited
+ * @param initial - The expense data used to display and prepopulate the form
+ */
 export function ExpenseDetailClient({
   id,
   initial,

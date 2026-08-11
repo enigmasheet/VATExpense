@@ -16,6 +16,12 @@ import type { ActionOk, ActionError } from "./expenses";
 
 type ActionResult<T> = ActionOk<T> | ActionError;
 
+/**
+ * Retrieves the authenticated user's company ID.
+ *
+ * @returns The authenticated user's company ID
+ * @throws An error if the user is not authenticated or has no company ID
+ */
 async function requireCompanyId(): Promise<string> {
   const session = await auth();
   const companyId = (session?.user as { companyId?: string })?.companyId;
@@ -23,7 +29,12 @@ async function requireCompanyId(): Promise<string> {
   return companyId;
 }
 
-// ── Parties ──────────────────────────────────────────────────────────
+/**
+ * Creates a company-scoped party after validating its details and enforcing unique name and VAT number values.
+ *
+ * @param input - The party name, optional VAT number, and optional location ID
+ * @returns A success result containing the created party, or an error result
+ */
 
 export async function createParty(input: {
   name: string;
@@ -89,6 +100,13 @@ export async function createParty(input: {
   }
 }
 
+/**
+ * Updates a company-owned party's name and active status.
+ *
+ * @param id - The party identifier
+ * @param changes - The party fields to update
+ * @returns The updated party on success, or an error result if authentication, lookup, or database operations fail
+ */
 export async function updateParty(
   id: string,
   changes: { name?: string; isActive?: boolean },
@@ -130,6 +148,12 @@ export async function updateParty(
   }
 }
 
+/**
+ * Deletes a party belonging to the authenticated user's company.
+ *
+ * @param id - The party ID
+ * @returns The deleted party ID on success, or an error result
+ */
 export async function deleteParty(id: string): Promise<ActionResult<{ id: string }>> {
   let companyId: string;
   try {
@@ -149,7 +173,12 @@ export async function deleteParty(id: string): Promise<ActionResult<{ id: string
   }
 }
 
-// ── Categories ───────────────────────────────────────────────────────
+/**
+ * Creates a company-scoped category.
+ *
+ * @param input - The category name to create.
+ * @returns A success result containing the created category, or an error result if authentication, validation, duplication, or persistence fails.
+ */
 
 export async function createCategory(input: {
   name: string;
@@ -188,6 +217,13 @@ export async function createCategory(input: {
   }
 }
 
+/**
+ * Updates a company-owned category's name and active status.
+ *
+ * @param id - The category identifier
+ * @param changes - The category fields to update
+ * @returns The updated category, or an error result if the category cannot be found or updated
+ */
 export async function updateCategory(
   id: string,
   changes: { name?: string; isActive?: boolean },
@@ -221,6 +257,12 @@ export async function updateCategory(
   }
 }
 
+/**
+ * Deletes a company-owned category.
+ *
+ * @param id - The category identifier
+ * @returns A success result containing the deleted category identifier, or an error result
+ */
 export async function deleteCategory(id: string): Promise<ActionResult<{ id: string }>> {
   let companyId: string;
   try {
@@ -240,7 +282,12 @@ export async function deleteCategory(id: string): Promise<ActionResult<{ id: str
   }
 }
 
-// ── Locations ────────────────────────────────────────────────────────
+/**
+ * Creates a company-scoped location.
+ *
+ * @param input - The location name
+ * @returns The created location record
+ */
 
 export async function createLocation(input: {
   name: string;
@@ -279,6 +326,13 @@ export async function createLocation(input: {
   }
 }
 
+/**
+ * Updates a company-owned location.
+ *
+ * @param id - The location identifier
+ * @param changes - The location name or active status to update
+ * @returns The updated location on success, or an error result if the location cannot be updated
+ */
 export async function updateLocation(
   id: string,
   changes: { name?: string; isActive?: boolean },
@@ -312,6 +366,12 @@ export async function updateLocation(
   }
 }
 
+/**
+ * Deletes a company-owned location.
+ *
+ * @param id - The location identifier
+ * @returns The deleted location identifier on success, or an error result
+ */
 export async function deleteLocation(id: string): Promise<ActionResult<{ id: string }>> {
   let companyId: string;
   try {
@@ -331,7 +391,14 @@ export async function deleteLocation(id: string): Promise<ActionResult<{ id: str
   }
 }
 
-// ── Fiscal Years ─────────────────────────────────────────────────────
+/**
+ * Creates a company-scoped fiscal year.
+ *
+ * Activating the new fiscal year deactivates the company's existing fiscal years.
+ *
+ * @param input - The fiscal year name, date range, and optional active state
+ * @returns The created fiscal year on success, or an error result
+ */
 
 export async function createFiscalYear(input: {
   name: string;
@@ -377,6 +444,13 @@ export async function createFiscalYear(input: {
   }
 }
 
+/**
+ * Updates a company fiscal year and optionally changes its active status.
+ *
+ * @param id - The fiscal year identifier
+ * @param changes - The fields to update
+ * @returns The updated fiscal year, or an error result if the fiscal year cannot be updated
+ */
 export async function updateFiscalYear(
   id: string,
   changes: { name?: string; isActive?: boolean },
@@ -414,6 +488,12 @@ export async function updateFiscalYear(
   }
 }
 
+/**
+ * Deletes a company-owned fiscal year.
+ *
+ * @param id - The fiscal year identifier
+ * @returns The deleted fiscal year identifier on success, or an error result if deletion fails
+ */
 export async function deleteFiscalYear(id: string): Promise<ActionResult<{ id: string }>> {
   let companyId: string;
   try {

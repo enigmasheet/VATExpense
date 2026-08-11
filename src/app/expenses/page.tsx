@@ -12,6 +12,12 @@ interface Props {
   }>;
 }
 
+/**
+ * Renders the expenses page for the authenticated company.
+ *
+ * @param searchParams - URL parameters used to filter and paginate expenses
+ * @returns The expenses interface or a fiscal-year configuration message
+ */
 export default async function ExpensesPage({ searchParams }: Props) {
   const companyId = await getCompanyId();
   if (!companyId) redirect("/login");

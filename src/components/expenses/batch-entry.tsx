@@ -21,6 +21,13 @@ interface BatchEntryProps {
   allCategories: Category[];
 }
 
+/**
+ * Renders the expense ledger for the selected company and fiscal year.
+ *
+ * @param allParties - Parties available for expense entries
+ * @param allCategories - Expense categories available for expense entries
+ * @returns The expense ledger or a prompt to create or select a fiscal year
+ */
 export function BatchEntry({ allParties, allCategories }: BatchEntryProps) {
   const { companyId, fiscalYearId, fiscalYears } = useApp();
 
