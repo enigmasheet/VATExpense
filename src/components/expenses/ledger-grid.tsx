@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { batchSaveExpenses, type BatchRowInput } from "@/lib/actions/expenses";
 import { round2 } from "@/lib/money";
 import { formatAmount } from "@/lib/format";
@@ -142,6 +143,7 @@ function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect
   const [results, setResults] = useState<Party[]>([]);
   const [open, setOpen] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(-1);
+  const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const prevValueRef = useRef(value);
@@ -150,6 +152,12 @@ function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect
     prevValueRef.current = value;
     setQuery(value);
   }
+
+  const updatePosition = useCallback(() => {
+    const rect = inputRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setPosition({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }, []);
 
   const search = useCallback(
     (q: string) => {
@@ -181,6 +189,17 @@ function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, updatePosition, position?.top]);
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (!open) return;
     if (e.key === "ArrowDown") { e.preventDefault(); setHighlightIdx((i) => Math.min(i + 1, results.length - 1)); }
@@ -202,8 +221,21 @@ function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect
     onSearchChange(val);
   }
 
+  function handleFocus() {
+    if (results.length > 0) {
+      updatePosition();
+      setOpen(true);
+    } else if (query.length > 0) {
+      search(query);
+      updatePosition();
+      setOpen(results.length > 0);
+    }
+  }
+
+  const showDropdown = open && results.length > 0 && position;
+
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative w-full" ref={dropdownRef}>
       <div className="relative">
         <input
           ref={inputRef}
@@ -211,36 +243,46 @@ function PartyAutocomplete({ allParties, value, partyId, partyResolved, onSelect
           value={query}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => { if (results.length > 0) setOpen(true); }}
+          onFocus={handleFocus}
           placeholder="Search party..."
-          className={`h-8 w-full rounded border bg-transparent px-2 pr-6 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
+          className={`h-10 w-full rounded border bg-transparent px-3 pr-8 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
             !partyResolved && query ? "border-destructive/50" : "border-border/50"
           }`}
         />
         {partyResolved && (
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-emerald-500">
-            &#10003;
+          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-emerald-500">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
           </span>
         )}
       </div>
-      {open && results.length > 0 && (
-        <div className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded border border-border bg-surface shadow-lg">
-          {results.map((party, idx) => (
-            <button
-              key={party.id}
-              type="button"
-              className={`block w-full px-3 py-2 text-left text-xs hover:bg-surface-hover ${
-                idx === highlightIdx ? "bg-surface-hover" : ""
-              } ${party.id === partyId ? "font-medium text-primary" : ""}`}
-              onMouseDown={(e) => { e.preventDefault(); selectParty(party); }}
-            >
-              <span className="font-medium">{party.name}</span>
-              {party.vatNumber && <span className="ml-2 text-muted">VAT: {party.vatNumber}</span>}
-              {party.locationName && <span className="ml-2 text-muted">&middot; {party.locationName}</span>}
-            </button>
-          ))}
-        </div>
-      )}
+      {showDropdown &&
+        createPortal(
+          <div
+            role="listbox"
+            className="fixed max-h-48 overflow-y-auto rounded-lg border border-border/50 bg-surface py-1 shadow-lg"
+            style={{ top: position.top, left: position.left, width: position.width, zIndex: 50 }}
+          >
+            {results.map((party, idx) => (
+              <button
+                key={party.id}
+                type="button"
+                role="option"
+                aria-selected={party.id === partyId}
+                className={`block w-full px-3 py-2.5 text-left text-sm hover:bg-surface-hover ${
+                  idx === highlightIdx ? "bg-surface-hover" : ""
+                } ${party.id === partyId ? "font-medium text-primary" : "text-foreground"}`}
+                onMouseDown={(e) => { e.preventDefault(); selectParty(party); }}
+              >
+                <span className="font-medium">{party.name}</span>
+                {party.vatNumber && <span className="ml-2 text-muted">VAT: {party.vatNumber}</span>}
+                {party.locationName && <span className="ml-2 text-muted">&middot; {party.locationName}</span>}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
@@ -320,7 +362,6 @@ export function LedgerGrid({
   const [existingInvoices, setExistingInvoices] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [saveResult, setSaveResult] = useState<{ saved: number; errors: number } | null>(null);
-  const [activeCell, setActiveCell] = useState<{ rowId: string; field: CellField } | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -473,7 +514,6 @@ export function LedgerGrid({
   }
 
   function focusField(rowId: string, field: CellField) {
-    setActiveCell({ rowId, field });
     setTimeout(() => {
       const el = gridRef.current?.querySelector<HTMLInputElement>(
         `[data-row="${rowId}"][data-field="${field}"]`,
@@ -521,7 +561,6 @@ export function LedgerGrid({
       e.preventDefault();
       duplicateRow(rowId);
     } else if (e.key === "Escape") {
-      setActiveCell(null);
       (e.target as HTMLElement).blur();
     }
   }
@@ -639,25 +678,25 @@ export function LedgerGrid({
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border/50 bg-muted/30 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              <th className="w-10 px-2 py-2 text-center">#</th>
-              <th className="w-25 px-2 py-2">Miti</th>
-              <th className="px-2 py-2">Party</th>
-              <th className="w-30 px-2 py-2">Invoice</th>
-              <th className="w-35 px-2 py-2">Category</th>
-              <th className="w-27.5 px-2 py-2 text-right">Excl. VAT</th>
-              <th className="w-22.5 px-2 py-2 text-right">VAT ({VAT_RATE}%)</th>
-              <th className="w-27.5 px-2 py-2 text-right">Incl. VAT</th>
-              <th className="w-20 px-2 py-2 text-center">Status</th>
-              <th className="w-16 px-2 py-2"></th>
+              <th className="w-10 px-3 py-3 text-center">#</th>
+              <th className="w-25 px-3 py-3">Miti</th>
+              <th className="px-3 py-3">Party</th>
+              <th className="w-30 px-3 py-3">Invoice</th>
+              <th className="w-35 px-3 py-3">Category</th>
+              <th className="w-27.5 px-3 py-3 text-right">Excl. VAT</th>
+              <th className="w-22.5 px-3 py-3 text-right">VAT ({VAT_RATE}%)</th>
+              <th className="w-27.5 px-3 py-3 text-right">Incl. VAT</th>
+              <th className="w-24 px-3 py-3 text-center">Status</th>
+              <th className="w-20 px-3 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {enrichedRows.map((row, idx) => (
               <React.Fragment key={row.id}>
                 <tr className={`border-b border-border/30 last:border-b-0 ${cellBg(row.status)}`}>
-                  <td className="px-2 py-1 text-center text-xs text-muted-foreground">{idx + 1}</td>
+                  <td className="px-3 py-2 text-center text-xs text-muted-foreground">{idx + 1}</td>
 
-                  <td className="px-1 py-1">
+                  <td className="px-1.5 py-1.5">
                     <input
                       type="text"
                       data-row={row.id}
@@ -666,13 +705,13 @@ export function LedgerGrid({
                       onChange={(e) => updateRow(row.id, { miti: e.target.value })}
                       onKeyDown={(e) => handleCellKeyDown(e, row.id, "miti")}
                       placeholder="2082-05-27"
-                      className={`h-8 w-full rounded border bg-transparent px-2 text-xs tabular-amount focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
+                      className={`h-10 w-full rounded border bg-transparent px-3 text-sm tabular-amount focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
                         !row.miti.trim() && row.status !== "pending" ? "border-destructive/50" : "border-border/50"
                       }`}
                     />
                   </td>
 
-                  <td className="px-1 py-1">
+                  <td className="px-1.5 py-1.5">
                     <PartyAutocomplete
                       allParties={allParties}
                       value={row.partyName}
@@ -687,7 +726,7 @@ export function LedgerGrid({
                     />
                   </td>
 
-                  <td className="px-1 py-1">
+                  <td className="px-1.5 py-1.5">
                     <input
                       type="text"
                       data-row={row.id}
@@ -696,13 +735,13 @@ export function LedgerGrid({
                       onChange={(e) => updateRow(row.id, { invoiceNumber: e.target.value })}
                       onKeyDown={(e) => handleCellKeyDown(e, row.id, "invoiceNumber")}
                       placeholder="INV-001"
-                      className={`h-8 w-full rounded border bg-transparent px-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
+                      className={`h-10 w-full rounded border bg-transparent px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
                         !row.invoiceNumber.trim() && row.status !== "pending" ? "border-destructive/50" : "border-border/50"
                       }`}
                     />
                   </td>
 
-                  <td className="px-1 py-1">
+                  <td className="px-1.5 py-1.5">
                     <select
                       data-row={row.id}
                       data-field="categoryId"
@@ -712,7 +751,7 @@ export function LedgerGrid({
                         updateRow(row.id, { categoryId: e.target.value, categoryName: cat?.name ?? "" });
                       }}
                       onKeyDown={(e) => handleCellKeyDown(e, row.id, "categoryId")}
-                      className={`h-8 w-full rounded border bg-transparent px-2 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
+                      className={`h-10 w-full rounded border bg-transparent px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
                         !row.categoryId ? "text-muted-foreground border-border/50" : "border-border/50"
                       }`}
                     >
@@ -723,7 +762,7 @@ export function LedgerGrid({
                     </select>
                   </td>
 
-                  <td className="px-1 py-1">
+                  <td className="px-1.5 py-1.5">
                     <input
                       type="number"
                       inputMode="decimal"
@@ -735,7 +774,7 @@ export function LedgerGrid({
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className={`h-8 w-full rounded border bg-transparent px-2 text-right text-xs tabular-amount focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
+                      className={`h-10 w-full rounded border bg-transparent px-3 text-right text-sm tabular-amount focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
                         (!row.taxableAmount || parseFloat(row.taxableAmount) <= 0) && row.status !== "pending"
                           ? "border-destructive/50"
                           : "border-border/50"
@@ -743,11 +782,11 @@ export function LedgerGrid({
                     />
                   </td>
 
-                  <td className="px-2 py-1.5 text-right text-xs text-muted-foreground tabular-amount">
+                  <td className="px-3 py-2 text-right text-sm text-muted-foreground tabular-amount">
                     {row.vatAmount ? formatAmount(parseFloat(row.vatAmount)) : "-"}
                   </td>
 
-                  <td className="px-1 py-1">
+                  <td className="px-1.5 py-1.5">
                     <input
                       type="number"
                       inputMode="decimal"
@@ -759,7 +798,7 @@ export function LedgerGrid({
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className={`h-8 w-full rounded border bg-transparent px-2 text-right text-xs tabular-amount focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
+                      className={`h-10 w-full rounded border bg-transparent px-3 text-right text-sm tabular-amount focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
                         (!row.totalAmount || parseFloat(row.totalAmount) <= 0) && row.status !== "pending"
                           ? "border-destructive/50"
                           : "border-border/50"
@@ -767,17 +806,17 @@ export function LedgerGrid({
                     />
                   </td>
 
-                  <td className="px-2 py-1 text-center">
+                  <td className="px-3 py-2 text-center">
                     <StatusBadge status={row.status} />
                   </td>
 
-                  <td className="px-2 py-1 text-right">
+                  <td className="px-3 py-2 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         type="button"
                         onClick={() => duplicateRow(row.id)}
                         title="Duplicate row (F2)"
-                        className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                       >
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
@@ -787,7 +826,7 @@ export function LedgerGrid({
                         type="button"
                         onClick={() => removeRow(row.id)}
                         title="Delete row (Esc)"
-                        className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       >
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -801,9 +840,9 @@ export function LedgerGrid({
                 {isIssueRow(row) && row.error && (
                   <tr className="border-b border-border/30 bg-destructive/5">
                     <td></td>
-                    <td colSpan={9} className="px-3 py-2">
-                      <div className="flex items-center gap-2 text-xs text-destructive">
-                        <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                    <td colSpan={9} className="px-3 py-2.5">
+                      <div className="flex items-center gap-2 text-sm text-destructive">
+                        <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                         </svg>
                         <span>{row.error}</span>
@@ -818,7 +857,7 @@ export function LedgerGrid({
                               )
                             );
                           }}
-                          className="ml-2 text-xs font-medium text-primary hover:underline"
+                          className="ml-2 text-sm font-medium text-primary hover:underline"
                         >
                           Fix
                         </button>
