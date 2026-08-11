@@ -32,7 +32,7 @@ export async function GET(request: Request) {
       .from(expenses)
       .where(where)
       .groupBy(expenses.nepaliMonth)
-      .orderBy(sql`ARRAY_POSITION(${NEPALI_MONTHS}::text[], ${expenses.nepaliMonth})`);
+      .orderBy(sql`ARRAY_POSITION(ARRAY[${sql.join(NEPALI_MONTHS.map((m) => sql`${m}`), sql`, `)}]::text[], ${expenses.nepaliMonth})`);
 
     const totals = await db
       .select({
