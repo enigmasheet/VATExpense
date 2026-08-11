@@ -5,6 +5,7 @@ import { useApp } from "@/lib/use-app";
 import { api, ApiError } from "@/lib/api-client";
 import { formatAmount } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
 
 interface BatchRow {
   id: string;
@@ -195,79 +196,82 @@ export default function ImportPage() {
             </Button>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                  <th className="px-3 py-2">#</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Miti</th>
-                  <th className="px-3 py-2">Invoice</th>
-                  <th className="px-3 py-2">Party</th>
-                  <th className="px-3 py-2">Category</th>
-                  <th className="px-3 py-2">Item</th>
-                  <th className="px-3 py-2 text-right">Taxable</th>
-                  <th className="px-3 py-2 text-right">VAT</th>
-                  <th className="px-3 py-2 text-right">Total</th>
-                  <th className="px-3 py-2">Errors</th>
-                </tr>
-              </thead>
-              <tbody>
-                {preview.rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className={`border-b border-border last:border-b-0 ${
-                      row.status === "error" ? "bg-danger/5" : ""
+          <DataTable
+            variant="desktop-only"
+            compact
+            rowClassName={(row) => (row.status === "error" ? "bg-danger/5" : "")}
+            columns={[
+              {
+                header: "#",
+                cell: (row) => <span className="text-muted">{row.rowIndex}</span>,
+              },
+              {
+                header: "Status",
+                cell: (row) => (
+                  <span
+                    className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${
+                      row.status === "valid"
+                        ? "bg-success/10 text-success"
+                        : "bg-danger/10 text-danger"
                     }`}
                   >
-                    <td className="px-3 py-2 text-muted">{row.rowIndex}</td>
-                    <td className="px-3 py-2">
-                      <span
-                        className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${
-                          row.status === "valid"
-                            ? "bg-success/10 text-success"
-                            : "bg-danger/10 text-danger"
-                        }`}
-                      >
-                        {row.status}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">{row.raw.miti}</td>
-                    <td className="px-3 py-2">{row.raw.invoiceNumber ?? "—"}</td>
-                    <td className="px-3 py-2">
-                      {row.resolved.partyName ?? (
-                        <span className="text-danger">{row.raw.partyName}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {row.resolved.categoryName ?? (
-                        <span className="text-danger">{row.raw.categoryName}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">{row.raw.item}</td>
-                    <td className="tabular-amount px-3 py-2 text-right">
-                      {formatAmount(row.raw.taxableAmount)}
-                    </td>
-                    <td className="tabular-amount px-3 py-2 text-right">
-                      {formatAmount(row.raw.vatAmount)}
-                    </td>
-                    <td className="tabular-amount px-3 py-2 text-right">
-                      {formatAmount(row.raw.totalAmount)}
-                    </td>
-                    <td className="px-3 py-2">
-                      {row.errors.length > 0 && (
-                        <ul className="list-disc text-xs text-danger">
-                          {row.errors.map((e, i) => (
-                            <li key={i}>{e}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    {row.status}
+                  </span>
+                ),
+              },
+              { header: "Miti", cell: (row) => row.raw.miti },
+              { header: "Invoice", cell: (row) => row.raw.invoiceNumber ?? "—" },
+              {
+                header: "Party",
+                cell: (row) =>
+                  row.resolved.partyName ?? (
+                    <span className="text-danger">{row.raw.partyName}</span>
+                  ),
+              },
+              {
+                header: "Category",
+                cell: (row) =>
+                  row.resolved.categoryName ?? (
+                    <span className="text-danger">{row.raw.categoryName}</span>
+                  ),
+              },
+              { header: "Item", cell: (row) => row.raw.item },
+              {
+                header: "Taxable",
+                align: "right",
+                cell: (row) => (
+                  <span className="tabular-amount">{formatAmount(row.raw.taxableAmount)}</span>
+                ),
+              },
+              {
+                header: "VAT",
+                align: "right",
+                cell: (row) => (
+                  <span className="tabular-amount">{formatAmount(row.raw.vatAmount)}</span>
+                ),
+              },
+              {
+                header: "Total",
+                align: "right",
+                cell: (row) => (
+                  <span className="tabular-amount">{formatAmount(row.raw.totalAmount)}</span>
+                ),
+              },
+              {
+                header: "Errors",
+                cell: (row) =>
+                  row.errors.length > 0 && (
+                    <ul className="list-disc text-xs text-danger">
+                      {row.errors.map((e, i) => (
+                        <li key={i}>{e}</li>
+                      ))}
+                    </ul>
+                  ),
+              },
+            ]}
+            rows={preview.rows}
+            getKey={(row) => row.id}
+          />
         </div>
       )}
     </div>
