@@ -261,6 +261,11 @@ function PartyAutocomplete({ allParties, value, partyId, partyResolved, rowId, o
     };
   }, [open, updatePosition]);
 
+  /**
+   * Handles keyboard navigation and selection for the party autocomplete and ledger grid.
+   *
+   * @param e - The keyboard event from the party search input
+   */
   function handleKeyDown(e: React.KeyboardEvent) {
     if (open) {
       if (e.key === "ArrowDown") { e.preventDefault(); setHighlightIdx((i) => Math.min(i + 1, results.length - 1)); return; }
@@ -272,6 +277,9 @@ function PartyAutocomplete({ allParties, value, partyId, partyResolved, rowId, o
     onGridKeyDown(e, "partySearch");
   }
 
+  /**
+   * Selects a party from the autocomplete results and notifies the parent.
+   */
   function selectParty(party: Party) {
     setQuery(party.name);
     setOpen(false);
@@ -485,6 +493,12 @@ export function LedgerGrid({
 
   const pendingCount = enrichedRows.filter((r) => r.status === "pending").length;
 
+  /**
+   * Updates a ledger row and refreshes its derived values and editing state.
+   *
+   * @param rowId - The identifier of the row to update
+   * @param updates - The row fields to change
+   */
   function updateRow(rowId: string, updates: Partial<LedgerRow>) {
     setRows((prev) =>
       prev.map((r) => {
@@ -525,6 +539,12 @@ export function LedgerGrid({
     );
   }
 
+  /**
+   * Updates a row's party details by matching the entered name against available parties.
+   *
+   * @param rowId - The identifier of the row to update
+   * @param partyName - The party name to resolve
+   */
   function updatePartyName(rowId: string, partyName: string) {
     setRows((prev) =>
       prev.map((r) => {
@@ -559,6 +579,12 @@ export function LedgerGrid({
     );
   }
 
+  /**
+   * Inserts a new empty ledger row after the specified row or at the end of the ledger.
+   *
+   * @param afterId - The ID of the row after which to insert the new row
+   * @returns The ID of the inserted row
+   */
   function addRow(afterId?: string): string {
     const idx = afterId ? rows.findIndex((r) => r.id === afterId) : rows.length - 1;
     const prevRow = idx >= 0 ? rows[idx] : undefined;
@@ -571,6 +597,11 @@ export function LedgerGrid({
     return newRow.id;
   }
 
+  /**
+   * Removes a ledger row while preserving one empty row in the ledger.
+   *
+   * @param rowId - The identifier of the row to remove
+   */
   function removeRow(rowId: string) {
     setRows((prev) => {
       if (prev.length <= 1) return [createEmptyRow()];
@@ -606,6 +637,12 @@ export function LedgerGrid({
     });
   }
 
+  /**
+   * Focuses and selects the input for a specified ledger cell.
+   *
+   * @param rowId - The identifier of the row containing the cell
+   * @param field - The cell field to focus
+   */
   function focusField(rowId: string, field: CellField) {
     setTimeout(() => {
       const el = gridRef.current?.querySelector<HTMLElement>(
@@ -616,6 +653,13 @@ export function LedgerGrid({
     }, 0);
   }
 
+  /**
+   * Handles keyboard navigation and row actions for an editable ledger cell.
+   *
+   * @param e - The keyboard event from the cell
+   * @param rowId - The identifier of the row containing the cell
+   * @param field - The cell field receiving the event
+   */
   function handleCellKeyDown(e: React.KeyboardEvent, rowId: string, field: CellField) {
     const fieldIdx = FIELD_ORDER.indexOf(field);
 
@@ -656,6 +700,9 @@ export function LedgerGrid({
     }
   }
 
+  /**
+   * Saves all pending expense rows and updates their statuses with the batch results.
+   */
   async function saveAll() {
     const pending = enrichedRows.filter((r) => r.status === "pending");
     if (pending.length === 0) return;
