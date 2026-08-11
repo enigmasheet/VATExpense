@@ -25,6 +25,8 @@ interface Shortcut {
 const SHORTCUTS: Shortcut[] = [
   { href: "/expenses/new", label: "Record an expense", hint: "Enter a purchase invoice" },
   { href: "/expenses", label: "Browse expenses", hint: "Search, filter and paginate" },
+  { href: "/reports/monthly", label: "Monthly report", hint: "Category breakdown by month" },
+  { href: "/reports/fiscal-year", label: "FY report", hint: "12-month overview" },
   { href: "/parties", label: "Manage parties", hint: "Suppliers and their VAT numbers" },
   { href: "/fiscal-years", label: "Fiscal years", hint: "2082/83 and beyond" },
 ];
