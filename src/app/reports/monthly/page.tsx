@@ -102,7 +102,7 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
               },
             ]}
             rows={report.categories}
-            getKey={(cat) => cat.categoryId}
+            getKey={(cat) => cat.categoryId ?? cat.categoryName ?? ""}
             mobileCard={(cat) => (
               <>
                 <div className="flex items-start justify-between">
