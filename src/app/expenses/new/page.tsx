@@ -2,6 +2,9 @@
 
 import { ExpenseForm } from "@/components/expenses/expense-form";
 
+/**
+ * Renders the page for creating a new expense.
+ */
 export default function NewExpensePage() {
   return (
     <div className="flex flex-col gap-6">

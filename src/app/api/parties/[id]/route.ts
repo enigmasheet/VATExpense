@@ -3,6 +3,12 @@ import { parties } from "@/lib/db/schema";
 import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
 import { eq } from "drizzle-orm";
 
+/**
+ * Updates the specified party's name or active status.
+ *
+ * @param params - Route parameters containing the party ID.
+ * @returns An HTTP response containing the updated party or an error response.
+ */
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -44,6 +50,12 @@ export async function PATCH(
   }
 }
 
+/**
+ * Deletes a party by ID.
+ *
+ * @param params - Route parameters containing the party ID
+ * @returns A success response containing the deleted party ID, or a not-found or internal-error response
+ */
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },

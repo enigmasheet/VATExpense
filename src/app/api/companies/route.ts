@@ -5,6 +5,12 @@ import { safeParse } from "@/lib/validation/utils";
 import { apiOk, badRequest, conflict, unprocessableEntity, internalError } from "@/lib/api-response";
 import { ilike, eq } from "drizzle-orm";
 
+/**
+ * Retrieves companies, optionally filtered by ID and ordered by name.
+ *
+ * @param request - The request containing the optional `id` query parameter.
+ * @returns A successful response containing the matching companies, or an internal-error response if the query fails.
+ */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
@@ -18,6 +24,11 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * Creates a company from the request body.
+ *
+ * @returns An API response containing the created company, or an error response for invalid input, duplicate names, or database failures.
+ */
 export async function POST(request: Request) {
   let body: unknown;
   try {

@@ -2,6 +2,11 @@
 
 import { MasterPage } from "@/components/master-page";
 
+/**
+ * Renders the locations management page.
+ *
+ * @returns The locations management page.
+ */
 export default function LocationsPage() {
   return (
     <MasterPage

@@ -3,6 +3,13 @@ import { importBatches, importBatchRows, expenses } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError, notFound } from "@/lib/api-response";
 import { eq } from "drizzle-orm";
 
+/**
+ * Confirms a pending import batch and creates expense records for its valid rows.
+ *
+ * @param request - The incoming request.
+ * @param params - Route parameters containing the import batch identifier.
+ * @returns The confirmed batch identifier, status, and number of imported expenses.
+ */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ batchId: string }> },

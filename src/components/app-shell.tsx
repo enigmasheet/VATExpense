@@ -61,6 +61,9 @@ function SidebarLink({ href, label, icon, active }: NavItem & { active: boolean 
   );
 }
 
+/**
+ * Renders the desktop sidebar with grouped navigation, fiscal-year selection, authenticated user information, and sign-out controls.
+ */
 function Sidebar() {
   const pathname = usePathname();
   const { fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
@@ -141,6 +144,11 @@ function Sidebar() {
   );
 }
 
+/**
+ * Renders the responsive mobile header and navigation menu.
+ *
+ * The menu closes when the current route changes or the overlay is clicked.
+ */
 function MobileHeader() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -250,6 +258,12 @@ function MobileHeader() {
   );
 }
 
+/**
+ * Provides the responsive application shell for authenticated content.
+ *
+ * @param children - The application content rendered in the main area
+ * @returns The application shell containing navigation, content, and footer
+ */
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>

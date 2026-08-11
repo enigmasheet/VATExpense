@@ -3,6 +3,14 @@ import { fiscalYears } from "@/lib/db/schema";
 import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
 import { eq, and } from "drizzle-orm";
 
+/**
+ * Updates a fiscal year by ID.
+ *
+ * Activating the fiscal year deactivates other active fiscal years belonging to
+ * the same company.
+ *
+ * @param params - Route parameters containing the fiscal year ID
+ */
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -56,6 +64,13 @@ export async function PATCH(
   }
 }
 
+/**
+ * Deletes a fiscal year by ID.
+ *
+ * @param _request - The incoming HTTP request.
+ * @param params - Route parameters containing the fiscal year ID.
+ * @returns The deleted fiscal year ID, or an error response if the fiscal year is not found or deletion fails.
+ */
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },

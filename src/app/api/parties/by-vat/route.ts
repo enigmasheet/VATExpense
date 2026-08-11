@@ -4,6 +4,11 @@ import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
 import { normalizeVatNumber } from "@/lib/normalize";
 import { eq, and } from "drizzle-orm";
 
+/**
+ * Retrieves an active party by VAT number within a company.
+ *
+ * Returns a bad-request response when `companyId` or `vat` is missing or the VAT contains no digits, a not-found response when no active party matches, or the party data on success.
+ */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const companyId = url.searchParams.get("companyId");

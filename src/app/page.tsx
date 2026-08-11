@@ -31,6 +31,9 @@ const SHORTCUTS: Shortcut[] = [
   { href: "/fiscal-years", label: "Fiscal years", hint: "2082/83 and beyond" },
 ];
 
+/**
+ * Displays the VAT expense dashboard for the selected company and fiscal year.
+ */
 export default function DashboardPage() {
   const { companyId, fiscalYearId, activeFiscalYear, companies, loading } = useApp();
   const [summary, setSummary] = useState<ExpenseSummary[]>([]);

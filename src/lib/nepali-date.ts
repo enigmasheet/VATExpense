@@ -27,8 +27,10 @@ const MITI_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MITI_DDMMYYYY_RE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 
 /**
- * Normalize a Miti string from various formats to YYYY-MM-DD.
- * Accepts: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY
+ * Normalizes a Miti string to `YYYY-MM-DD` when it is provided in a supported format.
+ *
+ * @param raw - The Miti string to normalize
+ * @returns The normalized `YYYY-MM-DD` string, or the trimmed input when no conversion is applied
  */
 export function normalizeMiti(raw: string): string {
   const trimmed = raw.trim();
@@ -61,11 +63,12 @@ export function fyName(fiscalYear: number): string {
 }
 
 /**
- * Validate a "YYYY-MM-DD" Bikram Sambat date string and derive its Nepali
- * month name and fiscal-year name (Shrawan starts the fiscal year).
+ * Validates a Bikram Sambat date and derives its Nepali month and fiscal-year metadata.
  *
- * Round-trips the string against the package to guard against silent
- * clamping, and checks the day length against the package's lookup table.
+ * Accepts `YYYY-MM-DD` and `DD/MM/YYYY` formats.
+ *
+ * @param miti - The Bikram Sambat date to validate
+ * @returns A successful result with date and fiscal-year metadata, or an error result describing why the date is invalid
  */
 export function parseMiti(miti: string): ParsedMiti {
   const normalMiti = normalizeMiti(miti);

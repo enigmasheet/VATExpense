@@ -5,6 +5,13 @@ import { parseMiti } from "@/lib/nepali-date";
 import { normalizeName, normalizeVatNumber } from "@/lib/normalize";
 import { and, eq, sql } from "drizzle-orm";
 
+/**
+ * Previews a pending import batch by resolving imported values against active company records and reporting row validation results.
+ *
+ * @param request - The incoming HTTP request
+ * @param params - Route parameters containing the import batch identifier
+ * @returns The batch metadata and resolved import rows, or an error response when the batch is missing, no longer pending, or processing fails
+ */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ batchId: string }> },
