@@ -7,6 +7,12 @@ import * as XLSX from "xlsx";
 
 export const runtime = "nodejs";
 
+/**
+ * Exports non-deleted fiscal-year expenses as an Excel workbook grouped by Nepali month.
+ *
+ * @param request - Request containing the `companyId` and `fiscalYearId` query parameters
+ * @returns An Excel file response, or an error response when the required parameters or export operation are invalid
+ */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const companyId = url.searchParams.get("companyId");

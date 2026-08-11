@@ -5,6 +5,11 @@ import { api, ApiError } from "@/lib/api-client";
 import { ExpenseForm, type ExpenseInitial } from "@/components/expenses/expense-form";
 import { formatAmount } from "@/lib/format";
 
+/**
+ * Displays an expense for editing, including its current details and row version.
+ *
+ * @param params - A promise containing the expense route identifier
+ */
 export default function ExpenseDetailPage({
   params,
 }: {

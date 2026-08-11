@@ -52,6 +52,9 @@ interface ImportResult {
   importedCount: number;
 }
 
+/**
+ * Renders the expense import page for uploading, previewing, and confirming Excel expense data.
+ */
 export default function ImportPage() {
   const { companyId, fiscalYearId, loading } = useApp();
   const fileRef = useRef<HTMLInputElement>(null);

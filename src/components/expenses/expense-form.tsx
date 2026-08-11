@@ -63,6 +63,11 @@ type Message =
   | { kind: "danger"; text: string }
   | { kind: "info"; text: string };
 
+/**
+ * Displays a styled list of messages based on the first message's severity.
+ *
+ * @param messages - The messages to display.
+ */
 function MessageList({ messages }: { messages: Message[] }) {
   if (messages.length === 0) return null;
   const tone = messages[0].kind;
@@ -83,6 +88,14 @@ function MessageList({ messages }: { messages: Message[] }) {
   );
 }
 
+/**
+ * Renders a form for creating or editing an expense, including VAT and total calculations.
+ *
+ * @param mode - Whether the form creates a new expense or edits an existing one.
+ * @param expenseId - Identifier of the expense being edited.
+ * @param initial - Existing expense values used to initialize edit mode.
+ * @param initialRowVersion - Version used to detect conflicting edits.
+ */
 export function ExpenseForm({
   mode,
   expenseId,

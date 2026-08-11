@@ -1,17 +1,20 @@
 "use client";
 
-import { ExpenseForm } from "@/components/expenses/expense-form";
+import { BatchEntry } from "@/components/expenses/batch-entry";
 
+/**
+ * Renders the page for creating a new expense.
+ */
 export default function NewExpensePage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-display text-2xl font-semibold text-foreground">New expense</h1>
+        <h1 className="font-display text-2xl font-semibold text-foreground">Quick Add</h1>
         <p className="mt-1 text-sm text-muted">
-          Enter the invoice as written — calculated amounts are only advisory and never override them.
+          Enter multiple invoices quickly. Type a VAT number to auto-resolve the party, fill the amount, and queue it up.
         </p>
       </div>
-      <ExpenseForm mode="create" />
+      <BatchEntry />
     </div>
   );
 }

@@ -25,6 +25,9 @@ interface FiscalYearReport {
   };
 }
 
+/**
+ * Displays expense and VAT summaries for the selected fiscal year, including monthly breakdowns and spreadsheet export.
+ */
 export default function FiscalYearReportPage() {
   const { companyId, fiscalYearId, activeFiscalYear, loading } = useApp();
   const [report, setReport] = useState<FiscalYearReport | null>(null);

@@ -32,6 +32,9 @@ const columns: ColumnSpec<PartyRow>[] = [
   },
 ];
 
+/**
+ * Renders the parties management page for suppliers and vendors.
+ */
 export default function PartiesPage() {
   return (
     <MasterPage<PartyRow>

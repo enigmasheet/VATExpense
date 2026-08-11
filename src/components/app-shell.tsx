@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { type ReactNode, useState, useRef } from "react";
+import { type ReactNode, useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { AppProvider, useApp } from "@/lib/use-app";
 import { AuthProvider } from "@/lib/auth-provider";
@@ -23,6 +23,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: "Main",
     items: [
       { href: "/", label: "Dashboard", icon: "📊" },
+      { href: "/expenses/new", label: "Quick Add", icon: "⚡" },
       { href: "/expenses", label: "Expenses", icon: "📋" },
       { href: "/import", label: "Import", icon: "📥" },
     ],
@@ -61,6 +62,9 @@ function SidebarLink({ href, label, icon, active }: NavItem & { active: boolean 
   );
 }
 
+/**
+ * Renders the desktop sidebar with grouped navigation, fiscal-year selection, authenticated user information, and sign-out controls.
+ */
 function Sidebar() {
   const pathname = usePathname();
   const { fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
@@ -141,18 +145,22 @@ function Sidebar() {
   );
 }
 
+/**
+ * Renders the responsive mobile header and navigation menu.
+ *
+ * The menu closes when the current route changes or the overlay is clicked.
+ */
 function MobileHeader() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
   const { data: session } = useSession();
 
-  // Close menu on route change via ref-based approach
-  const prevPathname = useRef(pathname);
-  if (prevPathname.current !== pathname) {
-    prevPathname.current = pathname;
-    setOpen(false);
-  }
+    // Close menu on route change. Run asynchronously to avoid synchronous setState in effect.
+    useEffect(() => {
+      const id = window.setTimeout(() => setOpen(false), 0);
+      return () => window.clearTimeout(id);
+    }, [pathname]);
 
   return (
     <>
@@ -250,6 +258,12 @@ function MobileHeader() {
   );
 }
 
+/**
+ * Provides the responsive application shell for authenticated content.
+ *
+ * @param children - The application content rendered in the main area
+ * @returns The application shell containing navigation, content, and footer
+ */
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { expenses, categories } from "@/lib/db/schema";
+import { expenses } from "@/lib/db/schema";
 import { badRequest, internalError } from "@/lib/api-response";
 import { NEPALI_MONTHS, type NepaliMonth } from "@/lib/nepali-date";
 import { and, eq, sql, type SQL } from "drizzle-orm";
@@ -7,6 +7,11 @@ import * as XLSX from "xlsx";
 
 export const runtime = "nodejs";
 
+/**
+ * Exports the selected month's non-deleted expenses as an Excel VAT report.
+ *
+ * @returns A downloadable XLSX response containing expense details and totals, or an error response for invalid parameters or processing failures.
+ */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const companyId = url.searchParams.get("companyId");

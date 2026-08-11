@@ -2,9 +2,16 @@ import { db } from "@/lib/db";
 import { importBatches, importBatchRows, parties, categories, locations } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError, notFound } from "@/lib/api-response";
 import { parseMiti } from "@/lib/nepali-date";
-import { normalizeName, normalizeVatNumber } from "@/lib/normalize";
-import { and, eq, sql } from "drizzle-orm";
+import { normalizeName } from "@/lib/normalize";
+import { and, eq } from "drizzle-orm";
 
+/**
+ * Previews a pending import batch by resolving imported values against active company records and reporting row validation results.
+ *
+ * @param request - The incoming HTTP request
+ * @param params - Route parameters containing the import batch identifier
+ * @returns The batch metadata and resolved import rows, or an error response when the batch is missing, no longer pending, or processing fails
+ */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ batchId: string }> },
@@ -26,8 +33,6 @@ export async function GET(
       .from(importBatchRows)
       .where(eq(importBatchRows.batchId, batchId))
       .orderBy(importBatchRows.rowIndex);
-
-    const companyConditions = sql`company_id = ${batch.companyId}`;
 
     const [existingParties, existingCategories, existingLocations] = await Promise.all([
       db.select().from(parties).where(and(eq(parties.companyId, batch.companyId), eq(parties.isActive, true))),

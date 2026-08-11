@@ -4,6 +4,12 @@ import { apiOk, badRequest, internalError } from "@/lib/api-response";
 import { NEPALI_MONTHS } from "@/lib/nepali-date";
 import { and, eq, sql, type SQL } from "drizzle-orm";
 
+/**
+ * Generates a fiscal-year expense report for a company.
+ *
+ * @param request - Request containing the `companyId` and `fiscalYearId` query parameters
+ * @returns A response containing monthly expense aggregates and fiscal-year totals
+ */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const companyId = url.searchParams.get("companyId");

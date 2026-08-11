@@ -4,6 +4,11 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
+/**
+ * Provides a responsive sign-in page for credential-based authentication.
+ *
+ * @returns The login page interface.
+ */
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
