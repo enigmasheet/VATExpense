@@ -310,15 +310,16 @@ export async function getFiscalYearReport(companyId: string, fiscalYearId: strin
 
   const monthsMap = new Map(monthData.map((m) => [m.nepaliMonth, m]));
 
-  const months = NEPALI_MONTHS_ORDER.map((name) => ({
-    nepaliMonth: name,
-    ...(monthsMap.get(name) ?? {
-      totalTaxableAmount: "0",
-      totalVatAmount: "0",
-      totalAmount: "0",
-      expenseCount: 0,
-    }),
-  }));
+  const months = NEPALI_MONTHS_ORDER.map((name) => {
+    const m = monthsMap.get(name);
+    return {
+      nepaliMonth: name,
+      totalTaxableAmount: m?.totalTaxableAmount ?? "0",
+      totalVatAmount: m?.totalVatAmount ?? "0",
+      totalAmount: m?.totalAmount ?? "0",
+      expenseCount: m?.expenseCount ?? 0,
+    };
+  });
 
   const [totals] = await db
     .select({

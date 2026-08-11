@@ -47,9 +47,7 @@ export function ExpensesListClient({
 }: ExpensesListClientProps) {
   const router = useRouter();
   const [rows, setRows] = useState(initialData);
-  const [page, setPage] = useState(initialPage);
   const [total, setTotal] = useState(initialTotal);
-  const [loading, setLoading] = useState(false);
 
   const [q, setQ] = useState("");
   const [partyId, setPartyId] = useState("");

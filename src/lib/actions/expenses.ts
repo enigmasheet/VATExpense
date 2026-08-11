@@ -6,7 +6,10 @@ import { expenses, companies, fiscalYears, parties } from "@/lib/db/schema";
 import { expenseInputSchema, validateAmounts } from "@/lib/validation/expense";
 import { safeParse } from "@/lib/validation/utils";
 import { parseMiti } from "@/lib/nepali-date";
-import { checkInvoiceDuplicate, findSuspiciousDuplicates } from "@/lib/expenses/duplicates";
+import {
+  checkInvoiceDuplicate,
+  findSuspiciousDuplicates,
+} from "@/lib/expenses/duplicates";
 import { and, eq, sql } from "drizzle-orm";
 
 export interface ActionError {
@@ -23,12 +26,10 @@ export interface ActionOk<T> {
 
 export type ActionResult<T> = ActionOk<T> | ActionError;
 
-async function requireCompanyId(): Promise<string | ActionError> {
+async function requireCompanyId(): Promise<string> {
   const session = await auth();
   const companyId = (session?.user as { companyId?: string })?.companyId;
-  if (!companyId) {
-    return { ok: false, error: "Not authenticated" };
-  }
+  if (!companyId) throw new Error("Not authenticated");
   return companyId;
 }
 
@@ -51,23 +52,31 @@ export interface ExpenseInput {
 
 /**
  * Create a single expense via Server Action.
- * Replaces POST /api/expenses for client-side forms.
  */
 export async function createExpense(
   input: ExpenseInput,
 ): Promise<ActionResult<typeof expenses.$inferSelect>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   const payload = { ...input, companyId };
   const parsed = safeParse(expenseInputSchema, payload);
-  if (!parsed.ok) return { ok: false, error: "Validation failed", errors: parsed.errors };
+  if (!parsed.ok)
+    return { ok: false, error: "Validation failed", errors: parsed.errors };
 
   const data = parsed.data;
 
   try {
     const company = (
-      await db.select().from(companies).where(eq(companies.id, companyId)).limit(1)
+      await db
+        .select()
+        .from(companies)
+        .where(eq(companies.id, companyId))
+        .limit(1)
     )[0];
     if (!company) return { ok: false, error: "Company not found" };
 
@@ -75,7 +84,12 @@ export async function createExpense(
       await db
         .select()
         .from(fiscalYears)
-        .where(and(eq(fiscalYears.id, data.fiscalYearId), eq(fiscalYears.companyId, companyId)))
+        .where(
+          and(
+            eq(fiscalYears.id, data.fiscalYearId),
+            eq(fiscalYears.companyId, companyId),
+          ),
+        )
         .limit(1)
     )[0];
     if (!fiscalYear) return { ok: false, error: "Fiscal year not found" };
@@ -84,7 +98,9 @@ export async function createExpense(
       await db
         .select()
         .from(parties)
-        .where(and(eq(parties.id, data.partyId), eq(parties.companyId, companyId)))
+        .where(
+          and(eq(parties.id, data.partyId), eq(parties.companyId, companyId)),
+        )
         .limit(1)
     )[0];
     if (!party) return { ok: false, error: "Party not found" };
@@ -158,7 +174,11 @@ export async function createExpense(
       })
       .returning();
 
-    return { ok: true, data: created, warnings: warnings.length > 0 ? warnings : undefined };
+    return {
+      ok: true,
+      data: created,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    };
   } catch (err) {
     console.error("createExpense failed", err);
     return { ok: false, error: "An unexpected error occurred" };
@@ -167,10 +187,6 @@ export async function createExpense(
 
 /**
  * Batch save multiple expenses in a single database transaction.
- * Each row is validated individually; if any row has a hard error,
- * the entire batch is rolled back.
- *
- * This replaces the row-by-row POST loop in LedgerGrid.
  */
 export interface BatchRowInput {
   miti: string;
@@ -199,20 +215,32 @@ export interface BatchRowResult {
 export async function batchSaveExpenses(
   rows: BatchRowInput[],
 ): Promise<ActionResult<BatchRowResult[]>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   if (rows.length === 0) return { ok: true, data: [] };
-  if (rows.length > 200) return { ok: false, error: "Batch size limited to 200 rows" };
+  if (rows.length > 200)
+    return { ok: false, error: "Batch size limited to 200 rows" };
 
   try {
     const company = (
-      await db.select().from(companies).where(eq(companies.id, companyId)).limit(1)
+      await db
+        .select()
+        .from(companies)
+        .where(eq(companies.id, companyId))
+        .limit(1)
     )[0];
     if (!company) return { ok: false, error: "Company not found" };
 
     const results: BatchRowResult[] = [];
-    const rowsToInsert: { data: (typeof expenses.$inferInsert); index: number }[] = [];
+    const rowsToInsert: {
+      data: typeof expenses.$inferInsert;
+      index: number;
+    }[] = [];
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -226,7 +254,11 @@ export async function batchSaveExpenses(
       const data = parsed.data;
       const mitiParsed = parseMiti(data.miti);
       if (!mitiParsed.ok) {
-        results.push({ index: i, ok: false, error: `Invalid date: ${mitiParsed.error}` });
+        results.push({
+          index: i,
+          ok: false,
+          error: `Invalid date: ${mitiParsed.error}`,
+        });
         continue;
       }
 
@@ -234,7 +266,12 @@ export async function batchSaveExpenses(
         await db
           .select()
           .from(fiscalYears)
-          .where(and(eq(fiscalYears.id, data.fiscalYearId), eq(fiscalYears.companyId, companyId)))
+          .where(
+            and(
+              eq(fiscalYears.id, data.fiscalYearId),
+              eq(fiscalYears.companyId, companyId),
+            ),
+          )
           .limit(1)
       )[0];
       if (!fiscalYear) {
@@ -246,7 +283,9 @@ export async function batchSaveExpenses(
         await db
           .select()
           .from(parties)
-          .where(and(eq(parties.id, data.partyId), eq(parties.companyId, companyId)))
+          .where(
+            and(eq(parties.id, data.partyId), eq(parties.companyId, companyId)),
+          )
           .limit(1)
       )[0];
       if (!party) {
@@ -284,7 +323,9 @@ export async function batchSaveExpenses(
       if (!data.invoiceNumber) {
         const suspicious = await findSuspiciousDuplicates(fingerprint);
         if (suspicious.length > 0) {
-          warnings.push(`${suspicious.length} similar expense(s) may be duplicates`);
+          warnings.push(
+            `${suspicious.length} similar expense(s) may be duplicates`,
+          );
         }
       }
 
@@ -320,7 +361,11 @@ export async function batchSaveExpenses(
         },
       });
 
-      results.push({ index: i, ok: true, warnings: warnings.length > 0 ? warnings : undefined });
+      results.push({
+        index: i,
+        ok: true,
+        warnings: warnings.length > 0 ? warnings : undefined,
+      });
     }
 
     if (rowsToInsert.length === 0) {
@@ -330,7 +375,7 @@ export async function batchSaveExpenses(
     const inserted = await db
       .insert(expenses)
       .values(rowsToInsert.map((r) => r.data))
-      .returning({ id: expenses.id });
+      .returning();
 
     for (let j = 0; j < rowsToInsert.length; j++) {
       const resultIdx = rowsToInsert[j].index;
@@ -346,13 +391,16 @@ export async function batchSaveExpenses(
 
 /**
  * Soft-delete an expense via Server Action.
- * Replaces DELETE /api/expenses/[id].
  */
 export async function deleteExpense(
   id: string,
 ): Promise<ActionResult<{ id: string }>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   try {
     const current = (
@@ -363,7 +411,8 @@ export async function deleteExpense(
         .limit(1)
     )[0];
 
-    if (!current || current.isDeleted) return { ok: false, error: "Expense not found" };
+    if (!current || current.isDeleted)
+      return { ok: false, error: "Expense not found" };
 
     await db
       .update(expenses)
@@ -379,14 +428,17 @@ export async function deleteExpense(
 
 /**
  * Update an expense via Server Action.
- * Replaces PATCH /api/expenses/[id].
  */
 export async function updateExpense(
   id: string,
   changes: Partial<ExpenseInput> & { rowVersion: number },
 ): Promise<ActionResult<typeof expenses.$inferSelect>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   try {
     const current = (
@@ -397,25 +449,41 @@ export async function updateExpense(
         .limit(1)
     )[0];
 
-    if (!current || current.isDeleted) return { ok: false, error: "Expense not found" };
+    if (!current || current.isDeleted)
+      return { ok: false, error: "Expense not found" };
 
     if (current.rowVersion !== changes.rowVersion) {
-      return { ok: false, error: "This expense was changed by someone else — refresh and try again" };
+      return {
+        ok: false,
+        error:
+          "This expense was changed by someone else — refresh and try again",
+      };
     }
 
     const values: Record<string, unknown> = {};
 
     if (changes.miti !== undefined) {
       const mitiParsed = parseMiti(changes.miti);
-      if (!mitiParsed.ok) return { ok: false, error: `Invalid date: ${mitiParsed.error}` };
+      if (!mitiParsed.ok)
+        return { ok: false, error: `Invalid date: ${mitiParsed.error}` };
       values.miti = changes.miti;
       values.nepaliMonth = mitiParsed.monthName;
     }
 
     const patchKeys = [
-      "fiscalYearId", "partyId", "categoryId", "locationId",
-      "invoiceNumber", "item", "quantity", "rate",
-      "taxableAmount", "vatAmount", "totalAmount", "vatRate", "remarks",
+      "fiscalYearId",
+      "partyId",
+      "categoryId",
+      "locationId",
+      "invoiceNumber",
+      "item",
+      "quantity",
+      "rate",
+      "taxableAmount",
+      "vatAmount",
+      "totalAmount",
+      "vatRate",
+      "remarks",
     ] as const;
 
     for (const key of patchKeys) {
@@ -425,27 +493,56 @@ export async function updateExpense(
     }
 
     const merged = {
-      quantity: values.quantity !== undefined ? (values.quantity as string) : current.quantity,
+      quantity:
+        values.quantity !== undefined
+          ? (values.quantity as string)
+          : current.quantity,
       rate: values.rate !== undefined ? (values.rate as string) : current.rate,
-      taxableAmount: values.taxableAmount !== undefined ? (values.taxableAmount as string) : current.taxableAmount,
-      vatAmount: values.vatAmount !== undefined ? (values.vatAmount as string) : current.vatAmount,
-      totalAmount: values.totalAmount !== undefined ? (values.totalAmount as string) : current.totalAmount,
-      vatRate: values.vatRate !== undefined ? (values.vatRate as string) : current.vatRate,
+      taxableAmount:
+        values.taxableAmount !== undefined
+          ? (values.taxableAmount as string)
+          : current.taxableAmount,
+      vatAmount:
+        values.vatAmount !== undefined
+          ? (values.vatAmount as string)
+          : current.vatAmount,
+      totalAmount:
+        values.totalAmount !== undefined
+          ? (values.totalAmount as string)
+          : current.totalAmount,
+      vatRate:
+        values.vatRate !== undefined
+          ? (values.vatRate as string)
+          : current.vatRate,
     };
 
     const warnings = validateAmounts(merged);
 
     const [updated] = await db
       .update(expenses)
-      .set({ ...values, rowVersion: current.rowVersion + 1, updatedAt: sql`now()` })
-      .where(and(eq(expenses.id, id), eq(expenses.rowVersion, current.rowVersion)))
+      .set({
+        ...values,
+        rowVersion: current.rowVersion + 1,
+        updatedAt: sql`now()`,
+      })
+      .where(
+        and(eq(expenses.id, id), eq(expenses.rowVersion, current.rowVersion)),
+      )
       .returning();
 
     if (!updated) {
-      return { ok: false, error: "This expense was changed by someone else — refresh and try again" };
+      return {
+        ok: false,
+        error:
+          "This expense was changed by someone else — refresh and try again",
+      };
     }
 
-    return { ok: true, data: updated, warnings: warnings.length > 0 ? warnings : undefined };
+    return {
+      ok: true,
+      data: updated,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    };
   } catch (err) {
     console.error("updateExpense failed", err);
     return { ok: false, error: "Failed to update expense" };

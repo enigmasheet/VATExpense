@@ -6,15 +6,11 @@ import { formatAmount } from "@/lib/format";
 interface ExpenseDetailClientProps {
   id: string;
   initial: ExpenseInitial & { rowVersion: number };
-  partyName: string;
-  categoryName: string;
 }
 
 export function ExpenseDetailClient({
   id,
   initial,
-  partyName,
-  categoryName,
 }: ExpenseDetailClientProps) {
   return (
     <div className="flex flex-col gap-6">

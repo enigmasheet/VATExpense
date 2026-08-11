@@ -31,7 +31,10 @@ export default async function DashboardPage() {
       companyName={company?.name ?? "VAT Expense Ledger"}
       fiscalYearName={activeFiscalYear.name}
       totals={summary.totals}
-      recent={summary.recent}
+      recent={summary.recent.map((r) => ({
+        ...r,
+        partyName: r.partyName ?? "",
+      }))}
     />
   );
 }

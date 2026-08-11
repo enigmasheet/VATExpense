@@ -16,10 +16,10 @@ import type { ActionOk, ActionError } from "./expenses";
 
 type ActionResult<T> = ActionOk<T> | ActionError;
 
-async function requireCompanyId(): Promise<string | ActionError> {
+async function requireCompanyId(): Promise<string> {
   const session = await auth();
   const companyId = (session?.user as { companyId?: string })?.companyId;
-  if (!companyId) return { ok: false, error: "Not authenticated" };
+  if (!companyId) throw new Error("Not authenticated");
   return companyId;
 }
 
@@ -30,8 +30,12 @@ export async function createParty(input: {
   vatNumber?: string | null;
   locationId?: string | null;
 }): Promise<ActionResult<typeof parties.$inferSelect>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   const parsed = safeParse(createPartySchema, { ...input, companyId });
   if (!parsed.ok) return { ok: false, error: "Validation failed", errors: parsed.errors };
@@ -89,8 +93,12 @@ export async function updateParty(
   id: string,
   changes: { name?: string; isActive?: boolean },
 ): Promise<ActionResult<typeof parties.$inferSelect>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   try {
     const current = (
@@ -123,8 +131,12 @@ export async function updateParty(
 }
 
 export async function deleteParty(id: string): Promise<ActionResult<{ id: string }>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   try {
     await db
@@ -142,8 +154,12 @@ export async function deleteParty(id: string): Promise<ActionResult<{ id: string
 export async function createCategory(input: {
   name: string;
 }): Promise<ActionResult<typeof categories.$inferSelect>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   const parsed = safeParse(createCategorySchema, { ...input, companyId });
   if (!parsed.ok) return { ok: false, error: "Validation failed", errors: parsed.errors };
@@ -176,8 +192,12 @@ export async function updateCategory(
   id: string,
   changes: { name?: string; isActive?: boolean },
 ): Promise<ActionResult<typeof categories.$inferSelect>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   try {
     const values: Record<string, unknown> = {};
@@ -202,8 +222,12 @@ export async function updateCategory(
 }
 
 export async function deleteCategory(id: string): Promise<ActionResult<{ id: string }>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   try {
     await db
@@ -221,8 +245,12 @@ export async function deleteCategory(id: string): Promise<ActionResult<{ id: str
 export async function createLocation(input: {
   name: string;
 }): Promise<ActionResult<typeof locations.$inferSelect>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   const parsed = safeParse(createLocationSchema, { ...input, companyId });
   if (!parsed.ok) return { ok: false, error: "Validation failed", errors: parsed.errors };
@@ -255,8 +283,12 @@ export async function updateLocation(
   id: string,
   changes: { name?: string; isActive?: boolean },
 ): Promise<ActionResult<typeof locations.$inferSelect>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   try {
     const values: Record<string, unknown> = {};
@@ -281,8 +313,12 @@ export async function updateLocation(
 }
 
 export async function deleteLocation(id: string): Promise<ActionResult<{ id: string }>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   try {
     await db
@@ -303,8 +339,12 @@ export async function createFiscalYear(input: {
   endYear: number;
   isActive?: boolean;
 }): Promise<ActionResult<typeof fiscalYears.$inferSelect>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   const parsed = safeParse(createFiscalYearSchema, { ...input, companyId });
   if (!parsed.ok) return { ok: false, error: "Validation failed", errors: parsed.errors };
@@ -341,8 +381,12 @@ export async function updateFiscalYear(
   id: string,
   changes: { name?: string; isActive?: boolean },
 ): Promise<ActionResult<typeof fiscalYears.$inferSelect>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   try {
     if (changes.isActive) {
@@ -371,8 +415,12 @@ export async function updateFiscalYear(
 }
 
 export async function deleteFiscalYear(id: string): Promise<ActionResult<{ id: string }>> {
-  const companyId = await requireCompanyId();
-  if (!companyId.ok) return companyId;
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: "Not authenticated" };
+  }
 
   try {
     await db

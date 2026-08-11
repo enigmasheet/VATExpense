@@ -48,7 +48,11 @@ export default async function ExpensesPage({ searchParams }: Props) {
 
   return (
     <ExpensesListClient
-      initialData={result.data}
+      initialData={result.data.map((r) => ({
+        ...r,
+        partyName: r.partyName ?? "",
+        categoryName: r.categoryName ?? "",
+      }))}
       initialPage={result.page}
       initialTotal={result.total}
       pageSize={result.pageSize}
