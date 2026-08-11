@@ -17,6 +17,7 @@ import {
   notFound,
   internalError,
 } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { parseMiti } from "@/lib/nepali-date";
 import { checkInvoiceDuplicate, findSuspiciousDuplicates } from "@/lib/expenses/duplicates";
 import { and, eq, ilike, or, sql, aliasedTable, type SQL } from "drizzle-orm";
@@ -27,9 +28,8 @@ const MAX_PAGE_SIZE = 200;
 const locationAlias = aliasedTable(locations, "location");
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const companyId = url.searchParams.get("companyId");
-  if (!companyId) return badRequest("companyId query parameter is required");
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
 
   const fiscalYearId = url.searchParams.get("fiscalYearId");
   const partyId = url.searchParams.get("partyId");
@@ -119,6 +119,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
+
   let body: unknown;
   try {
     body = await request.json();
@@ -129,7 +132,7 @@ export async function POST(request: Request) {
   const parsed = safeParse(expenseInputSchema, body);
   if (!parsed.ok) return unprocessableEntity("Validation failed", parsed.errors);
 
-  const input = parsed.data;
+  const input = { ...parsed.data, companyId };
 
   try {
     const company = (

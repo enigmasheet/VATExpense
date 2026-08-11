@@ -1,10 +1,6 @@
 import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import * as partyService from "@/lib/services/parties";
-
-function getCompanyId(url: URL): string | null {
-  const value = url.searchParams.get("companyId");
-  return value && value.length > 0 ? value : null;
-}
 
 /**
  * Updates the specified party's name or active status.
@@ -17,8 +13,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const companyId = getCompanyId(new URL(request.url));
-  if (!companyId) return badRequest("companyId query parameter is required");
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
 
   let body: unknown;
   try {
@@ -58,8 +54,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const companyId = getCompanyId(new URL(request.url));
-  if (!companyId) return badRequest("companyId query parameter is required");
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
 
   try {
     const result = await partyService.deleteParty(id, companyId);

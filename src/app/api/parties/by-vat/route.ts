@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { parties, locations } from "@/lib/db/schema";
 import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { normalizeVatNumber } from "@/lib/normalize";
 import { eq, and } from "drizzle-orm";
 
@@ -10,11 +11,12 @@ import { eq, and } from "drizzle-orm";
  * Returns a bad-request response when `companyId` or `vat` is missing or the VAT contains no digits, a not-found response when no active party matches, or the party data on success.
  */
 export async function GET(request: Request) {
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
+
   const url = new URL(request.url);
-  const companyId = url.searchParams.get("companyId");
   const rawVat = url.searchParams.get("vat");
 
-  if (!companyId) return badRequest("companyId query parameter is required");
   if (!rawVat) return badRequest("vat query parameter is required");
 
   const normalizedVat = normalizeVatNumber(rawVat);

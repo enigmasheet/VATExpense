@@ -3,17 +3,13 @@ import { categories } from "@/lib/db/schema";
 import { createCategorySchema } from "@/lib/validation/masters";
 import { safeParse } from "@/lib/validation/utils";
 import { apiOk, badRequest, conflict, unprocessableEntity, internalError } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { normalizeName } from "@/lib/normalize";
 import { and, eq } from "drizzle-orm";
 
-function getCompanyId(url: URL): string | null {
-  const value = url.searchParams.get("companyId");
-  return value && value.length > 0 ? value : null;
-}
-
 export async function GET(request: Request) {
-  const companyId = getCompanyId(new URL(request.url));
-  if (!companyId) return badRequest("companyId query parameter is required");
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
 
   try {
     const rows = await db
@@ -28,6 +24,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
+
   let body: unknown;
   try {
     body = await request.json();
@@ -39,7 +38,7 @@ export async function POST(request: Request) {
   if (!parsed.ok) return unprocessableEntity("Validation failed", parsed.errors);
 
   try {
-    const { companyId, name, isActive } = parsed.data;
+    const { name, isActive } = parsed.data;
     const normalizedName = normalizeName(name);
 
     const existing = await db

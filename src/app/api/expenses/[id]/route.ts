@@ -10,6 +10,7 @@ import {
   notFound,
   internalError,
 } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { parseMiti } from "@/lib/nepali-date";
 import { and, eq, sql, aliasedTable } from "drizzle-orm";
 import { z } from "zod";
@@ -23,7 +24,7 @@ const patchSchema = expenseInputSchema
     rowVersion: z.coerce.number().int().min(1, "rowVersion is required"),
   });
 
-async function findExpense(id: string) {
+async function findExpense(id: string, companyId: string) {
   return (
     await db
       .select({
@@ -57,7 +58,7 @@ async function findExpense(id: string) {
       .leftJoin(parties, eq(parties.id, expenses.partyId))
       .leftJoin(categories, eq(categories.id, expenses.categoryId))
       .leftJoin(locationAlias, eq(locationAlias.id, expenses.locationId))
-      .where(eq(expenses.id, id))
+      .where(and(eq(expenses.id, id), eq(expenses.companyId, companyId)))
       .limit(1)
   )[0];
 }
@@ -67,8 +68,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
+
   try {
-    const row = await findExpense(id);
+    const row = await findExpense(id, companyId);
     if (!row || row.isDeleted) return notFound("Expense not found");
     return apiOk({ data: row });
   } catch (err) {
@@ -82,6 +86,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
 
   let body: unknown;
   try {
@@ -96,7 +102,7 @@ export async function PATCH(
   const { rowVersion, ...changes } = parsed.data;
 
   try {
-    const current = await findExpense(id);
+    const current = await findExpense(id, companyId);
     if (!current || current.isDeleted) return notFound("Expense not found");
 
     if (current.rowVersion !== rowVersion) {
@@ -180,8 +186,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
+
   try {
-    const current = await findExpense(id);
+    const current = await findExpense(id, companyId);
     if (!current || current.isDeleted) return notFound("Expense not found");
 
     await db

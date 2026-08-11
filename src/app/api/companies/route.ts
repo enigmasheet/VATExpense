@@ -2,7 +2,8 @@ import { db } from "@/lib/db";
 import { companies } from "@/lib/db/schema";
 import { createCompanySchema } from "@/lib/validation/masters";
 import { safeParse } from "@/lib/validation/utils";
-import { apiOk, badRequest, conflict, unprocessableEntity, internalError } from "@/lib/api-response";
+import { apiOk, badRequest, conflict, unprocessableEntity, internalError, unauthorized } from "@/lib/api-response";
+import { getSessionUser } from "@/lib/api-auth";
 import { ilike, eq } from "drizzle-orm";
 
 /**
@@ -25,11 +26,14 @@ export async function GET(request: Request) {
 }
 
 /**
- * Creates a company from the request body.
+ * Creates a company from the request body (superadmin only).
  *
  * @returns An API response containing the created company, or an error response for invalid input, duplicate names, or database failures.
  */
 export async function POST(request: Request) {
+  const user = await getSessionUser();
+  if (!user || user.role !== "SuperAdmin") return unauthorized();
+
   let body: unknown;
   try {
     body = await request.json();

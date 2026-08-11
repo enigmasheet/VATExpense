@@ -1,5 +1,6 @@
 import { getPartyPurchaseReport } from "@/lib/server-data";
 import { badRequest, internalError } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import * as XLSX from "xlsx";
 
 export const runtime = "nodejs";
@@ -13,12 +14,13 @@ const THRESHOLD = 100000;
  * @returns A downloadable XLSX response of qualifying parties and their purchase totals.
  */
 export async function GET(request: Request) {
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
+
   const url = new URL(request.url);
-  const companyId = url.searchParams.get("companyId");
   const fiscalYearId = url.searchParams.get("fiscalYearId");
   const basisParam = url.searchParams.get("basis");
 
-  if (!companyId) return badRequest("companyId query parameter is required");
   if (!fiscalYearId) return badRequest("fiscalYearId query parameter is required");
   if (basisParam !== "taxable" && basisParam !== "total") {
     return badRequest("basis query parameter must be either 'taxable' or 'total'");

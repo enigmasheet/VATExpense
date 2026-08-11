@@ -1,10 +1,6 @@
 import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import * as locationService from "@/lib/services/locations";
-
-function getCompanyId(url: URL): string | null {
-  const value = url.searchParams.get("companyId");
-  return value && value.length > 0 ? value : null;
-}
 
 /**
  * Updates a location identified by its route ID.
@@ -18,8 +14,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const companyId = getCompanyId(new URL(request.url));
-  if (!companyId) return badRequest("companyId query parameter is required");
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
 
   let body: unknown;
   try {
@@ -59,8 +55,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const companyId = getCompanyId(new URL(request.url));
-  if (!companyId) return badRequest("companyId query parameter is required");
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
 
   try {
     const result = await locationService.deleteLocation(id, companyId);

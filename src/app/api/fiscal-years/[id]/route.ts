@@ -1,10 +1,6 @@
 import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import * as fiscalYearService from "@/lib/services/fiscal-years";
-
-function getCompanyId(url: URL): string | null {
-  const value = url.searchParams.get("companyId");
-  return value && value.length > 0 ? value : null;
-}
 
 /**
  * Updates a fiscal year by ID.
@@ -19,8 +15,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const companyId = getCompanyId(new URL(request.url));
-  if (!companyId) return badRequest("companyId query parameter is required");
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
 
   let body: unknown;
   try {
@@ -60,8 +56,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const companyId = getCompanyId(new URL(request.url));
-  if (!companyId) return badRequest("companyId query parameter is required");
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
 
   try {
     const result = await fiscalYearService.deleteFiscalYear(id, companyId);

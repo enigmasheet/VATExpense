@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { expenses } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { and, eq } from "drizzle-orm";
 
 /**
@@ -9,10 +10,10 @@ import { and, eq } from "drizzle-orm";
  * expense rows just for duplicate detection.
  */
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const companyId = url.searchParams.get("companyId");
-  if (!companyId) return badRequest("companyId query parameter is required");
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
 
+  const url = new URL(request.url);
   const fiscalYearId = url.searchParams.get("fiscalYearId");
   if (!fiscalYearId) return badRequest("fiscalYearId query parameter is required");
 

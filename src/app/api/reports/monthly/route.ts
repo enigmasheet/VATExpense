@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { expenses, categories } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { NEPALI_MONTHS, type NepaliMonth } from "@/lib/nepali-date";
 import { and, eq, sql, type SQL } from "drizzle-orm";
 
@@ -11,12 +12,13 @@ import { and, eq, sql, type SQL } from "drizzle-orm";
  * @returns The category breakdown and aggregate totals for the specified month
  */
 export async function GET(request: Request) {
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
+
   const url = new URL(request.url);
-  const companyId = url.searchParams.get("companyId");
   const fiscalYearId = url.searchParams.get("fiscalYearId");
   const nepaliMonth = url.searchParams.get("nepaliMonth");
 
-  if (!companyId) return badRequest("companyId query parameter is required");
   if (!fiscalYearId) return badRequest("fiscalYearId query parameter is required");
   if (!nepaliMonth) return badRequest("nepaliMonth query parameter is required");
   if (!NEPALI_MONTHS.includes(nepaliMonth as NepaliMonth)) {

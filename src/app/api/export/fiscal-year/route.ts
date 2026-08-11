@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { expenses } from "@/lib/db/schema";
 import { badRequest, internalError } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { NEPALI_MONTHS } from "@/lib/nepali-date";
 import { and, eq, sql, type SQL } from "drizzle-orm";
 import * as XLSX from "xlsx";
@@ -14,11 +15,12 @@ export const runtime = "nodejs";
  * @returns An Excel file response, or an error response when the required parameters or export operation are invalid
  */
 export async function GET(request: Request) {
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
+
   const url = new URL(request.url);
-  const companyId = url.searchParams.get("companyId");
   const fiscalYearId = url.searchParams.get("fiscalYearId");
 
-  if (!companyId) return badRequest("companyId query parameter is required");
   if (!fiscalYearId) return badRequest("fiscalYearId query parameter is required");
 
   const conditions: SQL[] = [
