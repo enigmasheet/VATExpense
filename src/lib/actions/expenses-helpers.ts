@@ -1,5 +1,3 @@
-"use server";
-
 import { db } from "@/lib/db";
 import { expenses, fiscalYears, parties } from "@/lib/db/schema";
 import { validateAmounts, type ExpenseInput } from "@/lib/validation/expense";
