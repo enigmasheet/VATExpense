@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 
-const VAT_RATE = 13;
+import { VAT_RATE } from "@/lib/constants";
 const VAT_FACTOR = 1 + VAT_RATE / 100;
 
 interface Party {

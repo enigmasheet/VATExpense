@@ -5,6 +5,7 @@ import { useApp } from "@/lib/use-app";
 import { api, ApiError, apiUrl } from "@/lib/api-client";
 import { formatAmount } from "@/lib/format";
 import { NEPALI_MONTHS, type NepaliMonth } from "@/lib/nepali-date";
+import { Button } from "@/components/ui/button";
 
 interface CategoryBreakdown {
   categoryId: string;
@@ -104,12 +105,9 @@ export default function MonthlyReportPage() {
             </option>
           ))}
         </select>
-        <button
-          onClick={handleExport}
-          className="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-subtle"
-        >
+        <Button variant="secondary" onClick={handleExport}>
           Export .xlsx
-        </button>
+        </Button>
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}

@@ -52,16 +52,41 @@ export default function DashboardPage() {
 
   const totals = summary.reduce(
     (acc, e) => ({
-      taxable: acc.taxable + Number(e.taxableAmount),
-      vat: acc.vat + Number(e.vatAmount),
-      total: acc.total + Number(e.totalAmount),
+      taxable: acc.taxable + (Number(e.taxableAmount) || 0),
+      vat: acc.vat + (Number(e.vatAmount) || 0),
+      total: acc.total + (Number(e.totalAmount) || 0),
     }),
     { taxable: 0, vat: 0, total: 0 },
   );
 
   const recent = summary.slice(0, 5);
 
-  if (loading) return <p className="text-sm text-muted">Loading…</p>;
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-8">
+        <div className="flex items-baseline justify-between">
+          <div className="h-8 w-48 animate-pulse rounded bg-surface-muted" />
+          <div className="h-4 w-24 animate-pulse rounded bg-surface-muted" />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-lg border border-border bg-surface p-5">
+              <div className="h-3 w-20 animate-pulse rounded bg-surface-muted" />
+              <div className="mt-2 h-7 w-28 animate-pulse rounded bg-surface-muted" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="rounded-lg border border-border bg-surface p-4">
+              <div className="h-4 w-28 animate-pulse rounded bg-surface-muted" />
+              <div className="mt-2 h-3 w-36 animate-pulse rounded bg-surface-muted" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
   if (!companyId) {
     return (
       <p className="text-sm text-muted">
@@ -125,32 +150,49 @@ export default function DashboardPage() {
         ) : recent.length === 0 ? (
           <p className="text-sm text-muted">No expenses recorded yet.</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                  <th className="px-4 py-3">Miti</th>
-                  <th className="px-4 py-3">Invoice</th>
-                  <th className="px-4 py-3">Party</th>
-                  <th className="px-4 py-3">Item</th>
-                  <th className="px-4 py-3 text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recent.map((e, i) => (
-                  <tr key={i} className="border-b border-border last:border-b-0">
-                    <td className="px-4 py-3">{e.miti}</td>
-                    <td className="px-4 py-3">{e.invoiceNumber ?? "—"}</td>
-                    <td className="px-4 py-3">{e.partyName}</td>
-                    <td className="px-4 py-3">{e.item}</td>
-                    <td className="tabular-amount px-4 py-3 text-right font-medium">
-                      {formatAmount(e.totalAmount)}
-                    </td>
+          <>
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface sm:block">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
+                    <th className="px-4 py-3">Miti</th>
+                    <th className="px-4 py-3">Invoice</th>
+                    <th className="px-4 py-3">Party</th>
+                    <th className="px-4 py-3">Item</th>
+                    <th className="px-4 py-3 text-right">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {recent.map((e, i) => (
+                    <tr key={i} className="border-b border-border last:border-b-0">
+                      <td className="px-4 py-3">{e.miti}</td>
+                      <td className="px-4 py-3">{e.invoiceNumber ?? "—"}</td>
+                      <td className="px-4 py-3">{e.partyName}</td>
+                      <td className="px-4 py-3">{e.item}</td>
+                      <td className="tabular-amount px-4 py-3 text-right font-medium">
+                        {formatAmount(e.totalAmount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile card list */}
+            <div className="rounded-lg border border-border bg-surface sm:hidden">
+              {recent.map((e, i) => (
+                <div key={i} className="border-b border-border p-4 last:border-b-0">
+                  <div className="flex items-start justify-between">
+                    <span className="font-medium">{e.partyName}</span>
+                    <span className="tabular-amount font-medium">{formatAmount(e.totalAmount)}</span>
+                  </div>
+                  <p className="truncate text-sm text-muted">{e.item}</p>
+                  <p className="mt-1 text-xs text-muted">{e.miti}{e.invoiceNumber ? ` · Inv: ${e.invoiceNumber}` : ""}</p>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </section>
     </div>

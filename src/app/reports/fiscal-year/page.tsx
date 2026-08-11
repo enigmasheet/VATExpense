@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useApp } from "@/lib/use-app";
 import { api, ApiError, apiUrl } from "@/lib/api-client";
 import { formatAmount } from "@/lib/format";
+import { Button } from "@/components/ui/button";
 
 interface MonthBreakdown {
   nepaliMonth: string;
@@ -80,12 +81,9 @@ export default function FiscalYearReportPage() {
             Monthly breakdown for FY {activeFiscalYear?.name ?? "—"}
           </p>
         </div>
-        <button
-          onClick={handleExport}
-          className="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-subtle"
-        >
+        <Button variant="secondary" onClick={handleExport}>
           Export .xlsx
-        </button>
+        </Button>
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}

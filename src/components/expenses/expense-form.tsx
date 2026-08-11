@@ -8,7 +8,7 @@ import { round2 } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 
-const VAT_RATE = 13;
+import { VAT_RATE } from "@/lib/constants";
 const VAT_FACTOR = 1 + VAT_RATE / 100; // 1.13
 
 interface FormValues {
