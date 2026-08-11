@@ -27,23 +27,27 @@ export async function createFiscalYear(
   )[0];
   if (existing) return { ok: false, error: `Fiscal year "${input.name}" already exists` };
 
-  if (input.isActive) {
-    await db
-      .update(fiscalYears)
-      .set({ isActive: false, updatedAt: sql`now()` })
-      .where(eq(fiscalYears.companyId, companyId));
-  }
+  const [created] = await db.transaction(async (tx) => {
+    if (input.isActive) {
+      await tx
+        .update(fiscalYears)
+        .set({ isActive: false, updatedAt: sql`now()` })
+        .where(eq(fiscalYears.companyId, companyId));
+    }
 
-  const [created] = await db
-    .insert(fiscalYears)
-    .values({
-      companyId,
-      name: input.name,
-      startYear: input.startYear,
-      endYear: input.endYear,
-      isActive: input.isActive,
-    })
-    .returning();
+    const [row] = await tx
+      .insert(fiscalYears)
+      .values({
+        companyId,
+        name: input.name,
+        startYear: input.startYear,
+        endYear: input.endYear,
+        isActive: input.isActive,
+      })
+      .returning();
+
+    return [row];
+  });
 
   return { ok: true, data: created };
 }
@@ -58,10 +62,30 @@ export async function updateFiscalYear(
   changes: { name?: string; isActive?: boolean },
 ): Promise<ServiceResult<FiscalYear>> {
   if (changes.isActive) {
-    await db
-      .update(fiscalYears)
-      .set({ isActive: false, updatedAt: sql`now()` })
-      .where(and(eq(fiscalYears.companyId, companyId), eq(fiscalYears.isActive, true)));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(fiscalYears)
+        .set({ isActive: false, updatedAt: sql`now()` })
+        .where(and(eq(fiscalYears.companyId, companyId), eq(fiscalYears.isActive, true)));
+
+      const values: Record<string, unknown> = {};
+      if (changes.name !== undefined) values.name = changes.name;
+      if (changes.isActive !== undefined) values.isActive = changes.isActive;
+
+      await tx
+        .update(fiscalYears)
+        .set({ ...values, updatedAt: sql`now()` })
+        .where(and(eq(fiscalYears.id, id), eq(fiscalYears.companyId, companyId)));
+    });
+
+    const [updated] = await db
+      .select()
+      .from(fiscalYears)
+      .where(eq(fiscalYears.id, id))
+      .limit(1);
+
+    if (!updated) return { ok: false, error: "Fiscal year not found" };
+    return { ok: true, data: updated };
   }
 
   const values: Record<string, unknown> = {};

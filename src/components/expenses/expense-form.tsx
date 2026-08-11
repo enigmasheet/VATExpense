@@ -78,7 +78,8 @@ export function ExpenseForm({
   initialRowVersion?: number;
 }) {
   const router = useRouter();
-  const { companyId, fiscalYearId, fiscalYears } = useApp();
+  const { companyId, fiscalYearId, fiscalYears, companies } = useApp();
+  const defaultVatRate = companies[0]?.defaultVatRate ?? "13.00";
   const [values, setValues] = useState<FormValues>(() =>
     mode === "edit" && initial
       ? {
@@ -106,15 +107,15 @@ export function ExpenseForm({
 
   useEffect(() => {
     if (!companyId) return;
-    api<{ data: { id: string; name: string }[] }>(`/api/parties?companyId=${companyId}`).then(
-      ({ data }) => setParties(data),
-    );
-    api<{ data: { id: string; name: string }[] }>(`/api/categories?companyId=${companyId}`).then(
-      ({ data }) => setCategories(data),
-    );
-    api<{ data: { id: string; name: string }[] }>(`/api/locations?companyId=${companyId}`).then(
-      ({ data }) => setLocations(data),
-    );
+    api<{ data: { id: string; name: string }[] }>(`/api/parties?companyId=${companyId}`)
+      .then(({ data }) => setParties(data))
+      .catch((e) => console.error("Failed to load parties:", e));
+    api<{ data: { id: string; name: string }[] }>(`/api/categories?companyId=${companyId}`)
+      .then(({ data }) => setCategories(data))
+      .catch((e) => console.error("Failed to load categories:", e));
+    api<{ data: { id: string; name: string }[] }>(`/api/locations?companyId=${companyId}`)
+      .then(({ data }) => setLocations(data))
+      .catch((e) => console.error("Failed to load locations:", e));
   }, [companyId]);
 
   const set = useCallback(
@@ -130,6 +131,7 @@ export function ExpenseForm({
     const total = round2(taxable + vat);
     setValues((v) => ({
       ...v,
+      taxableAmount: taxableStr,
       vatAmount: String(vat),
       totalAmount: String(total),
     }));
@@ -144,6 +146,7 @@ export function ExpenseForm({
       ...v,
       taxableAmount: String(taxable),
       vatAmount: String(vat),
+      totalAmount: totalStr,
     }));
   }
 
@@ -163,15 +166,11 @@ export function ExpenseForm({
   }
 
   function onTaxableChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value;
-    setValues((v) => ({ ...v, taxableAmount: val }));
-    calcFromTaxable(val);
+    calcFromTaxable(e.target.value);
   }
 
   function onTotalChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value;
-    setValues((v) => ({ ...v, totalAmount: val }));
-    calcFromTotal(val);
+    calcFromTotal(e.target.value);
   }
 
   async function onSubmit(e: React.SubmitEvent<HTMLFormElement>) {
@@ -194,7 +193,7 @@ export function ExpenseForm({
       taxableAmount: values.taxableAmount,
       vatAmount: values.vatAmount,
       totalAmount: values.totalAmount,
-      vatRate: "13.00",
+      vatRate: defaultVatRate,
       remarks: values.remarks || null,
     };
 

@@ -11,7 +11,7 @@ import {
   unprocessableEntity,
   internalError,
 } from "@/lib/api-response";
-import { getSessionUser } from "@/lib/server-data";
+import { getSessionUser } from "@/lib/api-auth";
 import { eq, ilike, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 

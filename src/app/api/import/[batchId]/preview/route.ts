@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { importBatches, importBatchRows, parties, categories, locations } from "@/lib/db/schema";
-import { apiOk, badRequest, internalError, notFound } from "@/lib/api-response";
+import { apiOk, badRequest, internalError, notFound, forbidden } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { parseMiti } from "@/lib/nepali-date";
 import { normalizeName } from "@/lib/normalize";
 import { and, eq } from "drizzle-orm";
@@ -17,6 +18,8 @@ export async function GET(
   { params }: { params: Promise<{ batchId: string }> },
 ) {
   const { batchId } = await params;
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
 
   try {
     const batch = (
@@ -24,6 +27,7 @@ export async function GET(
     )[0];
 
     if (!batch) return notFound("Import batch not found");
+    if (batch.companyId !== companyId) return forbidden("Access denied");
     if (batch.status !== "pending") {
       return badRequest(`Batch is already ${batch.status}`);
     }

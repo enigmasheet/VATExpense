@@ -22,12 +22,17 @@ export type ActionResult<T> = ActionOk<T> | ActionError;
 /**
  * Retrieves the authenticated user's company ID.
  *
+ * For regular users: returns the session companyId.
+ * For superadmins: accepts companyId from the input parameter (superadmin has no company).
+ *
+ * @param inputCompanyId - Optional companyId from the action input (used by superadmin)
  * @returns The authenticated user's company ID
  * @throws If no authenticated company ID is available
  */
-export async function requireCompanyId(): Promise<string> {
+export async function requireCompanyId(inputCompanyId?: string): Promise<string> {
   const session = await auth();
-  const companyId = (session?.user as { companyId?: string })?.companyId;
+  const user = session?.user as { companyId?: string; role?: string } | undefined;
+  const companyId = user?.companyId ?? inputCompanyId;
   if (!companyId) throw new Error("Not authenticated");
   return companyId;
 }

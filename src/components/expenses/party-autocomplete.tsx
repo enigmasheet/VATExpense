@@ -41,10 +41,12 @@ export function PartyAutocomplete({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const prevValueRef = useRef(value);
 
-  if (prevValueRef.current !== value) {
-    prevValueRef.current = value;
-    setQuery(value);
-  }
+  useEffect(() => {
+    if (prevValueRef.current !== value) {
+      prevValueRef.current = value;
+      setQuery(value);
+    }
+  }, [value]);
 
   const updatePosition = useCallback(() => {
     const rect = inputRef.current?.getBoundingClientRect();

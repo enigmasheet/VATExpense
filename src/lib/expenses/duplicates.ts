@@ -36,6 +36,7 @@ export async function checkInvoiceDuplicate(
         eq(expenses.fiscalYearId, fingerprint.fiscalYearId),
         eq(expenses.partyId, fingerprint.partyId),
         eq(expenses.invoiceNumber, fingerprint.invoiceNumber),
+        eq(expenses.isDeleted, false),
       ),
     )
     .limit(1);

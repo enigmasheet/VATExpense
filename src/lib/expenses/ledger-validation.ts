@@ -53,15 +53,15 @@ export function validateLedgerRow(
 
   // Miti
   if (!row.miti) {
-    return { status: "duplicate", error: "Miti required", warnings };
+    return { status: "error", error: "Miti required", warnings };
   }
   const fy = getFiscalYearFromMiti(row.miti);
   if (!fy.ok) {
-    return { status: "duplicate", error: "Invalid date", warnings };
+    return { status: "error", error: "Invalid date", warnings };
   }
   if (fy.fiscalYearName !== fiscalYearName) {
     return {
-      status: "duplicate",
+      status: "error",
       error: `Date falls in FY ${fy.fiscalYearName}`,
       warnings,
     };
@@ -69,23 +69,23 @@ export function validateLedgerRow(
 
   // Party
   if (!row.partyResolved || !row.partyId) {
-    return { status: "duplicate", error: "Select a valid party", warnings };
+    return { status: "error", error: "Select a valid party", warnings };
   }
 
   // Invoice number
   if (!row.invoiceNumber.trim()) {
-    return { status: "duplicate", error: "Invoice number required", warnings };
+    return { status: "error", error: "Invoice number required", warnings };
   }
 
   // Category
   if (!row.categoryId) {
-    return { status: "duplicate", error: "Category required", warnings };
+    return { status: "error", error: "Category required", warnings };
   }
 
   // Taxable amount
   if (!row.taxableAmount || parseFloat(row.taxableAmount) <= 0) {
     return {
-      status: "duplicate",
+      status: "error",
       error: "Taxable amount must be greater than 0",
       warnings,
     };

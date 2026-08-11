@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { importBatches, importBatchRows } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import * as XLSX from "xlsx";
 
 export const runtime = "nodejs";
@@ -63,6 +64,9 @@ function mapExcelRow(row: Record<string, unknown>): ParsedRow | null {
  * @returns A response containing the created batch metadata, or an error response for invalid form data, empty workbook content, or processing failures.
  */
 export async function POST(request: Request) {
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
+
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -71,11 +75,9 @@ export async function POST(request: Request) {
   }
 
   const file = formData.get("file") as File | null;
-  const companyId = formData.get("companyId") as string | null;
   const fiscalYearId = formData.get("fiscalYearId") as string | null;
 
   if (!file) return badRequest("file is required");
-  if (!companyId) return badRequest("companyId is required");
   if (!fiscalYearId) return badRequest("fiscalYearId is required");
 
   try {

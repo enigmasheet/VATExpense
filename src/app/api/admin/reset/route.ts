@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { apiOk, notFound, unauthorized, internalError } from "@/lib/api-response";
-import { getSessionUser } from "@/lib/server-data";
+import { getSessionUser } from "@/lib/api-auth";
 import { sql } from "drizzle-orm";
 
 /**

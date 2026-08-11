@@ -45,7 +45,7 @@ export function AdminDashboard({ resetEnabled }: AdminDashboardProps) {
   const loadCompanies = useCallback(() => {
     api<{ data: CompanyRow[] }>("/api/admin/companies")
       .then(({ data }) => setCompanies(data))
-      .catch((e) => setError(e.detail))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : "Failed to load companies"))
       .finally(() => setLoading(false));
   }, []);
 

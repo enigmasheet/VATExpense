@@ -22,11 +22,13 @@ export function useLedgerSave({
   fiscalYearId,
   dispatch,
   setExistingInvoices,
+  defaultVatRate = "13.00",
 }: {
   enrichedRows: LedgerRow[];
   fiscalYearId: string;
   dispatch: React.Dispatch<LedgerAction>;
   setExistingInvoices: React.Dispatch<React.SetStateAction<Set<string>>>;
+  defaultVatRate?: string;
 }) {
   const [saving, setSaving] = useState(false);
   const [saveResult, setSaveResult] = useState<SaveResult | null>(null);
@@ -59,7 +61,7 @@ export function useLedgerSave({
       taxableAmount: row.taxableAmount,
       vatAmount: row.vatAmount,
       totalAmount: row.totalAmount,
-      vatRate: "13.00",
+      vatRate: defaultVatRate,
     }));
 
     const result = await batchSaveExpenses(batchInputs);

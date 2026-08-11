@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { importBatches, importBatchRows, expenses } from "@/lib/db/schema";
-import { apiOk, badRequest, internalError, notFound } from "@/lib/api-response";
+import { apiOk, badRequest, internalError, notFound, forbidden } from "@/lib/api-response";
+import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { eq } from "drizzle-orm";
 
 /**
@@ -15,6 +16,8 @@ export async function POST(
   { params }: { params: Promise<{ batchId: string }> },
 ) {
   const { batchId } = await params;
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
 
   try {
     const batch = (
@@ -22,6 +25,7 @@ export async function POST(
     )[0];
 
     if (!batch) return notFound("Import batch not found");
+    if (batch.companyId !== companyId) return forbidden("Access denied");
     if (batch.status !== "pending") {
       return badRequest(`Batch is already ${batch.status}`);
     }
@@ -41,16 +45,19 @@ export async function POST(
     const inserted = await db.transaction(async (tx) => {
       const results = [];
       for (const row of validRows) {
+        if (!row.resolvedPartyId || !row.resolvedCategoryId || !row.resolvedMiti || !row.resolvedNepaliMonth) {
+          continue;
+        }
         const [expense] = await tx
           .insert(expenses)
           .values({
             companyId: batch.companyId,
             fiscalYearId: batch.fiscalYearId,
-            partyId: row.resolvedPartyId as string,
-            categoryId: row.resolvedCategoryId as string,
+            partyId: row.resolvedPartyId,
+            categoryId: row.resolvedCategoryId,
             locationId: row.resolvedLocationId ?? undefined,
-            miti: row.resolvedMiti as string,
-            nepaliMonth: row.resolvedNepaliMonth as string,
+            miti: row.resolvedMiti,
+            nepaliMonth: row.resolvedNepaliMonth,
             invoiceNumber: row.rawInvoiceNumber || undefined,
             item: row.rawItem as string,
             quantity: row.rawQuantity ? row.rawQuantity : undefined,

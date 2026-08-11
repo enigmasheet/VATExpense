@@ -31,6 +31,7 @@ export async function GET(request: Request) {
   const companyId = await requireCompanyIdFromSession(request);
   if (typeof companyId !== "string") return companyId;
 
+  const url = new URL(request.url);
   const fiscalYearId = url.searchParams.get("fiscalYearId");
   const partyId = url.searchParams.get("partyId");
   const categoryId = url.searchParams.get("categoryId");

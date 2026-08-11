@@ -49,6 +49,9 @@ export const createFiscalYearSchema = z.object({
   startYear: z.coerce.number().int().min(2000, "Start year out of supported range").max(2099),
   endYear: z.coerce.number().int().min(2000, "End year out of supported range").max(2099),
   isActive: z.boolean().optional().default(false),
+}).refine((d) => d.endYear > d.startYear, {
+  message: "endYear must be greater than startYear",
+  path: ["endYear"],
 });
 
 export type CreateCompanyInput = z.infer<typeof createCompanySchema>;

@@ -50,7 +50,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
-  const [fiscalYearId, setFiscalYearIdState] = useState<string | null>(null);
+  const [fiscalYearId, setFiscalYearIdState] = useState<string | null>(
+    () => (typeof window !== "undefined" ? localStorage.getItem(FY_KEY) : null),
+  );
   const [loading, setLoading] = useState(true);
 
   const companyId = (session?.user as { companyId?: string })?.companyId ?? null;
@@ -84,7 +86,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return data.find((fy) => fy.isActive)?.id ?? data[0]?.id ?? null;
         });
       })
-      .catch(() => {});
+      .catch((e) => console.error("Failed to load fiscal years:", e));
     return () => {
       cancelled = true;
     };

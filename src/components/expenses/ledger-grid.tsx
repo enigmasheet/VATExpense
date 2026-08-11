@@ -48,9 +48,12 @@ export function LedgerGrid({
 
     fetch(
       `/api/expenses/invoice-keys?companyId=${companyId}&fiscalYearId=${fiscalYearId}`,
-      { signal: controller.signal },
+      { signal: controller.signal, credentials: "include" },
     )
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(
         (res: {
           data: { partyId: string; invoiceNumber: string }[];
