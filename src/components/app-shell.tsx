@@ -33,23 +33,13 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
 }
 
 function ContextBar() {
-  const { companies, companyId, setCompanyId, fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
+  const { companies, companyId, fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
   const { data: session } = useSession();
+  const company = companies.find((c) => c.id === companyId);
   return (
     <div className="flex items-center gap-3">
-      {companyId && (
-        <select
-          value={companyId}
-          onChange={(e) => setCompanyId(e.target.value)}
-          className="h-8 rounded-md border border-border bg-surface px-2 text-xs text-foreground"
-          aria-label="Company"
-        >
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+      {company && (
+        <span className="text-xs font-medium text-foreground">{company.name}</span>
       )}
       {companyId && fiscalYears.length > 0 && (
         <select

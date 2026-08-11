@@ -9,6 +9,7 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
+import { useSession } from "next-auth/react";
 import { api } from "@/lib/api-client";
 
 export interface Company {
@@ -29,7 +30,6 @@ export interface FiscalYear {
 interface AppContextValue {
   companies: Company[];
   companyId: string | null;
-  setCompanyId: (id: string) => void;
   fiscalYears: FiscalYear[];
   fiscalYearId: string | null;
   setFiscalYearId: (id: string) => void;
@@ -39,26 +39,24 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-const COMPANY_KEY = "vat-ledger:companyId";
 const FY_KEY = "vat-ledger:fiscalYearId";
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { data: session, status } = useSession();
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [companyId, setCompanyIdState] = useState<string | null>(null);
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [fiscalYearId, setFiscalYearIdState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const companyId = (session?.user as { companyId?: string })?.companyId ?? null;
+
   useEffect(() => {
+    if (status === "loading" || !companyId) return;
     let cancelled = false;
-    api<{ data: Company[] }>("/api/companies")
+    api<{ data: Company[] }>(`/api/companies?id=${companyId}`)
       .then(({ data }) => {
         if (cancelled) return;
         setCompanies(data);
-        const stored = localStorage.getItem(COMPANY_KEY);
-        const first = data[0]?.id ?? null;
-        const chosen = stored && data.some((c) => c.id === stored) ? stored : first;
-        if (chosen) setCompanyIdState(chosen);
         setLoading(false);
       })
       .catch(() => {
@@ -67,7 +65,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [companyId, status]);
 
   useEffect(() => {
     if (!companyId) return;
@@ -87,11 +85,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [companyId]);
 
-  const setCompanyId = useCallback((id: string) => {
-    setCompanyIdState(id);
-    localStorage.setItem(COMPANY_KEY, id);
-  }, []);
-
   const setFiscalYearId = useCallback((id: string) => {
     setFiscalYearIdState(id);
     localStorage.setItem(FY_KEY, id);
@@ -106,14 +99,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => ({
       companies,
       companyId,
-      setCompanyId,
       fiscalYears,
       fiscalYearId,
       setFiscalYearId,
       activeFiscalYear,
       loading,
     }),
-    [companies, companyId, setCompanyId, fiscalYears, fiscalYearId, setFiscalYearId, activeFiscalYear, loading],
+    [companies, companyId, fiscalYears, fiscalYearId, setFiscalYearId, activeFiscalYear, loading],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -32,13 +32,13 @@ async function getOrCreateUser(companyId: string) {
     .insert(users)
     .values({
       companyId,
-      email: "admin@nephardware.com.np",
+      email: "admin@gmail.com",
       name: "Admin",
       passwordHash,
       role: "Admin",
     })
     .returning();
-  console.log("Created admin user: admin@nephardware.com.np / admin123");
+  console.log("Created admin user: admin@gmail.com / admin123");
   return user;
 }
 

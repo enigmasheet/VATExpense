@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -11,10 +11,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        companyId: { label: "Company ID", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password || !credentials?.companyId) {
+        if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
@@ -22,17 +21,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           await db
             .select()
             .from(users)
-            .where(
-              and(
-                eq(users.email, credentials.email as string),
-                eq(users.companyId, credentials.companyId as string),
-                eq(users.isActive, true),
-              ),
-            )
+            .where(eq(users.email, credentials.email as string))
             .limit(1)
         )[0];
 
-        if (!user) return null;
+        if (!user || !user.isActive) return null;
 
         const isValid = await bcrypt.compare(
           credentials.password as string,

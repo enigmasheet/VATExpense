@@ -8,7 +8,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [companyId, setCompanyId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -21,7 +20,6 @@ export default function LoginPage() {
       const result = await signIn("credentials", {
         email,
         password,
-        companyId,
         redirect: false,
       });
 
@@ -49,21 +47,6 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="text-sm font-medium text-foreground" htmlFor="company">
-              Company ID
-            </label>
-            <input
-              id="company"
-              type="text"
-              value={companyId}
-              onChange={(e) => setCompanyId(e.target.value)}
-              required
-              className="mt-1 block w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-              placeholder="Enter company ID"
-            />
-          </div>
-
           <div>
             <label className="text-sm font-medium text-foreground" htmlFor="email">
               Email

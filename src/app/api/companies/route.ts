@@ -3,11 +3,15 @@ import { companies } from "@/lib/db/schema";
 import { createCompanySchema } from "@/lib/validation/masters";
 import { safeParse } from "@/lib/validation/utils";
 import { apiOk, badRequest, conflict, unprocessableEntity, internalError } from "@/lib/api-response";
-import { ilike } from "drizzle-orm";
+import { ilike, eq } from "drizzle-orm";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const id = url.searchParams.get("id");
+
   try {
-    const rows = await db.select().from(companies).orderBy(companies.name);
+    const where = id ? eq(companies.id, id) : undefined;
+    const rows = await db.select().from(companies).where(where).orderBy(companies.name);
     return apiOk({ data: rows });
   } catch {
     return internalError();
