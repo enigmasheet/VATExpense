@@ -124,9 +124,11 @@ export default async function PartyPurchaseReportPage({ searchParams }: Props) {
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-semibold text-foreground">By Party</h2>
         {report.length === 0 ? (
-          <p className="text-sm text-muted">
-            No parties exceed Rs. 1,00,000 in {basisLabel} purchases this fiscal year.
-          </p>
+          <div className="rounded-lg border border-border bg-surface p-8 text-center">
+            <p className="text-sm text-muted">
+              No parties exceed Rs. 1,00,000 in {basisLabel} purchases this fiscal year.
+            </p>
+          </div>
         ) : (
           <DataTable
             columns={[

@@ -12,6 +12,7 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
+import { useToast } from "@/components/ui/toast";
 
 interface ExpenseRow {
   id: string;
@@ -60,6 +61,7 @@ export function ExpensesListClient({
 }: ExpensesListClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const [rows, setRows] = useState(initialData);
   const [total, setTotal] = useState(initialTotal);
 
@@ -106,6 +108,9 @@ export function ExpensesListClient({
     if (result.ok) {
       setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id));
       setTotal((t) => Math.max(0, t - 1));
+      toast("Expense deleted.");
+    } else {
+      toast(result.error || "Failed to delete expense.", "error");
     }
     setDeleteTarget(null);
   }

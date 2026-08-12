@@ -2,12 +2,13 @@
 
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { AppProvider } from "@/lib/use-app";
+import { AppProvider } from "@/lib/useApp";
 import { AuthProvider } from "@/lib/auth-provider";
+import { ToastProvider } from "@/components/ui/toast";
 import { PATH_LOGIN } from "@/lib/constants";
 import { Sidebar } from "./sidebar";
 import { MobileHeader, ActiveFiscalYearIndicator } from "./mobile-nav";
-import { useSidebarCollapsed, toggleSidebarCollapsed } from "./use-sidebar-collapsed";
+import { useSidebarCollapsed, toggleSidebarCollapsed } from "./useSidebarCollapsed";
 
 /**
  * Provides the responsive application shell for authenticated content.
@@ -27,28 +28,30 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <AppProvider>
-        <div className="flex h-screen overflow-hidden">
-          {/* Desktop sidebar */}
-          <div className="hidden md:flex">
-            <Sidebar collapsed={collapsed} onToggleCollapsed={toggleSidebarCollapsed} />
-          </div>
+        <ToastProvider>
+          <div className="flex h-screen overflow-hidden">
+            {/* Desktop sidebar */}
+            <div className="hidden md:flex">
+              <Sidebar collapsed={collapsed} onToggleCollapsed={toggleSidebarCollapsed} />
+            </div>
 
-          {/* Mobile header */}
-          <MobileHeader />
+            {/* Mobile header */}
+            <MobileHeader />
 
-          {/* Main content */}
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <main className="flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8">
-              <div className="mx-auto max-w-6xl">
-                {collapsed && <ActiveFiscalYearIndicator />}
-                {children}
-              </div>
-            </main>
-            <footer className="border-t border-border py-3 text-center text-xs text-muted">
-              VAT Expense Ledger · Nepali fiscal-year purchase register
-            </footer>
+            {/* Main content */}
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <main className="flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8">
+                <div className="mx-auto max-w-6xl">
+                  {collapsed && <ActiveFiscalYearIndicator />}
+                  {children}
+                </div>
+              </main>
+              <footer className="border-t border-border py-3 text-center text-xs text-muted">
+                VAT Expense Ledger · Nepali fiscal-year purchase register
+              </footer>
+            </div>
           </div>
-        </div>
+        </ToastProvider>
       </AppProvider>
     </AuthProvider>
   );

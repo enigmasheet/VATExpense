@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Alert } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { ROLE_ADMIN, VAT_RATE_DEFAULT, PATH_LOGIN } from "@/lib/constants";
 
 interface CompanyRow {
@@ -26,6 +27,7 @@ interface AdminDashboardProps {
  * Superadmin dashboard: lists all companies, provisions new tenants, and provides DB reset.
  */
 export function AdminDashboard({ resetEnabled }: AdminDashboardProps) {
+  const { toast } = useToast();
   const [companies, setCompanies] = useState<CompanyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +103,7 @@ export function AdminDashboard({ resetEnabled }: AdminDashboardProps) {
     try {
       await api("/api/admin/reset", { method: "POST" });
       setCompanies([]);
+      toast("Database reset complete.");
     } catch (e: unknown) {
       const detail = e instanceof Error ? e.message : "Reset failed";
       setError(detail);
@@ -194,16 +197,19 @@ export function AdminDashboard({ resetEnabled }: AdminDashboardProps) {
         {loading ? (
           <p className="mt-4 text-sm text-muted">Loading...</p>
         ) : companies.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">No companies provisioned yet.</p>
+          <div className="mt-4 rounded-lg border border-border bg-surface p-8 text-center">
+            <p className="text-sm text-muted">No companies provisioned yet.</p>
+            <p className="mt-1 text-xs text-muted">Use the form above to create your first company.</p>
+          </div>
         ) : (
           <div className="mt-4 overflow-x-auto rounded-lg border border-border bg-surface">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">VAT</th>
-                  <th className="px-4 py-3 text-right">Users</th>
-                  <th className="px-4 py-3">Created</th>
+                  <th scope="col" className="px-4 py-3">Name</th>
+                  <th scope="col" className="px-4 py-3">VAT</th>
+                  <th scope="col" className="px-4 py-3 text-right">Users</th>
+                  <th scope="col" className="px-4 py-3">Created</th>
                 </tr>
               </thead>
               <tbody>

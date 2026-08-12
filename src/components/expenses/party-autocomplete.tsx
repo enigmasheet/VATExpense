@@ -171,6 +171,9 @@ export function PartyAutocomplete({
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           placeholder="Search party..."
+          aria-label="Search party"
+          aria-autocomplete="list"
+          aria-expanded={!!showDropdown}
           className={`h-10 w-full rounded border bg-transparent px-3 pr-8 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
             !partyResolved && query
               ? "border-destructive bg-destructive/5 focus:ring-destructive/40"

@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { useApp } from "@/lib/use-app";
+import { useApp } from "@/lib/useApp";
 import { PATH_LOGIN } from "@/lib/constants";
+import { Button } from "@/components/ui/button";
 import { NavIcon } from "./icons";
 import { getNavGroups, type NavItem } from "./nav-config";
 
@@ -144,8 +145,9 @@ export function Sidebar({
             {/* Fiscal Year Selector */}
             {fiscalYears.length > 0 && (
               <div className="mb-3">
-                <label className="mb-1 block text-xs text-muted">Fiscal Year</label>
+                <label htmlFor="fiscal-year-select" className="mb-1 block text-xs text-muted">Fiscal Year</label>
                 <select
+                  id="fiscal-year-select"
                   value={fiscalYearId ?? ""}
                   onChange={(e) => e.target.value && setFiscalYearId(e.target.value)}
                   className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground"
@@ -167,12 +169,15 @@ export function Sidebar({
                     {session.user.name}
                   </p>
                 </div>
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => signOut({ callbackUrl: PATH_LOGIN })}
-                  className="rounded-md px-2 py-1 text-xs text-muted hover:bg-surface-hover hover:text-foreground"
+                  aria-label="Sign out"
+                  className="text-xs text-muted"
                 >
                   Sign out
-                </button>
+                </Button>
               </div>
             )}
           </>

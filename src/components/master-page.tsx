@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { api, ApiError } from "@/lib/api-client";
-import { useApp } from "@/lib/use-app";
+import { useApp } from "@/lib/useApp";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
+import { useToast } from "@/components/ui/toast";
 
 export interface FieldSpec {
   name: string;
@@ -59,6 +60,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
   emptyHint,
 }: MasterPageProps<T>) {
   const { companyId } = useApp();
+  const { toast } = useToast();
   const [items, setItems] = useState<T[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [options, setOptions] = useState<Record<string, Option[]>>({});
@@ -95,7 +97,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
       ),
     )
       .then((pairs) => setOptions(Object.fromEntries(pairs)))
-      .catch(() => {});
+      .catch((e) => console.error("Failed to load dropdown options:", e));
   }, [companyId, fields]);
 
   async function onSubmit(e: React.FormEvent) {
@@ -110,6 +112,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
       });
       setValues({});
       refresh();
+      toast(`${title.slice(0, -1)} added.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Failed to save");
     } finally {
@@ -139,6 +142,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
       setEditingId(null);
       setEditValues({});
       refresh();
+      toast("Updated.");
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Failed to update");
     } finally {
@@ -154,6 +158,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
         body: JSON.stringify({ isActive: !item.isActive }),
       });
       refresh();
+      toast(`${item.name} ${item.isActive ? "deactivated" : "activated"}.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Failed to update status");
     }
@@ -169,6 +174,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
       await api(`${listUrl}/${deleteTarget.id}`, { method: "DELETE" });
       setDeleteTarget(null);
       refresh();
+      toast("Deleted.");
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Failed to delete");
     }
@@ -202,15 +208,12 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
   const actions = (item: T) =>
     editingId !== item.id && (
       <div className="flex items-center justify-end gap-2">
-        <button className="text-sm text-primary hover:underline" onClick={() => startEdit(item)}>
+        <Button variant="ghost" size="sm" onClick={() => startEdit(item)}>
           Edit
-        </button>
-        <button
-          className="text-sm text-danger hover:underline"
-          onClick={() => confirmDelete(item.id, item.name)}
-        >
+        </Button>
+        <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={() => confirmDelete(item.id, item.name)}>
           Delete
-        </button>
+        </Button>
       </div>
     );
 
@@ -253,15 +256,12 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
           </div>
         ))}
         <div className="mt-3 flex gap-3">
-          <button className="text-sm text-primary hover:underline" onClick={() => startEdit(item)}>
+          <Button variant="ghost" size="sm" onClick={() => startEdit(item)}>
             Edit
-          </button>
-          <button
-            className="text-sm text-danger hover:underline"
-            onClick={() => confirmDelete(item.id, item.name)}
-          >
+          </Button>
+          <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={() => confirmDelete(item.id, item.name)}>
             Delete
-          </button>
+          </Button>
         </div>
       </>
     );

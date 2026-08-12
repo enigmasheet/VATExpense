@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { useApp } from "@/lib/use-app";
+import { useApp } from "@/lib/useApp";
 import { api, ApiError } from "@/lib/api-client";
 import { formatAmount } from "@/lib/format";
 import { Button } from "@/components/ui/button";

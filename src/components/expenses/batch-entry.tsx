@@ -1,20 +1,8 @@
 "use client";
 
-import { useApp } from "@/lib/use-app";
+import { useApp } from "@/lib/useApp";
 import { LedgerGrid } from "@/components/expenses/ledger-grid";
-
-interface Party {
-  id: string;
-  name: string;
-  vatNumber: string | null;
-  locationId: string | null;
-  locationName: string | null;
-}
-
-interface Category {
-  id: string;
-  name: string;
-}
+import type { Party, Category } from "@/lib/expenses/ledger-types";
 
 interface BatchEntryProps {
   allParties: Party[];

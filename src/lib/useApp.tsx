@@ -66,7 +66,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setCompanies(data);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((e) => {
+        console.error("Failed to load companies:", e);
         if (!cancelled) setLoading(false);
       });
     return () => {

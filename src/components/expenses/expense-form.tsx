@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api-client";
-import { useApp } from "@/lib/use-app";
+import { useApp } from "@/lib/useApp";
 import { round2 } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
@@ -104,18 +104,22 @@ export function ExpenseForm({
   const [parties, setParties] = useState<{ id: string; name: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
 
   useEffect(() => {
     if (!companyId) return;
-    api<{ data: { id: string; name: string }[] }>(`/api/parties?companyId=${companyId}`)
-      .then(({ data }) => setParties(data))
-      .catch((e) => console.error("Failed to load parties:", e));
-    api<{ data: { id: string; name: string }[] }>(`/api/categories?companyId=${companyId}`)
-      .then(({ data }) => setCategories(data))
-      .catch((e) => console.error("Failed to load categories:", e));
-    api<{ data: { id: string; name: string }[] }>(`/api/locations?companyId=${companyId}`)
-      .then(({ data }) => setLocations(data))
-      .catch((e) => console.error("Failed to load locations:", e));
+    setLoadingOptions(true);
+    Promise.all([
+      api<{ data: { id: string; name: string }[] }>(`/api/parties?companyId=${companyId}`)
+        .then(({ data }) => setParties(data))
+        .catch((e) => console.error("Failed to load parties:", e)),
+      api<{ data: { id: string; name: string }[] }>(`/api/categories?companyId=${companyId}`)
+        .then(({ data }) => setCategories(data))
+        .catch((e) => console.error("Failed to load categories:", e)),
+      api<{ data: { id: string; name: string }[] }>(`/api/locations?companyId=${companyId}`)
+        .then(({ data }) => setLocations(data))
+        .catch((e) => console.error("Failed to load locations:", e)),
+    ]).finally(() => setLoadingOptions(false));
   }, [companyId]);
 
   const set = useCallback(
@@ -257,6 +261,9 @@ export function ExpenseForm({
       {/* Invoice Details */}
       <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4">
         <h2 className="font-display text-lg font-semibold">Invoice details</h2>
+        {loadingOptions && (
+          <p className="text-xs text-muted">Loading parties, categories, and locations...</p>
+        )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Miti (BS)" htmlFor="e-miti">
             <Input
@@ -325,7 +332,7 @@ export function ExpenseForm({
         </p>
 
         {/* Qty & Rate row */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4">
           <Field label="Quantity" htmlFor="e-qty">
             <Input id="e-qty" inputMode="decimal" value={values.quantity} onChange={set("quantity")} />
           </Field>
