@@ -13,6 +13,7 @@ vi.mock("@/lib/db", () => ({
 import { db } from "@/lib/db";
 import { normalizeVatNumber } from "@/lib/normalize";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
 function mockChainReturn(rows: any[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const where = vi.fn().mockReturnValue({ limit });
@@ -20,12 +21,14 @@ function mockChainReturn(rows: any[]) {
   return { from, where, limit };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
 function mockInsertReturn(rows: any[]) {
   const returning = vi.fn().mockResolvedValue(rows);
   const values = vi.fn().mockReturnValue({ returning });
   return { values, returning };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
 function mockUpdateReturn(rows: any[]) {
   const returning = vi.fn().mockResolvedValue(rows);
   const where = vi.fn().mockReturnValue({ returning });
@@ -33,6 +36,7 @@ function mockUpdateReturn(rows: any[]) {
   return { set, where, returning };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
 function mockDeleteReturn(rows: any[]) {
   const returning = vi.fn().mockResolvedValue(rows);
   const where = vi.fn().mockReturnValue({ returning });
@@ -46,6 +50,7 @@ describe("parties service", () => {
 
   describe("createParty", () => {
     it("returns duplicate when name+vat matches", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
       vi.mocked(db.select).mockReturnValue(mockChainReturn([{ id: "existing-1", name: "Acme" }]) as any);
       const result = await createParty("comp-1", { name: "Acme" });
       expect(result.ok).toBe(false);
@@ -53,14 +58,18 @@ describe("parties service", () => {
     });
 
     it("returns ok on insert with unique name+vatNumber", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
       vi.mocked(db.select).mockReturnValue(mockChainReturn([]) as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
       vi.mocked(db.insert).mockReturnValue(mockInsertReturn([{ id: "p1", name: "Acme" }]) as any);
       const result = await createParty("comp-1", { name: "Acme" });
       expect(result.ok).toBe(true);
     });
 
     it("checks normalized vat number for duplicates", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
       vi.mocked(db.select).mockReturnValue(mockChainReturn([]) as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
       vi.mocked(db.insert).mockReturnValue(mockInsertReturn([{ id: "p1" }]) as any);
       const result = await createParty("comp-1", { name: "Acme", vatNumber: "12345" });
       expect(result.ok).toBe(true);
@@ -70,12 +79,14 @@ describe("parties service", () => {
 
   describe("updateParty", () => {
     it("returns not-found when no rows affected", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
       vi.mocked(db.update).mockReturnValue(mockUpdateReturn([]) as any);
       const result = await updateParty("p1", "comp-1", { name: "New" });
       expect(result.ok).toBe(false);
     });
 
     it("returns ok when updated", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
       vi.mocked(db.update).mockReturnValue(mockUpdateReturn([{ id: "p1" }]) as any);
       const result = await updateParty("p1", "comp-1", { name: "New" });
       expect(result.ok).toBe(true);
@@ -84,12 +95,14 @@ describe("parties service", () => {
 
   describe("deleteParty", () => {
     it("returns not-found when no rows deleted", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
       vi.mocked(db.delete).mockReturnValue(mockDeleteReturn([]) as any);
       const result = await deleteParty("p1", "comp-1");
       expect(result.ok).toBe(false);
     });
 
     it("returns ok when deleted", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
       vi.mocked(db.delete).mockReturnValue(mockDeleteReturn([{ id: "p1" }]) as any);
       const result = await deleteParty("p1", "comp-1");
       expect(result.ok).toBe(true);

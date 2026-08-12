@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseMiti, normalizeMiti, fyName, isValidMiti, NEPALI_MONTHS } from "../nepali-date";
+import { parseMiti, normalizeMiti, fyName, isValidMiti } from "../nepali-date";
 
 describe("parseMiti", () => {
   it("parses valid miti and returns correct FY", () => {

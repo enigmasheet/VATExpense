@@ -111,7 +111,7 @@ export function useLedgerSave({
     }
 
     setSaving(false);
-  }, [enrichedRows, fiscalYearId, dispatch, setExistingInvoices]);
+  }, [enrichedRows, fiscalYearId, dispatch, setExistingInvoices, defaultVatRate]);
 
   return { saving, saveResult, statusMessage, saveAll };
 }

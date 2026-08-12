@@ -26,10 +26,12 @@ function makeFingerprint(overrides: Partial<ExpenseFingerprint> = {}): ExpenseFi
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
 function mockSelectReturn(rows: any[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const where = vi.fn().mockReturnValue({ limit });
   const from = vi.fn().mockReturnValue({ where });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
   vi.mocked(db.select).mockReturnValue({ from } as any);
 }
 

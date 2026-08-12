@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { validateAmounts, expenseInputSchema } from "../expense";
-import { safeParse } from "../utils";
 
 describe("expenseInputSchema", () => {
   const validExpense = {

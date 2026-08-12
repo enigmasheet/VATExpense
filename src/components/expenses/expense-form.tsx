@@ -108,7 +108,6 @@ export function ExpenseForm({
 
   useEffect(() => {
     if (!companyId) return;
-    setLoadingOptions(true);
     Promise.all([
       api<{ data: { id: string; name: string }[] }>(`/api/parties?companyId=${companyId}`)
         .then(({ data }) => setParties(data))
