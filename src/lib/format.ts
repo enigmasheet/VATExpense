@@ -25,3 +25,9 @@ export function formatAmount(value: string | number | null | undefined): string 
 export function formatMiti(miti: string): string {
   return miti; // already YYYY-MM-DD; display copy can wrap later
 }
+
+export function formatDate(value: string | Date | null | undefined): string {
+  if (value === null || value === undefined) return "–";
+  const date = typeof value === "string" ? new Date(value) : value;
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+}

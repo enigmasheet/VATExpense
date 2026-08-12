@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { signOut } from "next-auth/react";
 import { api } from "@/lib/api-client";
+import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -219,7 +220,7 @@ export function AdminDashboard({ resetEnabled }: AdminDashboardProps) {
                     <td className="px-4 py-3 text-muted">{c.vatNumber ?? "—"}</td>
                     <td className="px-4 py-3 text-right tabular-amount">{c.userCount}</td>
                     <td className="px-4 py-3 text-muted">
-                      {new Date(c.createdAt).toLocaleDateString()}
+                      {formatDate(c.createdAt)}
                     </td>
                   </tr>
                 ))}
