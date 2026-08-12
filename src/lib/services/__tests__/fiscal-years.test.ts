@@ -47,7 +47,8 @@ describe("fiscal-years service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default transaction mock: execute the callback with a mock tx
-    vi.mocked(db.transaction).mockImplementation(async (fn: (tx: never) => Promise<unknown>) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock transaction callback
+    vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
       const tx = {
         update: vi.fn().mockReturnValue({
           set: vi.fn().mockReturnValue({
