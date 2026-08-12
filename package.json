@@ -1,7 +1,8 @@
 {
-  "name": "vatexpense-temp",
-  "version": "0.1.0",
+  "name": "vatexpense",
+  "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@11.21.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,6 +10,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "node --env-file=.env.local --import tsx scripts/seed.ts",
