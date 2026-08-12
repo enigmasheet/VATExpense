@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import {
   expenses,
   companies,
-  fiscalYears,
   parties,
   categories,
   locations,
@@ -18,6 +17,7 @@ import {
   internalError,
 } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
+import { findFiscalYearByIdAndCompany, findPartyByIdAndCompany } from "@/lib/db-helpers/entities";
 import { parseMiti } from "@/lib/nepali-date";
 import { checkInvoiceDuplicate, findSuspiciousDuplicates } from "@/lib/expenses/duplicates";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@/lib/constants";
@@ -139,27 +139,10 @@ export async function POST(request: Request) {
     )[0];
     if (!company) return notFound("Company not found");
 
-    const fiscalYear = (
-      await db
-        .select()
-        .from(fiscalYears)
-        .where(
-          and(
-            eq(fiscalYears.id, input.fiscalYearId),
-            eq(fiscalYears.companyId, input.companyId),
-          ),
-        )
-        .limit(1)
-    )[0];
+    const fiscalYear = await findFiscalYearByIdAndCompany(input.fiscalYearId, input.companyId);
     if (!fiscalYear) return notFound("Fiscal year not found for this company");
 
-    const party = (
-      await db
-        .select()
-        .from(parties)
-        .where(and(eq(parties.id, input.partyId), eq(parties.companyId, input.companyId)))
-        .limit(1)
-    )[0];
+    const party = await findPartyByIdAndCompany(input.partyId, input.companyId);
     if (!party) return notFound("Party not found for this company");
 
     const vatRate = input.vatRate ?? company.defaultVatRate;

@@ -1,9 +1,10 @@
 import { db } from "@/lib/db";
-import { parties, locations } from "@/lib/db/schema";
+import { parties } from "@/lib/db/schema";
 import { createPartySchema } from "@/lib/validation/masters";
 import { safeParse } from "@/lib/validation/utils";
 import { apiOk, badRequest, conflict, unprocessableEntity, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
+import { findPartiesWithLocation } from "@/lib/db-helpers/parties";
 import { normalizeName, normalizeVatNumber } from "@/lib/normalize";
 import { and, eq, isNull } from "drizzle-orm";
 
@@ -12,23 +13,7 @@ export async function GET(request: Request) {
   if (typeof companyId !== "string") return companyId;
 
   try {
-    const rows = await db
-      .select({
-        id: parties.id,
-        name: parties.name,
-        normalizedName: parties.normalizedName,
-        vatNumber: parties.vatNumber,
-        normalizedVatNumber: parties.normalizedVatNumber,
-        locationId: parties.locationId,
-        locationName: locations.name,
-        isActive: parties.isActive,
-        createdAt: parties.createdAt,
-        updatedAt: parties.updatedAt,
-      })
-      .from(parties)
-      .leftJoin(locations, eq(locations.id, parties.locationId))
-      .where(eq(parties.companyId, companyId))
-      .orderBy(parties.name);
+    const rows = await findPartiesWithLocation(companyId);
     return apiOk({ data: rows });
   } catch {
     return internalError();

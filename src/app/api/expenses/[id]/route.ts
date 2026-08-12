@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { expenses, parties, categories, locations } from "@/lib/db/schema";
+import { expenses } from "@/lib/db/schema";
 import { expenseInputSchema, validateAmounts } from "@/lib/validation/expense";
 import { safeParse } from "@/lib/validation/utils";
 import {
@@ -11,11 +11,10 @@ import {
   internalError,
 } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
+import { findExpenseById } from "@/lib/db-helpers/expenses";
 import { parseMiti } from "@/lib/nepali-date";
-import { and, eq, sql, aliasedTable } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-
-const locationAlias = aliasedTable(locations, "location");
 
 const patchSchema = expenseInputSchema
   .partial()
@@ -23,45 +22,6 @@ const patchSchema = expenseInputSchema
   .extend({
     rowVersion: z.coerce.number().int().min(1, "rowVersion is required"),
   });
-
-async function findExpense(id: string, companyId: string) {
-  return (
-    await db
-      .select({
-        id: expenses.id,
-        companyId: expenses.companyId,
-        fiscalYearId: expenses.fiscalYearId,
-        partyId: expenses.partyId,
-        categoryId: expenses.categoryId,
-        locationId: expenses.locationId,
-        miti: expenses.miti,
-        nepaliMonth: expenses.nepaliMonth,
-        invoiceNumber: expenses.invoiceNumber,
-        item: expenses.item,
-        quantity: expenses.quantity,
-        rate: expenses.rate,
-        taxableAmount: expenses.taxableAmount,
-        vatAmount: expenses.vatAmount,
-        totalAmount: expenses.totalAmount,
-        vatRate: expenses.vatRate,
-        remarks: expenses.remarks,
-        isDeleted: expenses.isDeleted,
-        deletedAt: expenses.deletedAt,
-        rowVersion: expenses.rowVersion,
-        createdAt: expenses.createdAt,
-        updatedAt: expenses.updatedAt,
-        partyName: parties.name,
-        categoryName: categories.name,
-        locationName: locationAlias.name,
-      })
-      .from(expenses)
-      .leftJoin(parties, eq(parties.id, expenses.partyId))
-      .leftJoin(categories, eq(categories.id, expenses.categoryId))
-      .leftJoin(locationAlias, eq(locationAlias.id, expenses.locationId))
-      .where(and(eq(expenses.id, id), eq(expenses.companyId, companyId)))
-      .limit(1)
-  )[0];
-}
 
 export async function GET(
   request: Request,
@@ -72,7 +32,7 @@ export async function GET(
   if (typeof companyId !== "string") return companyId;
 
   try {
-    const row = await findExpense(id, companyId);
+    const row = await findExpenseById(id, companyId);
     if (!row || row.isDeleted) return notFound("Expense not found");
     return apiOk({ data: row });
   } catch (err) {
@@ -102,7 +62,7 @@ export async function PATCH(
   const { rowVersion, ...changes } = parsed.data;
 
   try {
-    const current = await findExpense(id, companyId);
+    const current = await findExpenseById(id, companyId);
     if (!current || current.isDeleted) return notFound("Expense not found");
 
     if (current.rowVersion !== rowVersion) {
@@ -190,7 +150,7 @@ export async function DELETE(
   if (typeof companyId !== "string") return companyId;
 
   try {
-    const current = await findExpense(id, companyId);
+    const current = await findExpenseById(id, companyId);
     if (!current || current.isDeleted) return notFound("Expense not found");
 
     await db

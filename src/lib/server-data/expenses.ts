@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { expenses, parties, categories } from "@/lib/db/schema";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
+import { findExpenseById } from "@/lib/db-helpers/expenses";
 import { and, eq, sql } from "drizzle-orm";
 
 /**
@@ -137,31 +138,5 @@ export async function getExpenses(params: ExpenseListParams) {
  * @returns The matching expense, or `null` if no expense has the specified ID.
  */
 export async function getExpenseById(id: string, companyId: string) {
-  const row = await db
-    .select({
-      id: expenses.id,
-      miti: expenses.miti,
-      invoiceNumber: expenses.invoiceNumber,
-      partyId: expenses.partyId,
-      categoryId: expenses.categoryId,
-      locationId: expenses.locationId,
-      item: expenses.item,
-      quantity: expenses.quantity,
-      rate: expenses.rate,
-      taxableAmount: expenses.taxableAmount,
-      vatAmount: expenses.vatAmount,
-      totalAmount: expenses.totalAmount,
-      vatRate: expenses.vatRate,
-      remarks: expenses.remarks,
-      rowVersion: expenses.rowVersion,
-      partyName: parties.name,
-      categoryName: categories.name,
-    })
-    .from(expenses)
-    .leftJoin(parties, eq(parties.id, expenses.partyId))
-    .leftJoin(categories, eq(categories.id, expenses.categoryId))
-    .where(and(eq(expenses.id, id), eq(expenses.companyId, companyId)))
-    .limit(1);
-
-  return row[0] ?? null;
+  return findExpenseById(id, companyId);
 }

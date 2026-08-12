@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
-import { parties, categories, locations } from "@/lib/db/schema";
+import { categories, locations } from "@/lib/db/schema";
+import { findPartiesWithLocation } from "@/lib/db-helpers/parties";
 import { eq } from "drizzle-orm";
 
 /**
@@ -9,19 +10,7 @@ import { eq } from "drizzle-orm";
  * @returns The company's parties ordered by name.
  */
 export async function getParties(companyId: string) {
-  return db
-    .select({
-      id: parties.id,
-      name: parties.name,
-      vatNumber: parties.vatNumber,
-      locationId: parties.locationId,
-      locationName: locations.name,
-      isActive: parties.isActive,
-    })
-    .from(parties)
-    .leftJoin(locations, eq(locations.id, parties.locationId))
-    .where(eq(parties.companyId, companyId))
-    .orderBy(parties.name);
+  return findPartiesWithLocation(companyId);
 }
 
 /**
