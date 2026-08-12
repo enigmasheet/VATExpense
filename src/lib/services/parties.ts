@@ -17,6 +17,9 @@ export async function createParty(
     name: string;
     vatNumber?: string | null;
     locationId?: string | null;
+    phone?: string | null;
+    whatsapp?: string | null;
+    comment?: string | null;
     isActive?: boolean;
   },
 ): Promise<ServiceResult<Party>> {
@@ -65,6 +68,9 @@ export async function createParty(
       vatNumber: input.vatNumber ?? null,
       normalizedVatNumber,
       locationId: input.locationId ?? null,
+      phone: input.phone ?? null,
+      whatsapp: input.whatsapp ?? null,
+      comment: input.comment ?? null,
       isActive: input.isActive,
     })
     .returning();
@@ -73,18 +79,44 @@ export async function createParty(
 }
 
 /**
- * Updates a party by ID, scoped to a company. Normalizes name and sets updatedAt.
+ * Updates a party by ID, scoped to a company. Normalizes name/VAT and checks for duplicates.
  */
 export async function updateParty(
   id: string,
   companyId: string,
-  changes: { name?: string; isActive?: boolean },
+  changes: { name?: string; vatNumber?: string | null; locationId?: string | null; phone?: string | null; whatsapp?: string | null; comment?: string | null; isActive?: boolean },
 ): Promise<ServiceResult<Party>> {
   const updates: Record<string, unknown> = {};
   if (changes.name !== undefined) {
     updates.name = changes.name;
     updates.normalizedName = normalizeName(changes.name);
   }
+  if (changes.vatNumber !== undefined) {
+    const normalizedVatNumber = normalizeVatNumber(changes.vatNumber);
+    updates.vatNumber = changes.vatNumber ?? null;
+    updates.normalizedVatNumber = normalizedVatNumber;
+
+    if (normalizedVatNumber) {
+      const existing = (
+        await db
+          .select()
+          .from(parties)
+          .where(
+            and(
+              eq(parties.companyId, companyId),
+              eq(parties.normalizedVatNumber, normalizedVatNumber),
+              sql`${parties.id} != ${id}`,
+            ),
+          )
+          .limit(1)
+      )[0];
+      if (existing) return { ok: false, error: `VAT number already used by "${existing.name}"` };
+    }
+  }
+  if (changes.locationId !== undefined) updates.locationId = changes.locationId ?? null;
+  if (changes.phone !== undefined) updates.phone = changes.phone ?? null;
+  if (changes.whatsapp !== undefined) updates.whatsapp = changes.whatsapp ?? null;
+  if (changes.comment !== undefined) updates.comment = changes.comment ?? null;
   if (changes.isActive !== undefined) updates.isActive = changes.isActive;
 
   if (Object.keys(updates).length === 0) {

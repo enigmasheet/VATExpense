@@ -42,6 +42,9 @@ export const createPartySchema = z.object({
     (v) => (v === null || v === undefined || v === "" ? null : v),
     z.uuid("locationId must be a valid UUID").nullable().optional(),
   ),
+  phone: optionalTextToNull,
+  whatsapp: optionalTextToNull,
+  comment: optionalTextToNull,
   isActive: z.boolean().optional().default(true),
 });
 
@@ -61,3 +64,18 @@ export type CreateLocationInput = z.infer<typeof createLocationSchema>;
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 export type CreatePartyInput = z.infer<typeof createPartySchema>;
 export type CreateFiscalYearInput = z.infer<typeof createFiscalYearSchema>;
+
+export const updatePartySchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(MAX_NAME_LENGTH).optional(),
+  vatNumber: optionalTextToNull.optional(),
+  locationId: z.preprocess(
+    (v) => (v === null || v === undefined || v === "" ? null : v),
+    z.uuid("locationId must be a valid UUID").nullable().optional(),
+  ),
+  phone: optionalTextToNull.optional(),
+  whatsapp: optionalTextToNull.optional(),
+  comment: optionalTextToNull.optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type UpdatePartyInput = z.infer<typeof updatePartySchema>;

@@ -1,9 +1,10 @@
 import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
+import { updatePartySchema } from "@/lib/validation/masters";
 import * as partyService from "@/lib/services/parties";
 
 /**
- * Updates the specified party's name or active status.
+ * Updates the specified party's name, VAT number, location, or active status.
  *
  * @param params - Route parameters containing the party ID.
  * @returns An HTTP response containing the updated party or an error response.
@@ -23,11 +24,12 @@ export async function PATCH(
     return badRequest("Invalid JSON body");
   }
 
-  const data = body as Record<string, unknown>;
-  const changes: { name?: string; isActive?: boolean } = {};
-  if ("name" in data && typeof data.name === "string") changes.name = data.name;
-  if ("isActive" in data && typeof data.isActive === "boolean") changes.isActive = data.isActive;
+  const parsed = updatePartySchema.safeParse(body);
+  if (!parsed.success) {
+    return badRequest(parsed.error.issues.map((i) => i.message).join("; "));
+  }
 
+  const changes = parsed.data;
   if (Object.keys(changes).length === 0) {
     return badRequest("No valid fields to update");
   }

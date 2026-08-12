@@ -15,6 +15,9 @@ export async function createParty(input: {
   name: string;
   vatNumber?: string | null;
   locationId?: string | null;
+  phone?: string | null;
+  whatsapp?: string | null;
+  comment?: string | null;
 }): Promise<ActionResult<Party>> {
   let companyId: string;
   try {
@@ -29,15 +32,15 @@ export async function createParty(input: {
 }
 
 /**
- * Updates a company-owned party's name and active status.
+ * Updates a company-owned party's fields.
  *
  * @param id - The party identifier
- * @param changes - The party fields to update
+ * @param changes - The party fields to update (name, vatNumber, locationId, isActive)
  * @returns The updated party on success, or an error result if authentication, lookup, or database operations fail
  */
 export async function updateParty(
   id: string,
-  changes: { name?: string; isActive?: boolean },
+  changes: { name?: string; vatNumber?: string | null; locationId?: string | null; phone?: string | null; whatsapp?: string | null; comment?: string | null; isActive?: boolean },
 ): Promise<ActionResult<Party>> {
   let companyId: string;
   try {

@@ -22,6 +22,13 @@
       "when": 1786456525124,
       "tag": "0002_sweet_lionheart",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786507515855,
+      "tag": "0003_new_surge",
+      "breakpoints": true
     }
   ]
 }

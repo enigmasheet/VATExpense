@@ -7,6 +7,7 @@ import { useApp } from "@/lib/useApp";
 import { round2 } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
+import { PartyFormModal } from "@/components/party-form-modal";
 
 import { VAT_RATE, VAT_RATE_DEFAULT } from "@/lib/constants";
 import { MessageList, type Message } from "@/components/ui/alert";
@@ -105,6 +106,14 @@ export function ExpenseForm({
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
+  const [partyModalOpen, setPartyModalOpen] = useState(false);
+
+  function refreshParties() {
+    if (!companyId) return;
+    api<{ data: { id: string; name: string }[] }>(`/api/parties?companyId=${companyId}`)
+      .then(({ data }) => setParties(data))
+      .catch(() => {});
+  }
 
   useEffect(() => {
     if (!companyId) return;
@@ -282,14 +291,19 @@ export function ExpenseForm({
             />
           </Field>
           <Field label="Party / supplier" htmlFor="e-party">
-            <Select id="e-party" required value={values.partyId} onChange={set("partyId")}>
-              <option value="">Select party</option>
-              {parties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </Select>
+            <div className="flex gap-2">
+              <Select id="e-party" required value={values.partyId} onChange={set("partyId")} className="flex-1">
+                <option value="">Select party</option>
+                {parties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+              <Button type="button" variant="secondary" size="sm" onClick={() => setPartyModalOpen(true)}>
+                Add
+              </Button>
+            </div>
           </Field>
           <Field label="Category" htmlFor="e-category">
             <Select id="e-category" required value={values.categoryId} onChange={set("categoryId")}>
@@ -388,6 +402,16 @@ export function ExpenseForm({
           Cancel
         </Button>
       </div>
+
+      <PartyFormModal
+        open={partyModalOpen}
+        mode="create"
+        onSaved={() => {
+          setPartyModalOpen(false);
+          refreshParties();
+        }}
+        onCancel={() => setPartyModalOpen(false)}
+      />
     </form>
   );
 }

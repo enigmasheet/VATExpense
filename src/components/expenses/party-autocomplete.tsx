@@ -13,6 +13,7 @@ interface PartyAutocompleteProps {
   onSelect: (party: Party) => void;
   onSearchChange: (partyName: string) => void;
   onGridKeyDown: (e: React.KeyboardEvent, field: CellField) => void;
+  onQuickAdd?: (name: string) => void;
 }
 
 /**
@@ -27,6 +28,7 @@ export function PartyAutocomplete({
   onSelect,
   onSearchChange,
   onGridKeyDown,
+  onQuickAdd,
 }: PartyAutocompleteProps) {
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<Party[]>([]);
@@ -156,7 +158,7 @@ export function PartyAutocomplete({
     }
   }
 
-  const showDropdown = open && results.length > 0 && position;
+  const showDropdown = open && (results.length > 0 || (query.length > 0 && onQuickAdd)) && position;
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
@@ -236,6 +238,25 @@ export function PartyAutocomplete({
                 )}
               </button>
             ))}
+            {query.length > 0 && onQuickAdd && (
+              <>
+                {results.length > 0 && <div className="border-t border-border/50" />}
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-primary hover:bg-surface-hover"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setOpen(false);
+                    onQuickAdd(query);
+                  }}
+                >
+                  <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Add &ldquo;{query}&rdquo; as new party
+                </button>
+              </>
+            )}
           </div>,
           document.body,
         )}
