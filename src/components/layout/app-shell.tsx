@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AppProvider } from "@/lib/use-app";
 import { AuthProvider } from "@/lib/auth-provider";
+import { PATH_LOGIN } from "@/lib/constants";
 import { Sidebar } from "./sidebar";
 import { MobileHeader, ActiveFiscalYearIndicator } from "./mobile-nav";
 import { useSidebarCollapsed, toggleSidebarCollapsed } from "./use-sidebar-collapsed";
@@ -17,7 +18,7 @@ import { useSidebarCollapsed, toggleSidebarCollapsed } from "./use-sidebar-colla
 export function AppShell({ children }: { children: ReactNode }) {
   const collapsed = useSidebarCollapsed();
   const pathname = usePathname();
-  const isAuthPage = pathname.startsWith("/login");
+  const isAuthPage = pathname.startsWith(PATH_LOGIN);
 
   if (isAuthPage) {
     return <>{children}</>;

@@ -4,6 +4,7 @@ import { createCompanySchema } from "@/lib/validation/masters";
 import { safeParse } from "@/lib/validation/utils";
 import { apiOk, badRequest, conflict, unprocessableEntity, internalError, unauthorized } from "@/lib/api-response";
 import { getSessionUser } from "@/lib/api-auth";
+import { ROLE_SUPER_ADMIN } from "@/lib/constants";
 import { ilike, eq } from "drizzle-orm";
 
 /**
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   const user = await getSessionUser();
-  if (!user || user.role !== "SuperAdmin") return unauthorized();
+  if (!user || user.role !== ROLE_SUPER_ADMIN) return unauthorized();
 
   let body: unknown;
   try {

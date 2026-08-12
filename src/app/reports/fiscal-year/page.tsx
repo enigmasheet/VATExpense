@@ -4,6 +4,7 @@ import { formatAmount } from "@/lib/format";
 import { FiscalYearReportExport } from "@/components/fiscal-year-report-export";
 import { StatCard } from "@/components/ui/stat-card";
 import { DataTable } from "@/components/ui/data-table";
+import { PATH_LOGIN } from "@/lib/constants";
 
 /**
  * Displays the active fiscal year's report with summary totals and monthly expense details.
@@ -14,7 +15,7 @@ import { DataTable } from "@/components/ui/data-table";
  */
 export default async function FiscalYearReportPage() {
   const companyId = await getCompanyId();
-  if (!companyId) redirect("/login");
+  if (!companyId) redirect(PATH_LOGIN);
 
   const activeFiscalYear = await getActiveFiscalYear(companyId);
   if (!activeFiscalYear) {

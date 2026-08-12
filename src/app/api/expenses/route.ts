@@ -20,10 +20,8 @@ import {
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { parseMiti } from "@/lib/nepali-date";
 import { checkInvoiceDuplicate, findSuspiciousDuplicates } from "@/lib/expenses/duplicates";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@/lib/constants";
 import { and, eq, ilike, or, sql, aliasedTable, type SQL } from "drizzle-orm";
-
-const DEFAULT_PAGE_SIZE = 50;
-const MAX_PAGE_SIZE = 200;
 
 const locationAlias = aliasedTable(locations, "location");
 

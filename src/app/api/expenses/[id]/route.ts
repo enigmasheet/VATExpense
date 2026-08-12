@@ -200,7 +200,7 @@ export async function DELETE(
         deletedAt: sql`now()`,
         updatedAt: sql`now()`,
       })
-      .where(eq(expenses.id, id));
+      .where(and(eq(expenses.id, id), eq(expenses.companyId, companyId)));
 
     return apiOk({ data: { id, isDeleted: true } });
   } catch (err) {

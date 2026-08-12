@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { expenses, categories, parties } from "@/lib/db/schema";
+import { NEPALI_MONTHS } from "@/lib/nepali-date";
+import { PARTY_PURCHASE_THRESHOLD } from "@/lib/constants";
 import { and, eq, sql } from "drizzle-orm";
 
 /**
@@ -63,10 +65,7 @@ export async function getMonthlyReport(
 /**
  * Nepali month names in fiscal-year order (Shrawan first).
  */
-const NEPALI_MONTHS_ORDER = [
-  "Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra", "Ashwin",
-  "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra",
-] as const;
+const NEPALI_MONTHS_ORDER = NEPALI_MONTHS;
 
 /**
  * Generates an expense report for every month in a fiscal year.
@@ -140,7 +139,7 @@ export async function getPartyPurchaseReport(
   companyId: string,
   fiscalYearId: string,
   basis: "taxable" | "total",
-  threshold = 100000,
+  threshold = PARTY_PURCHASE_THRESHOLD,
 ) {
   const basisColumn =
     basis === "taxable" ? expenses.taxableAmount : expenses.totalAmount;

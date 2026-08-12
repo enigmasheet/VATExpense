@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { batchSaveExpenses, type BatchRowInput } from "@/lib/actions/expenses";
 import { getInvoiceKey } from "@/lib/expenses/ledger-utils";
+import { VAT_RATE_DEFAULT, SAVED_STATUS_DISPLAY_MS } from "@/lib/constants";
 import type { LedgerRow } from "@/lib/expenses/ledger-types";
 import type { LedgerAction } from "@/lib/expenses/ledger-reducer";
 
@@ -22,7 +23,7 @@ export function useLedgerSave({
   fiscalYearId,
   dispatch,
   setExistingInvoices,
-  defaultVatRate = "13.00",
+  defaultVatRate = VAT_RATE_DEFAULT,
 }: {
   enrichedRows: LedgerRow[];
   fiscalYearId: string;
@@ -101,7 +102,7 @@ export function useLedgerSave({
       if (savedCount > 0) {
         setTimeout(() => {
           dispatch({ type: "CLEAR_SAVED" });
-        }, 2000);
+        }, SAVED_STATUS_DISPLAY_MS);
       }
     } else {
       dispatch({ type: "MARK_SAVING_AS_ERROR", error: result.error });

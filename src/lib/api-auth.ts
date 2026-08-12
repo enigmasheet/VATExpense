@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { unauthorized } from "./api-response";
+import { ROLE_SUPER_ADMIN } from "@/lib/constants";
 import type { NextResponse } from "next/server";
 
 export interface SessionUser {
@@ -25,7 +26,7 @@ export async function requireCompanyIdFromSession(
   if (!session?.user) return unauthorized();
 
   const user = session.user as SessionUser;
-  const isSuperAdmin = user.role === "SuperAdmin";
+  const isSuperAdmin = user.role === ROLE_SUPER_ADMIN;
 
   if (isSuperAdmin) {
     const url = new URL(request.url);

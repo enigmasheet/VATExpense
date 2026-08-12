@@ -8,7 +8,7 @@ import { round2 } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 
-import { VAT_RATE } from "@/lib/constants";
+import { VAT_RATE, VAT_RATE_DEFAULT } from "@/lib/constants";
 import { MessageList, type Message } from "@/components/ui/alert";
 const VAT_FACTOR = 1 + VAT_RATE / 100; // 1.13
 
@@ -79,7 +79,7 @@ export function ExpenseForm({
 }) {
   const router = useRouter();
   const { companyId, fiscalYearId, fiscalYears, companies } = useApp();
-  const defaultVatRate = companies[0]?.defaultVatRate ?? "13.00";
+  const defaultVatRate = companies[0]?.defaultVatRate ?? VAT_RATE_DEFAULT;
   const [values, setValues] = useState<FormValues>(() =>
     mode === "edit" && initial
       ? {

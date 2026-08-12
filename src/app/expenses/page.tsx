@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCompanyId, getExpenses, getParties, getCategories, getActiveFiscalYear } from "@/lib/server-data";
+import { PATH_LOGIN, DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { ExpensesListClient } from "@/components/expenses-list-client";
 
 interface Props {
@@ -21,11 +22,11 @@ interface Props {
  */
 export default async function ExpensesPage({ searchParams }: Props) {
   const companyId = await getCompanyId();
-  if (!companyId) redirect("/login");
+  if (!companyId) redirect(PATH_LOGIN);
 
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
-  const pageSize = 50;
+  const pageSize = DEFAULT_PAGE_SIZE;
 
   const [activeFiscalYear, parties, categories] = await Promise.all([
     getActiveFiscalYear(companyId),

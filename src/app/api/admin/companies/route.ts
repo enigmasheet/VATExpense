@@ -12,12 +12,13 @@ import {
   internalError,
 } from "@/lib/api-response";
 import { getSessionUser } from "@/lib/api-auth";
+import { ROLE_SUPER_ADMIN, BCRYPT_SALT_ROUNDS } from "@/lib/constants";
 import { eq, ilike, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 function requireSuperAdmin() {
   return getSessionUser().then((u) => {
-    if (!u || u.role !== "SuperAdmin") return null;
+    if (!u || u.role !== ROLE_SUPER_ADMIN) return null;
     return u;
   });
 }
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
         })
         .returning();
 
-      const passwordHash = await bcrypt.hash(userData.password, 10);
+      const passwordHash = await bcrypt.hash(userData.password, BCRYPT_SALT_ROUNDS);
 
       const [user] = await tx
         .insert(users)

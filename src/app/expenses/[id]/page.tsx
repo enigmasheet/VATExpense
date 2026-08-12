@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { getCompanyId, getExpenseById } from "@/lib/server-data";
+import { PATH_LOGIN } from "@/lib/constants";
 import { ExpenseDetailClient } from "@/components/expense-detail-client";
 
 interface Props {
@@ -13,10 +14,10 @@ interface Props {
  */
 export default async function ExpenseDetailPage({ params }: Props) {
   const companyId = await getCompanyId();
-  if (!companyId) redirect("/login");
+  if (!companyId) redirect(PATH_LOGIN);
 
   const { id } = await params;
-  const expense = await getExpenseById(id);
+  const expense = await getExpenseById(id, companyId);
 
   if (!expense) notFound();
 

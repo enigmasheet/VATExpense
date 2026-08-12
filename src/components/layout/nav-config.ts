@@ -1,3 +1,4 @@
+import { ROLE_SUPER_ADMIN, PATH_EXPENSES, PATH_ADMIN } from "@/lib/constants";
 import type { IconName } from "./icons";
 
 export interface NavItem {
@@ -17,7 +18,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/", label: "Dashboard", icon: "dashboard" },
       { href: "/expenses/new", label: "Add Expense", icon: "quickAdd" },
-      { href: "/expenses", label: "Expenses", icon: "expenses" },
+      { href: PATH_EXPENSES, label: "Expenses", icon: "expenses" },
       { href: "/import", label: "Import", icon: "import" },
     ],
   },
@@ -44,11 +45,11 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     title: "Management",
     items: [
-      { href: "/admin", label: "Admin Dashboard", icon: "management" },
+      { href: PATH_ADMIN, label: "Admin Dashboard", icon: "management" },
     ],
   },
 ];
 
 export function getNavGroups(role?: string): NavGroup[] {
-  return role === "SuperAdmin" ? ADMIN_NAV_GROUPS : NAV_GROUPS;
+  return role === ROLE_SUPER_ADMIN ? ADMIN_NAV_GROUPS : NAV_GROUPS;
 }

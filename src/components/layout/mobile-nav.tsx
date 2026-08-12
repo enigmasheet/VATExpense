@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useApp } from "@/lib/use-app";
+import { PATH_LOGIN } from "@/lib/constants";
 import { NavIcon } from "./icons";
 import { getNavGroups } from "./nav-config";
 import { SidebarLink } from "./sidebar";
@@ -189,7 +190,7 @@ function MobileNavPanel({ onClose }: { onClose: () => void }) {
                 {session.user.name}
               </p>
               <button
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={() => signOut({ callbackUrl: PATH_LOGIN })}
                 className="rounded-md px-2 py-1 text-xs text-muted hover:bg-surface-hover hover:text-foreground"
               >
                 Sign out

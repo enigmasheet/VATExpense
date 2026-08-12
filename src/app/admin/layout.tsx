@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/server-data";
+import { ROLE_SUPER_ADMIN, PATH_LOGIN } from "@/lib/constants";
 
 /**
  * Server layout for the admin area. Only superadmins may access.
@@ -7,8 +8,8 @@ import { getSessionUser } from "@/lib/server-data";
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await getSessionUser();
-  if (!user || user.role !== "SuperAdmin") {
-    redirect("/login");
+  if (!user || user.role !== ROLE_SUPER_ADMIN) {
+    redirect(PATH_LOGIN);
   }
 
   return (

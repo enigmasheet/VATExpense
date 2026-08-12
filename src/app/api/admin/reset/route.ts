@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { apiOk, notFound, unauthorized, internalError } from "@/lib/api-response";
 import { getSessionUser } from "@/lib/api-auth";
+import { ROLE_SUPER_ADMIN } from "@/lib/constants";
 import { sql } from "drizzle-orm";
 
 /**
@@ -14,7 +15,7 @@ export async function POST() {
   }
 
   const admin = await getSessionUser();
-  if (!admin || admin.role !== "SuperAdmin") return unauthorized();
+  if (!admin || admin.role !== ROLE_SUPER_ADMIN) return unauthorized();
 
   try {
     await db.execute(

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { expenses, parties, categories } from "@/lib/db/schema";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { and, eq, sql } from "drizzle-orm";
 
 /**
@@ -79,7 +80,7 @@ export async function getExpenses(params: ExpenseListParams) {
     month,
     q,
     page = 1,
-    pageSize = 50,
+    pageSize = DEFAULT_PAGE_SIZE,
   } = params;
 
   const conditions = [
@@ -131,11 +132,11 @@ export async function getExpenses(params: ExpenseListParams) {
 }
 
 /**
- * Retrieves a single expense with its related party and category names.
+ * Retrieves a single expense with its related party and category names, scoped to a company.
  *
  * @returns The matching expense, or `null` if no expense has the specified ID.
  */
-export async function getExpenseById(id: string) {
+export async function getExpenseById(id: string, companyId: string) {
   const row = await db
     .select({
       id: expenses.id,
@@ -159,7 +160,7 @@ export async function getExpenseById(id: string) {
     .from(expenses)
     .leftJoin(parties, eq(parties.id, expenses.partyId))
     .leftJoin(categories, eq(categories.id, expenses.categoryId))
-    .where(eq(expenses.id, id))
+    .where(and(eq(expenses.id, id), eq(expenses.companyId, companyId)))
     .limit(1);
 
   return row[0] ?? null;

@@ -10,12 +10,13 @@ import { PartyReportExport } from "@/components/party-report-export";
 import { FiscalYearSelector } from "@/components/fiscal-year-selector";
 import { StatCard } from "@/components/ui/stat-card";
 import { DataTable } from "@/components/ui/data-table";
+import { PATH_LOGIN, PARTY_PURCHASE_THRESHOLD } from "@/lib/constants";
 
 interface Props {
   searchParams: Promise<{ fiscalYearId?: string; basis?: string }>;
 }
 
-const THRESHOLD = 100000;
+const THRESHOLD = PARTY_PURCHASE_THRESHOLD;
 
 /**
  * Displays the parties whose purchases in a fiscal year exceed the threshold.
@@ -25,7 +26,7 @@ const THRESHOLD = 100000;
  */
 export default async function PartyPurchaseReportPage({ searchParams }: Props) {
   const companyId = await getCompanyId();
-  if (!companyId) redirect("/login");
+  if (!companyId) redirect(PATH_LOGIN);
 
   const params = await searchParams;
   const basis = params.basis === "total" ? "total" : "taxable";

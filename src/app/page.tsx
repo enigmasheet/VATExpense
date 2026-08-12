@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCompanyId, getSessionUser, getCompany, getActiveFiscalYear, getDashboardSummary } from "@/lib/server-data";
+import { ROLE_SUPER_ADMIN, PATH_LOGIN, PATH_ADMIN } from "@/lib/constants";
 import { DashboardClient } from "@/components/dashboard-client";
 
 /**
@@ -10,10 +11,10 @@ import { DashboardClient } from "@/components/dashboard-client";
  */
 export default async function DashboardPage() {
   const sessionUser = await getSessionUser();
-  if (sessionUser?.role === "SuperAdmin") redirect("/admin");
+  if (sessionUser?.role === ROLE_SUPER_ADMIN) redirect(PATH_ADMIN);
 
   const companyId = await getCompanyId();
-  if (!companyId) redirect("/login");
+  if (!companyId) redirect(PATH_LOGIN);
 
   const [company, activeFiscalYear] = await Promise.all([
     getCompany(companyId),

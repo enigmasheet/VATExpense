@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCompanyId, getParties, getCategories } from "@/lib/server-data";
+import { PATH_LOGIN } from "@/lib/constants";
 import { BatchEntry } from "@/components/expenses/batch-entry";
 
 /**
@@ -7,7 +8,7 @@ import { BatchEntry } from "@/components/expenses/batch-entry";
  */
 export default async function NewExpensePage() {
   const companyId = await getCompanyId();
-  if (!companyId) redirect("/login");
+  if (!companyId) redirect(PATH_LOGIN);
 
   const [parties, categories] = await Promise.all([
     getParties(companyId),

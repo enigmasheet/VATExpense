@@ -1,11 +1,12 @@
 import { getPartyPurchaseReport } from "@/lib/server-data";
 import { badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
+import { PARTY_PURCHASE_THRESHOLD } from "@/lib/constants";
 import * as XLSX from "xlsx";
 
 export const runtime = "nodejs";
 
-const THRESHOLD = 100000;
+const THRESHOLD = PARTY_PURCHASE_THRESHOLD;
 
 /**
  * Exports the parties with purchases over the threshold as an Excel report.

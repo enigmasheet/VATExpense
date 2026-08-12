@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { importBatches, importBatchRows, expenses } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError, notFound, forbidden } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 /**
  * Confirms a pending import batch and creates expense records for its valid rows.
@@ -43,41 +43,43 @@ export async function POST(
     }
 
     const inserted = await db.transaction(async (tx) => {
-      const results = [];
-      for (const row of validRows) {
-        if (!row.resolvedPartyId || !row.resolvedCategoryId || !row.resolvedMiti || !row.resolvedNepaliMonth) {
-          continue;
-        }
-        const [expense] = await tx
-          .insert(expenses)
-          .values({
-            companyId: batch.companyId,
-            fiscalYearId: batch.fiscalYearId,
-            partyId: row.resolvedPartyId,
-            categoryId: row.resolvedCategoryId,
-            locationId: row.resolvedLocationId ?? undefined,
-            miti: row.resolvedMiti,
-            nepaliMonth: row.resolvedNepaliMonth,
-            invoiceNumber: row.rawInvoiceNumber || undefined,
-            item: row.rawItem as string,
-            quantity: row.rawQuantity ? row.rawQuantity : undefined,
-            rate: row.rawRate ? row.rawRate : undefined,
-            taxableAmount: row.resolvedTaxableAmount as string,
-            vatAmount: row.resolvedVatAmount as string,
-            totalAmount: row.resolvedTotalAmount as string,
-            vatRate: row.resolvedVatRate as string,
-            remarks: row.rawRemarks || undefined,
-          })
-          .returning();
+      // Filter to rows that have all required resolved fields
+      const importableRows = validRows.filter(
+        (r) => r.resolvedPartyId && r.resolvedCategoryId && r.resolvedMiti && r.resolvedNepaliMonth,
+      );
 
-        results.push(expense);
+      if (importableRows.length === 0) return [];
 
-        await tx
-          .update(importBatchRows)
-          .set({ status: "confirmed" })
-          .where(eq(importBatchRows.id, row.id));
-      }
+      // Batch insert all expenses at once
+      const expenseValues = importableRows.map((row) => ({
+        companyId: batch.companyId,
+        fiscalYearId: batch.fiscalYearId,
+        partyId: row.resolvedPartyId!,
+        categoryId: row.resolvedCategoryId!,
+        locationId: row.resolvedLocationId ?? undefined,
+        miti: row.resolvedMiti!,
+        nepaliMonth: row.resolvedNepaliMonth!,
+        invoiceNumber: row.rawInvoiceNumber || undefined,
+        item: row.rawItem as string,
+        quantity: row.rawQuantity ? row.rawQuantity : undefined,
+        rate: row.rawRate ? row.rawRate : undefined,
+        taxableAmount: row.resolvedTaxableAmount as string,
+        vatAmount: row.resolvedVatAmount as string,
+        totalAmount: row.resolvedTotalAmount as string,
+        vatRate: row.resolvedVatRate as string,
+        remarks: row.rawRemarks || undefined,
+      }));
 
+      const results = await tx.insert(expenses).values(expenseValues).returning();
+
+      // Batch update all confirmed rows at once
+      const confirmedIds = importableRows.map((r) => r.id);
+      await tx
+        .update(importBatchRows)
+        .set({ status: "confirmed" })
+        .where(inArray(importBatchRows.id, confirmedIds));
+
+      // Update batch status
       await tx
         .update(importBatches)
         .set({ status: "confirmed" })

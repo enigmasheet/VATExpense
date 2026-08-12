@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { expenses } from "@/lib/db/schema";
 import { amountsClose } from "@/lib/money";
+import { SUSPICIOUS_DUPLICATE_FETCH_LIMIT } from "@/lib/constants";
 import { and, eq } from "drizzle-orm";
 
 export type DuplicateLevel = "exact" | "invoice";
@@ -75,7 +76,7 @@ export async function findSuspiciousDuplicates(
         eq(expenses.isDeleted, false),
       ),
     )
-    .limit(20);
+    .limit(SUSPICIOUS_DUPLICATE_FETCH_LIMIT);
 
   return candidates.filter(
     (e) =>

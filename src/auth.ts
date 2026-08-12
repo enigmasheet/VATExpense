@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import { ROLE_SUPER_ADMIN, PATH_LOGIN } from "@/lib/constants";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -29,7 +30,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             email: saEmail,
             name: "Super Admin",
             companyId: null,
-            role: "SuperAdmin",
+            role: ROLE_SUPER_ADMIN,
           };
         }
 
@@ -78,6 +79,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   pages: {
-    signIn: "/login",
+    signIn: PATH_LOGIN,
   },
 });

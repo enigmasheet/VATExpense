@@ -10,6 +10,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { VAT_RATE_DEFAULT, ROLE_DATA_ENTRY } from "@/lib/constants";
 
 export const companies = pgTable("companies", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -20,7 +21,7 @@ export const companies = pgTable("companies", {
   email: text("email"),
   defaultVatRate: numeric("default_vat_rate", { precision: 5, scale: 2 })
     .notNull()
-    .default("13.00"),
+    .default(VAT_RATE_DEFAULT),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -251,7 +252,7 @@ export const users = pgTable(
     email: text("email").notNull(),
     name: text("name").notNull(),
     passwordHash: text("password_hash").notNull(),
-    role: text("role").notNull().default("DataEntry"), // Admin | DataEntry
+    role: text("role").notNull().default(ROLE_DATA_ENTRY), // Admin | DataEntry
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

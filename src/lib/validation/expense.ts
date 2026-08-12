@@ -2,6 +2,7 @@ import { z } from "zod";
 import { toFixedStr, round2 } from "@/lib/money";
 import { parseMiti } from "@/lib/nepali-date";
 import { companyIdSchema } from "./masters";
+import { MAX_ITEM_LENGTH, MAX_REMARKS_LENGTH, MAX_NAME_LENGTH, MIN_AMOUNT_TOLERANCE, AMOUNT_TOLERANCE_RATIO } from "@/lib/constants";
 
 export function optionalNumeric(scale: number) {
   return z.preprocess((v) => toFixedStr(v, scale), z.string().nullable().optional());
@@ -37,9 +38,9 @@ export const expenseInputSchema = z.object({
     }),
   invoiceNumber: z.preprocess(
     (v) => (v === null || v === undefined || v === "" ? null : v),
-    z.string().trim().min(1, "Invoice number cannot be blank").max(100).nullable().optional(),
+    z.string().trim().min(1, "Invoice number cannot be blank").max(MAX_NAME_LENGTH).nullable().optional(),
   ),
-  item: z.string().trim().min(1, "Item is required").max(500),
+  item: z.string().trim().min(1, "Item is required").max(MAX_ITEM_LENGTH),
   quantity: optionalNumeric(3),
   rate: optionalNumeric(4),
   taxableAmount: requiredNumeric(2),
@@ -48,7 +49,7 @@ export const expenseInputSchema = z.object({
   vatRate: optionalNumeric(2),
   remarks: z.preprocess(
     (v) => (v === null || v === undefined || v === "" ? null : v),
-    z.string().trim().max(1000).nullable().optional(),
+    z.string().trim().max(MAX_REMARKS_LENGTH).nullable().optional(),
   ),
 });
 
@@ -75,7 +76,7 @@ export function validateAmounts(d: {
   const vat = Number(d.vatAmount);
   const total = Number(d.totalAmount);
   const vatRate = Number(d.vatRate);
-  const tolerance = Math.max(1.0, taxable * 0.005);
+  const tolerance = Math.max(MIN_AMOUNT_TOLERANCE, taxable * AMOUNT_TOLERANCE_RATIO);
 
   if (d.quantity !== null && d.quantity !== undefined && d.rate !== null && d.rate !== undefined) {
     const computed = round2(Number(d.quantity) * Number(d.rate));

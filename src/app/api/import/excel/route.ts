@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { importBatches, importBatchRows } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
+import { VAT_RATE } from "@/lib/constants";
 import * as XLSX from "xlsx";
 
 export const runtime = "nodejs";
@@ -53,7 +54,7 @@ function mapExcelRow(row: Record<string, unknown>): ParsedRow | null {
     taxableAmount: get("taxable") || get("taxable amount") || "0",
     vatAmount: get("vat") || get("vat amount") || "0",
     totalAmount: get("total") || get("total amount") || "0",
-    vatRate: get("vat rate") || get("rate %") || "13",
+    vatRate: get("vat rate") || get("rate %") || String(VAT_RATE),
     remarks: get("remarks") || null,
   };
 }

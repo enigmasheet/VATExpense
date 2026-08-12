@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Alert } from "@/components/ui/alert";
+import { ROLE_ADMIN, VAT_RATE_DEFAULT, PATH_LOGIN } from "@/lib/constants";
 
 interface CompanyRow {
   id: string;
@@ -67,13 +68,13 @@ export function AdminDashboard({ resetEnabled }: AdminDashboardProps) {
             company: {
               name: companyName,
               vatNumber: vatNumber || null,
-              defaultVatRate: "13.00",
+              defaultVatRate: VAT_RATE_DEFAULT,
             },
             user: {
               name: adminName,
               email: adminEmail,
               password: adminPassword,
-              role: "Admin",
+              role: ROLE_ADMIN,
             },
           }),
         },
@@ -116,7 +117,7 @@ export function AdminDashboard({ resetEnabled }: AdminDashboardProps) {
           <h1 className="font-display text-2xl font-semibold text-foreground">Admin</h1>
           <p className="mt-1 text-sm text-muted">Manage companies and tenants</p>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: "/login" })}>
+        <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: PATH_LOGIN })}>
           Sign out
         </Button>
       </div>

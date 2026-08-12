@@ -6,6 +6,7 @@ import { useState, useCallback } from "react";
 import { NEPALI_MONTHS } from "@/lib/nepali-date";
 import { formatAmount } from "@/lib/format";
 import { deleteExpense } from "@/lib/actions/expenses";
+import { PATH_EXPENSES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
@@ -78,7 +79,7 @@ export function ExpensesListClient({
       if (overrides.partyId) params.set("partyId", String(overrides.partyId));
       if (overrides.categoryId) params.set("categoryId", String(overrides.categoryId));
       if (overrides.month) params.set("month", String(overrides.month));
-      return `/expenses${params.toString() ? `?${params.toString()}` : ""}`;
+      return `${PATH_EXPENSES}${params.toString() ? `?${params.toString()}` : ""}`;
     },
     [],
   );
@@ -92,7 +93,7 @@ export function ExpensesListClient({
     setPartyId("");
     setCategoryId("");
     setMonth("");
-    router.push("/expenses");
+    router.push(PATH_EXPENSES);
   }
 
   function goToPage(p: number) {

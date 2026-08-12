@@ -4,6 +4,7 @@ import { apiOk, badRequest, internalError, notFound, forbidden } from "@/lib/api
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { parseMiti } from "@/lib/nepali-date";
 import { normalizeName } from "@/lib/normalize";
+import { VAT_RATE } from "@/lib/constants";
 import { and, eq } from "drizzle-orm";
 
 /**
@@ -103,7 +104,7 @@ export async function GET(
             resolvedTaxableAmount: String(taxable),
             resolvedVatAmount: String(vat),
             resolvedTotalAmount: String(total),
-            resolvedVatRate: row.rawVatRate || "13",
+            resolvedVatRate: row.rawVatRate || String(VAT_RATE),
             errors: errors.length > 0 ? JSON.stringify(errors) : null,
           })
           .where(eq(importBatchRows.id, row.id));
@@ -137,7 +138,7 @@ export async function GET(
             taxableAmount: String(taxable),
             vatAmount: String(vat),
             totalAmount: String(total),
-            vatRate: row.rawVatRate || "13",
+            vatRate: row.rawVatRate || String(VAT_RATE),
           },
           errors,
         };

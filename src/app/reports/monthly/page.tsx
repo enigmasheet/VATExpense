@@ -6,6 +6,7 @@ import { MonthlyReportExport } from "@/components/monthly-report-export";
 import { MonthSelector } from "@/components/month-selector";
 import { StatCard } from "@/components/ui/stat-card";
 import { DataTable } from "@/components/ui/data-table";
+import { PATH_LOGIN } from "@/lib/constants";
 
 interface Props {
   searchParams: Promise<{ month?: string }>;
@@ -19,7 +20,7 @@ interface Props {
  */
 export default async function MonthlyReportPage({ searchParams }: Props) {
   const companyId = await getCompanyId();
-  if (!companyId) redirect("/login");
+  if (!companyId) redirect(PATH_LOGIN);
 
   const params = await searchParams;
   const nepaliMonth = (params.month || "Baisakh") as (typeof NEPALI_MONTHS)[number];

@@ -7,6 +7,7 @@ import { safeParse } from "@/lib/validation/utils";
 import { parseMiti } from "@/lib/nepali-date";
 import { and, eq, sql } from "drizzle-orm";
 import { requireCompanyId, type ActionResult } from "./common";
+import { BATCH_SIZE_LIMIT } from "@/lib/constants";
 import {
   prepareValidatedExpense,
   type ExpenseInput,
@@ -135,8 +136,8 @@ export async function batchSaveExpenses(
   }
 
   if (rows.length === 0) return { ok: true, data: [] };
-  if (rows.length > 200)
-    return { ok: false, error: "Batch size limited to 200 rows" };
+  if (rows.length > BATCH_SIZE_LIMIT)
+    return { ok: false, error: `Batch size limited to ${BATCH_SIZE_LIMIT} rows` };
 
   try {
     const company = (
@@ -242,7 +243,7 @@ export async function deleteExpense(
     await db
       .update(expenses)
       .set({ isDeleted: true, deletedAt: sql`now()`, updatedAt: sql`now()` })
-      .where(eq(expenses.id, id));
+      .where(and(eq(expenses.id, id), eq(expenses.companyId, companyId)));
 
     return { ok: true, data: { id } };
   } catch (err) {

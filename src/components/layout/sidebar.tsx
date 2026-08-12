@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useApp } from "@/lib/use-app";
+import { PATH_LOGIN } from "@/lib/constants";
 import { NavIcon } from "./icons";
 import { getNavGroups, type NavItem } from "./nav-config";
 
@@ -128,7 +129,7 @@ export function Sidebar({
                   {userInitials}
                 </div>
                 <button
-                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  onClick={() => signOut({ callbackUrl: PATH_LOGIN })}
                   className="rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-foreground"
                   aria-label="Sign out"
                   title="Sign out"
@@ -167,7 +168,7 @@ export function Sidebar({
                   </p>
                 </div>
                 <button
-                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  onClick={() => signOut({ callbackUrl: PATH_LOGIN })}
                   className="rounded-md px-2 py-1 text-xs text-muted hover:bg-surface-hover hover:text-foreground"
                 >
                   Sign out

@@ -1,16 +1,17 @@
 import { auth } from "@/auth";
+import { PATH_LOGIN, PATH_API_AUTH } from "@/lib/constants";
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
   // Allow login page and API auth routes
-  if (pathname.startsWith("/login") || pathname.startsWith("/api/auth")) {
+  if (pathname.startsWith(PATH_LOGIN) || pathname.startsWith(PATH_API_AUTH)) {
     return;
   }
 
   // Redirect unauthenticated users to login
   if (!req.auth) {
-    const loginUrl = new URL("/login", req.nextUrl.origin);
+    const loginUrl = new URL(PATH_LOGIN, req.nextUrl.origin);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return Response.redirect(loginUrl);
   }
