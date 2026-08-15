@@ -1,4 +1,4 @@
-import { parseMiti } from "@/lib/nepali-date";
+import { parseMiti, fromEnglishDate } from "@/lib/nepali-date";
 import type { LedgerRow, ValidationResult } from "./ledger-types";
 import { getInvoiceKey } from "./ledger-utils";
 import {
@@ -6,7 +6,16 @@ import {
   STATUS_ERROR,
   STATUS_DUPLICATE,
   STATUS_INCOMPLETE,
+  DEFAULT_CATEGORY_GENERAL,
 } from "@/lib/status-constants";
+import type { FixActionType } from "./ledger-reducer";
+
+export interface FixableAction {
+  fixType: FixActionType;
+  label: string;
+  value: string;
+  categoryName?: string;
+}
 
 /**
  * Determines the fiscal year for a Bikram Sambat date using
@@ -113,4 +122,37 @@ export function validateLedgerRow(
   }
 
   return { status: STATUS_PENDING, error: undefined, warnings };
+}
+
+/**
+ * Returns a fixable action for the given error message, or null if no auto-fix is available.
+ */
+export function getFixableAction(
+  error: string | undefined,
+): FixableAction | null {
+  if (!error) return null;
+
+  if (error === "Miti required" || error === "Invalid date") {
+    try {
+      const today = fromEnglishDate(new Date());
+      return {
+        fixType: "fillTodayMiti",
+        label: "Fill today's date",
+        value: today.miti,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  if (error === "Category required") {
+    return {
+      fixType: "selectGeneralCategory",
+      label: "Select General",
+      value: "",
+      categoryName: DEFAULT_CATEGORY_GENERAL,
+    };
+  }
+
+  return null;
 }

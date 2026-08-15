@@ -11,6 +11,8 @@ import {
   STATUS_SAVED,
 } from "@/lib/status-constants";
 import type { Party, Category, LedgerRow, CellField } from "@/lib/expenses/ledger-types";
+import { getFixableAction } from "@/lib/expenses/ledger-validation";
+import type { FixableAction } from "@/lib/expenses/ledger-validation";
 import { PartyAutocomplete } from "./party-autocomplete";
 import { StatusBadge } from "./status-badge";
 import { Button } from "@/components/ui/button";

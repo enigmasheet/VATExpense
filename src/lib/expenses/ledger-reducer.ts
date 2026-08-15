@@ -6,7 +6,10 @@ import {
   STATUS_SAVING,
   STATUS_SAVED,
   STATUS_ERROR,
+  DEFAULT_CATEGORY_GENERAL,
 } from "@/lib/status-constants";
+
+export type FixActionType = "fillTodayMiti" | "selectGeneralCategory";
 
 export type LedgerAction =
   | {
@@ -55,7 +58,14 @@ export type LedgerAction =
         warnings?: string[];
       }>;
     }
-  | { type: "RESET_ROWS"; rows: LedgerRow[] };
+  | { type: "RESET_ROWS"; rows: LedgerRow[] }
+  | {
+      type: "AUTO_FIX";
+      rowId: string;
+      fixType: FixActionType;
+      value: string;
+      categoryName?: string;
+    };
 
 function clearTerminalStatus(row: LedgerRow): LedgerRow {
   if (
@@ -224,6 +234,22 @@ export function ledgerReducer(
 
     case "RESET_ROWS": {
       return action.rows;
+    }
+
+    case "AUTO_FIX": {
+      return rows.map((r) => {
+        if (r.id !== action.rowId) return r;
+        let next = { ...r, status: STATUS_PENDING, error: undefined };
+
+        if (action.fixType === "fillTodayMiti") {
+          next.miti = action.value;
+        } else if (action.fixType === "selectGeneralCategory") {
+          next.categoryId = action.value;
+          next.categoryName = action.categoryName ?? DEFAULT_CATEGORY_GENERAL;
+        }
+
+        return next;
+      });
     }
   }
 }
