@@ -2,6 +2,7 @@
 
 import { requireCompanyId, type ActionResult } from "./common";
 import { createParty as createPartyService, updateParty as updatePartyService, deleteParty as deletePartyService, type Party } from "@/lib/services/parties";
+import { ERR_NOT_AUTHENTICATED } from "@/lib/status-constants";
 
 export type { ActionResult };
 
@@ -23,7 +24,7 @@ export async function createParty(input: {
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await createPartyService(companyId, input);
@@ -46,7 +47,7 @@ export async function updateParty(
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await updatePartyService(id, companyId, changes);
@@ -65,7 +66,7 @@ export async function deleteParty(id: string): Promise<ActionResult<{ id: string
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await deletePartyService(id, companyId);

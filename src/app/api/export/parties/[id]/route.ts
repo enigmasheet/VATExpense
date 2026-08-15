@@ -1,8 +1,15 @@
 import { badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { getPartyStatement } from "@/lib/server-data/party-statement";
+import {
+  HTTP_NOT_FOUND,
+  CONTENT_TYPE_JSON,
+  CONTENT_TYPE_CSV,
+  CONTENT_TYPE_XLSX,
+  RUNTIME_NODEJS,
+} from "@/lib/status-constants";
 
-export const runtime = "nodejs";
+export const runtime = RUNTIME_NODEJS;
 
 /**
  * Exports the per-party statement as an Excel or CSV file.
@@ -30,7 +37,7 @@ export async function GET(
     if (rows.length === 0) {
       return new Response(
         JSON.stringify({ error: "No transactions found for this party" }),
-        { status: 404, headers: { "Content-Type": "application/json" } },
+        { status: HTTP_NOT_FOUND, headers: { "Content-Type": CONTENT_TYPE_JSON } },
       );
     }
 
@@ -97,7 +104,7 @@ export async function GET(
       const csv = XLSX.utils.sheet_to_csv(ws);
       return new Response(csv, {
         headers: {
-          "Content-Type": "text/csv",
+          "Content-Type": CONTENT_TYPE_CSV,
           "Content-Disposition": `attachment; filename="${fileName}.csv"`,
         },
       });
@@ -107,7 +114,7 @@ export async function GET(
 
     return new Response(buf, {
       headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Type": CONTENT_TYPE_XLSX,
         "Content-Disposition": `attachment; filename="${fileName}.xlsx"`,
       },
     });

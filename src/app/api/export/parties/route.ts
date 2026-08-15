@@ -2,9 +2,16 @@ import { getPartyPurchaseReport } from "@/lib/server-data";
 import { badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { PARTY_PURCHASE_THRESHOLD } from "@/lib/constants";
+import {
+  HTTP_NOT_FOUND,
+  CONTENT_TYPE_JSON,
+  CONTENT_TYPE_CSV,
+  CONTENT_TYPE_XLSX,
+  RUNTIME_NODEJS,
+} from "@/lib/status-constants";
 import * as XLSX from "xlsx";
 
-export const runtime = "nodejs";
+export const runtime = RUNTIME_NODEJS;
 
 const THRESHOLD = PARTY_PURCHASE_THRESHOLD;
 
@@ -36,7 +43,7 @@ export async function GET(request: Request) {
     if (rows.length === 0) {
       return new Response(
         JSON.stringify({ error: "No parties found matching the criteria" }),
-        { status: 404, headers: { "Content-Type": "application/json" } },
+        { status: HTTP_NOT_FOUND, headers: { "Content-Type": CONTENT_TYPE_JSON } },
       );
     }
 
@@ -89,7 +96,7 @@ export async function GET(request: Request) {
       const csv = XLSX.utils.sheet_to_csv(ws);
       return new Response(csv, {
         headers: {
-          "Content-Type": "text/csv",
+          "Content-Type": CONTENT_TYPE_CSV,
           "Content-Disposition": `attachment; filename="party-report-${basis}.csv"`,
         },
       });
@@ -99,7 +106,7 @@ export async function GET(request: Request) {
 
     return new Response(buf, {
       headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Type": CONTENT_TYPE_XLSX,
         "Content-Disposition": `attachment; filename="party-report-${basis}.xlsx"`,
       },
     });

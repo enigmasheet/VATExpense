@@ -2,6 +2,7 @@
 
 import { requireCompanyId, type ActionResult } from "./common";
 import { updateCompany as updateCompanyService, type Company } from "@/lib/services/companies";
+import { ERR_NOT_AUTHENTICATED } from "@/lib/status-constants";
 
 export type { ActionResult };
 
@@ -25,7 +26,7 @@ export async function updateCompany(
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await updateCompanyService(companyId, changes);

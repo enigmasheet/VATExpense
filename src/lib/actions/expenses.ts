@@ -9,6 +9,17 @@ import { and, eq, sql } from "drizzle-orm";
 import { requireCompanyId, type ActionResult } from "./common";
 import { BATCH_SIZE_LIMIT } from "@/lib/constants";
 import {
+  ERR_NOT_AUTHENTICATED,
+  ERR_COMPANY_NOT_FOUND,
+  ERR_EXPENSE_NOT_FOUND,
+  ERR_UNEXPECTED,
+  ERR_VALIDATION_FAILED,
+  ERR_DUPLICATE_IN_BATCH,
+  ERR_OPTIMISTIC_CONFLICT,
+  ERR_FAILED_TO_DELETE,
+  ERR_FAILED_TO_UPDATE,
+} from "@/lib/status-constants";
+import {
   prepareValidatedExpense,
   type ExpenseInput,
 } from "./expenses-helpers";
@@ -46,13 +57,13 @@ export async function createExpense(
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const payload = { ...input, companyId };
   const parsed = safeParse(expenseInputSchema, payload);
   if (!parsed.ok)
-    return { ok: false, error: "Validation failed", errors: parsed.errors };
+    return { ok: false, error: ERR_VALIDATION_FAILED, errors: parsed.errors };
 
   try {
     const company = (
@@ -62,7 +73,7 @@ export async function createExpense(
         .where(eq(companies.id, companyId))
         .limit(1)
     )[0];
-    if (!company) return { ok: false, error: "Company not found" };
+    if (!company) return { ok: false, error: ERR_COMPANY_NOT_FOUND };
 
     const result = await prepareValidatedExpense(
       companyId,
@@ -89,7 +100,7 @@ export async function createExpense(
     };
   } catch (err) {
     console.error("createExpense failed", err);
-    return { ok: false, error: "An unexpected error occurred" };
+    return { ok: false, error: ERR_UNEXPECTED };
   }
 }
 
@@ -134,7 +145,7 @@ export async function batchSaveExpenses(
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   if (rows.length === 0) return { ok: true, data: [] };
@@ -149,7 +160,7 @@ export async function batchSaveExpenses(
         .where(eq(companies.id, companyId))
         .limit(1)
     )[0];
-    if (!company) return { ok: false, error: "Company not found" };
+    if (!company) return { ok: false, error: ERR_COMPANY_NOT_FOUND };
 
     const results: BatchRowResult[] = [];
     const rowsToInsert: {
@@ -176,7 +187,7 @@ export async function batchSaveExpenses(
           results.push({
             index: i,
             ok: false,
-            error: "Duplicate invoice number within this batch",
+            error: ERR_DUPLICATE_IN_BATCH,
           });
           continue;
         }
@@ -227,7 +238,7 @@ export async function batchSaveExpenses(
     return { ok: true, data: results };
   } catch (err) {
     console.error("batchSaveExpenses failed", err);
-    return { ok: false, error: "An unexpected error occurred" };
+    return { ok: false, error: ERR_UNEXPECTED };
   }
 }
 
@@ -244,7 +255,7 @@ export async function deleteExpense(
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   try {
@@ -257,7 +268,7 @@ export async function deleteExpense(
     )[0];
 
     if (!current || current.isDeleted)
-      return { ok: false, error: "Expense not found" };
+      return { ok: false, error: ERR_EXPENSE_NOT_FOUND };
 
     await db
       .update(expenses)
@@ -267,7 +278,7 @@ export async function deleteExpense(
     return { ok: true, data: { id } };
   } catch (err) {
     console.error("deleteExpense failed", err);
-    return { ok: false, error: "Failed to delete expense" };
+    return { ok: false, error: ERR_FAILED_TO_DELETE };
   }
 }
 
@@ -286,7 +297,7 @@ export async function updateExpense(
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   try {
@@ -299,13 +310,12 @@ export async function updateExpense(
     )[0];
 
     if (!current || current.isDeleted)
-      return { ok: false, error: "Expense not found" };
+      return { ok: false, error: ERR_EXPENSE_NOT_FOUND };
 
     if (current.rowVersion !== changes.rowVersion) {
       return {
         ok: false,
-        error:
-          "This expense was changed by someone else — refresh and try again",
+        error: ERR_OPTIMISTIC_CONFLICT,
       };
     }
 
@@ -383,8 +393,7 @@ export async function updateExpense(
     if (!updated) {
       return {
         ok: false,
-        error:
-          "This expense was changed by someone else — refresh and try again",
+        error: ERR_OPTIMISTIC_CONFLICT,
       };
     }
 
@@ -395,6 +404,6 @@ export async function updateExpense(
     };
   } catch (err) {
     console.error("updateExpense failed", err);
-    return { ok: false, error: "Failed to update expense" };
+    return { ok: false, error: ERR_FAILED_TO_UPDATE };
   }
 }

@@ -2,6 +2,7 @@
 
 import { requireCompanyId, type ActionResult } from "./common";
 import { createFiscalYear as createFiscalYearService, updateFiscalYear as updateFiscalYearService, deleteFiscalYear as deleteFiscalYearService, type FiscalYear } from "@/lib/services/fiscal-years";
+import { ERR_NOT_AUTHENTICATED } from "@/lib/status-constants";
 
 export type { ActionResult };
 
@@ -23,7 +24,7 @@ export async function createFiscalYear(input: {
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await createFiscalYearService(companyId, input);
@@ -46,7 +47,7 @@ export async function updateFiscalYear(
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await updateFiscalYearService(id, companyId, changes);
@@ -65,10 +66,30 @@ export async function deleteFiscalYear(id: string): Promise<ActionResult<{ id: s
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await deleteFiscalYearService(id, companyId);
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, data: result.data };
+}
+
+/**
+ * Sets a fiscal year as the active one for the company.
+ * Deactivates all other fiscal years for the company.
+ *
+ * @param id - The fiscal year identifier to activate
+ * @returns The activated fiscal year on success, or an error result
+ */
+export async function setActiveFiscalYear(id: string): Promise<ActionResult<FiscalYear>> {
+  let companyId: string;
+  try {
+    companyId = await requireCompanyId();
+  } catch {
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
+  }
+
+  const result = await updateFiscalYearService(id, companyId, { isActive: true });
   if (!result.ok) return { ok: false, error: result.error };
   return { ok: true, data: result.data };
 }

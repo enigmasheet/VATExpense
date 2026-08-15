@@ -6,6 +6,12 @@ import { useLedgerNavigation } from "@/hooks/expenses/use-ledger-navigation";
 import { ledgerReducer } from "@/lib/expenses/ledger-reducer";
 import { createLedgerRow, getInvoiceKey } from "@/lib/expenses/ledger-utils";
 import { validateLedgerRow, buildDuplicateIndex } from "@/lib/expenses/ledger-validation";
+import {
+  STATUS_PENDING,
+  STATUS_SAVING,
+  STATUS_SAVED,
+  STATUS_ERROR,
+} from "@/lib/status-constants";
 import type { Party, Category, LedgerRow } from "@/lib/expenses/ledger-types";
 import { LedgerTable } from "./ledger-table";
 import { LedgerSummary } from "./ledger-summary";
@@ -83,7 +89,7 @@ export function LedgerGrid({
 
   const enrichedRows = useMemo(() => {
     return rows.map((row) => {
-      if (row.status === "saving" || row.status === "saved" || row.status === "error") {
+      if (row.status === STATUS_SAVING || row.status === STATUS_SAVED || row.status === STATUS_ERROR) {
         return row;
       }
       const result = validateLedgerRow(row, duplicateIndex, existingInvoices, fiscalYearName);
@@ -99,7 +105,7 @@ export function LedgerGrid({
   });
 
   const totals = useMemo(() => {
-    const valid = enrichedRows.filter((r) => r.status === "pending" || r.status === "saving" || r.status === "saved");
+    const valid = enrichedRows.filter((r) => r.status === STATUS_PENDING || r.status === STATUS_SAVING || r.status === STATUS_SAVED);
     return valid.reduce(
       (acc, r) => ({
         taxable: acc.taxable + (Number(r.taxableAmount) || 0),
@@ -111,8 +117,8 @@ export function LedgerGrid({
     );
   }, [enrichedRows]);
 
-  const pendingCount = enrichedRows.filter((r) => r.status === "pending").length;
-  const savedCount = enrichedRows.filter((r) => r.status === "saved").length;
+  const pendingCount = enrichedRows.filter((r) => r.status === STATUS_PENDING).length;
+  const savedCount = enrichedRows.filter((r) => r.status === STATUS_SAVED).length;
 
   function updateField(rowId: string, field: string, value: string, categoryName?: string) {
     dispatch({ type: "UPDATE_FIELD", rowId, field, value, categoryName });
@@ -170,7 +176,7 @@ export function LedgerGrid({
       taxableAmount: src.taxableAmount,
       vatAmount: src.vatAmount,
       totalAmount: src.totalAmount,
-      status: "pending",
+      status: STATUS_PENDING,
       error: undefined,
       warnings: undefined,
     };

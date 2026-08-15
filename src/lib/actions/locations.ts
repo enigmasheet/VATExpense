@@ -2,6 +2,7 @@
 
 import { requireCompanyId, type ActionResult } from "./common";
 import { createLocation as createLocationService, updateLocation as updateLocationService, deleteLocation as deleteLocationService, type Location } from "@/lib/services/locations";
+import { ERR_NOT_AUTHENTICATED } from "@/lib/status-constants";
 
 export type { ActionResult };
 
@@ -18,7 +19,7 @@ export async function createLocation(input: {
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await createLocationService(companyId, input);
@@ -41,7 +42,7 @@ export async function updateLocation(
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await updateLocationService(id, companyId, changes);
@@ -60,7 +61,7 @@ export async function deleteLocation(id: string): Promise<ActionResult<{ id: str
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await deleteLocationService(id, companyId);

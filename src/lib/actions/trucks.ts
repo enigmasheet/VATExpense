@@ -2,6 +2,7 @@
 
 import { requireCompanyId, type ActionResult } from "./common";
 import { createTruck as createTruckService, updateTruck as updateTruckService, deleteTruck as deleteTruckService, type Truck } from "@/lib/services/trucks";
+import { ERR_NOT_AUTHENTICATED } from "@/lib/status-constants";
 
 export type { ActionResult };
 
@@ -17,7 +18,7 @@ export async function createTruck(input: {
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await createTruckService(companyId, input);
@@ -36,7 +37,7 @@ export async function updateTruck(
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await updateTruckService(id, companyId, changes);
@@ -52,7 +53,7 @@ export async function deleteTruck(id: string): Promise<ActionResult<{ id: string
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await deleteTruckService(id, companyId);

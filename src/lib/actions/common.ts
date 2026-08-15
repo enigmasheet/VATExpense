@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
+import { ERR_NOT_AUTHENTICATED } from "@/lib/status-constants";
 
 /**
  * Standard result union returned by server actions.
@@ -33,6 +34,6 @@ export async function requireCompanyId(inputCompanyId?: string): Promise<string>
   const session = await auth();
   const user = session?.user as { companyId?: string; role?: string } | undefined;
   const companyId = user?.companyId ?? inputCompanyId;
-  if (!companyId) throw new Error("Not authenticated");
+  if (!companyId) throw new Error(ERR_NOT_AUTHENTICATED);
   return companyId;
 }

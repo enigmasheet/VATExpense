@@ -1,10 +1,17 @@
 import type { LedgerRowStatus } from "@/lib/expenses/ledger-types";
+import {
+  STATUS_SAVED,
+  STATUS_SAVING,
+  STATUS_ERROR,
+  STATUS_DUPLICATE,
+  STATUS_INCOMPLETE,
+} from "@/lib/status-constants";
 
 /**
  * Renders a visual status badge for a ledger row.
  */
 export function StatusBadge({ status }: { status: LedgerRowStatus }) {
-  if (status === "saved") {
+  if (status === STATUS_SAVED) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
         <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
@@ -14,7 +21,7 @@ export function StatusBadge({ status }: { status: LedgerRowStatus }) {
       </span>
     );
   }
-  if (status === "saving") {
+  if (status === STATUS_SAVING) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
         <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -25,7 +32,7 @@ export function StatusBadge({ status }: { status: LedgerRowStatus }) {
       </span>
     );
   }
-  if (status === "error") {
+  if (status === STATUS_ERROR) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
         <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
@@ -35,7 +42,7 @@ export function StatusBadge({ status }: { status: LedgerRowStatus }) {
       </span>
     );
   }
-  if (status === "duplicate") {
+  if (status === STATUS_DUPLICATE) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
         <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
@@ -45,7 +52,7 @@ export function StatusBadge({ status }: { status: LedgerRowStatus }) {
       </span>
     );
   }
-  if (status === "incomplete") {
+  if (status === STATUS_INCOMPLETE) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
         Incomplete

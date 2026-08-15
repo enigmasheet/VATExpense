@@ -2,7 +2,16 @@ import { db } from "@/lib/db";
 import { importBatches, importBatchRows, expenses } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError, notFound, forbidden } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
+import {
+  BATCH_STATUS_PENDING,
+  BATCH_STATUS_CONFIRMED,
+  BATCH_ROW_STATUS_VALID,
+  BATCH_ROW_STATUS_CONFIRMED,
+  RUNTIME_NODEJS,
+} from "@/lib/status-constants";
 import { eq, inArray } from "drizzle-orm";
+
+export const runtime = RUNTIME_NODEJS;
 
 /**
  * Confirms a pending import batch and creates expense records for its valid rows.
@@ -26,7 +35,7 @@ export async function POST(
 
     if (!batch) return notFound("Import batch not found");
     if (batch.companyId !== companyId) return forbidden("Access denied");
-    if (batch.status !== "pending") {
+    if (batch.status !== BATCH_STATUS_PENDING) {
       return badRequest(`Batch is already ${batch.status}`);
     }
 
@@ -36,7 +45,7 @@ export async function POST(
       .where(eq(importBatchRows.batchId, batchId))
       .orderBy(importBatchRows.rowIndex);
 
-    const validRows = rows.filter((r) => r.status === "valid");
+    const validRows = rows.filter((r) => r.status === BATCH_ROW_STATUS_VALID);
 
     if (validRows.length === 0) {
       return badRequest("No valid rows to import");
@@ -78,13 +87,13 @@ export async function POST(
       const confirmedIds = importableRows.map((r) => r.id);
       await tx
         .update(importBatchRows)
-        .set({ status: "confirmed" })
+        .set({ status: BATCH_ROW_STATUS_CONFIRMED })
         .where(inArray(importBatchRows.id, confirmedIds));
 
       // Update batch status
       await tx
         .update(importBatches)
-        .set({ status: "confirmed" })
+        .set({ status: BATCH_STATUS_CONFIRMED })
         .where(eq(importBatches.id, batchId));
 
       return results;
@@ -93,7 +102,7 @@ export async function POST(
     return apiOk({
       data: {
         batchId: batch.id,
-        status: "confirmed",
+        status: BATCH_STATUS_CONFIRMED,
         importedCount: inserted.length,
         skippedCount: skippedCount ?? 0,
       },

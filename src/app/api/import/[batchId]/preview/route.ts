@@ -6,20 +6,35 @@ import { loadActiveMasterData } from "@/lib/db-helpers/masters";
 import { parseMiti } from "@/lib/nepali-date";
 import { normalizeName, normalizeVatNumber, findSimilarNames } from "@/lib/normalize";
 import { VAT_RATE, MIN_AMOUNT_TOLERANCE, AMOUNT_TOLERANCE_RATIO } from "@/lib/constants";
+import {
+  BATCH_STATUS_PENDING,
+  BATCH_ROW_STATUS_VALID,
+  BATCH_ROW_STATUS_ERROR,
+  FUEL_KEYWORDS,
+  SPARE_PARTS_KEYWORDS,
+  TYRE_KEYWORDS,
+  DEFAULT_CATEGORY_FUEL,
+  DEFAULT_CATEGORY_SPARE_PARTS,
+  DEFAULT_CATEGORY_TYRES,
+  DEFAULT_CATEGORY_GENERAL,
+  RUNTIME_NODEJS,
+} from "@/lib/status-constants";
 import { eq, and } from "drizzle-orm";
+
+export const runtime = RUNTIME_NODEJS;
 
 function inferCategoryFromItem(item: string): string {
   const normalized = item.toLowerCase().trim();
-  if (["diesel", "hsd", "petrol", "fuel", "oil"].some((k) => normalized.includes(k))) {
-    return "Fuel";
+  if (FUEL_KEYWORDS.some((k) => normalized.includes(k))) {
+    return DEFAULT_CATEGORY_FUEL;
   }
-  if (["parts", "spare", "filter", "belt", "bearing"].some((k) => normalized.includes(k))) {
-    return "Spare Parts";
+  if (SPARE_PARTS_KEYWORDS.some((k) => normalized.includes(k))) {
+    return DEFAULT_CATEGORY_SPARE_PARTS;
   }
-  if (["tyre", "tire", "tube"].some((k) => normalized.includes(k))) {
-    return "Tyres";
+  if (TYRE_KEYWORDS.some((k) => normalized.includes(k))) {
+    return DEFAULT_CATEGORY_TYRES;
   }
-  return "General";
+  return DEFAULT_CATEGORY_GENERAL;
 }
 
 export async function GET(
@@ -40,7 +55,7 @@ export async function GET(
 
     if (!batch) return notFound("Import batch not found");
     if (batch.companyId !== companyId) return forbidden("Access denied");
-    if (batch.status !== "pending") {
+    if (batch.status !== BATCH_STATUS_PENDING) {
       return badRequest(`Batch is already ${batch.status}`);
     }
 
@@ -247,7 +262,7 @@ export async function GET(
           }
         }
 
-        const status = errors.length > 0 ? "error" : "valid";
+        const status = errors.length > 0 ? BATCH_ROW_STATUS_ERROR : BATCH_ROW_STATUS_VALID;
 
         return {
           id: row.id,
@@ -397,8 +412,8 @@ export async function GET(
       ),
     );
 
-    const errorCount = resolvedRows.filter((r) => r.status === "error").length;
-    const warningCount = resolvedRows.filter((r) => r.warnings.length > 0 && r.status !== "error").length;
+    const errorCount = resolvedRows.filter((r) => r.status === BATCH_ROW_STATUS_ERROR).length;
+    const warningCount = resolvedRows.filter((r) => r.warnings.length > 0 && r.status !== BATCH_ROW_STATUS_ERROR).length;
 
     await db
       .update(importBatches)

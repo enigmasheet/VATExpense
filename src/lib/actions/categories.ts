@@ -2,6 +2,7 @@
 
 import { requireCompanyId, type ActionResult } from "./common";
 import { createCategory as createCategoryService, updateCategory as updateCategoryService, deleteCategory as deleteCategoryService, type Category } from "@/lib/services/categories";
+import { ERR_NOT_AUTHENTICATED } from "@/lib/status-constants";
 
 export type { ActionResult };
 
@@ -18,7 +19,7 @@ export async function createCategory(input: {
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await createCategoryService(companyId, input);
@@ -41,7 +42,7 @@ export async function updateCategory(
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await updateCategoryService(id, companyId, changes);
@@ -60,7 +61,7 @@ export async function deleteCategory(id: string): Promise<ActionResult<{ id: str
   try {
     companyId = await requireCompanyId();
   } catch {
-    return { ok: false, error: "Not authenticated" };
+    return { ok: false, error: ERR_NOT_AUTHENTICATED };
   }
 
   const result = await deleteCategoryService(id, companyId);

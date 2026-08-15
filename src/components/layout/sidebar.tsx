@@ -15,6 +15,10 @@ function isItemActive(href: string, pathname: string): boolean {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
+function isChildActive(href: string, pathname: string): boolean {
+  return pathname === href;
+}
+
 export function SidebarLink({ href, label, icon, active, collapsed = false, onClose }: NavItem & { active: boolean; collapsed?: boolean; onClose?: () => void }) {
   return (
     <Link
@@ -41,7 +45,7 @@ export function SidebarLink({ href, label, icon, active, collapsed = false, onCl
 function SidebarSubmenu({ item, pathname, collapsed, onClose }: { item: NavItem; pathname: string; collapsed: boolean; onClose?: () => void }) {
   const hasChildren = item.children && item.children.length > 0;
   const isActive = isItemActive(item.href, pathname);
-  const isExpanded = hasChildren && (isActive || item.children?.some((child) => isItemActive(child.href, pathname)));
+  const isExpanded = hasChildren && (isActive || item.children?.some((child) => isChildActive(child.href, pathname)));
   const [open, setOpen] = useState(isExpanded);
 
   if (collapsed || !hasChildren) {
@@ -69,7 +73,7 @@ function SidebarSubmenu({ item, pathname, collapsed, onClose }: { item: NavItem;
             <SidebarLink
               key={child.href}
               {...child}
-              active={isItemActive(child.href, pathname)}
+              active={isChildActive(child.href, pathname)}
               onClose={onClose}
             />
           ))}
@@ -92,7 +96,7 @@ export function Sidebar({
   onToggleCollapsed: () => void;
   }) {
   const pathname = usePathname();
-  const { fiscalYears, fiscalYearId, setFiscalYearId, activeCompany } = useApp();
+  const { fiscalYears, fiscalYearId, setActiveFiscalYear, activeCompany } = useApp();
   const { data: session } = useSession();
 
   const displayName = activeCompany?.brandName || activeCompany?.name || "VAT Ledger";
@@ -194,7 +198,7 @@ export function Sidebar({
                 <select
                   id="fiscal-year-select"
                   value={fiscalYearId ?? ""}
-                  onChange={(e) => e.target.value && setFiscalYearId(e.target.value)}
+                  onChange={(e) => e.target.value && setActiveFiscalYear(e.target.value)}
                   className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground"
                 >
                   {fiscalYears.map((fy) => (

@@ -1,6 +1,12 @@
 import { parseMiti } from "@/lib/nepali-date";
 import type { LedgerRow, ValidationResult } from "./ledger-types";
 import { getInvoiceKey } from "./ledger-utils";
+import {
+  STATUS_PENDING,
+  STATUS_ERROR,
+  STATUS_DUPLICATE,
+  STATUS_INCOMPLETE,
+} from "@/lib/status-constants";
 
 /**
  * Determines the fiscal year for a Bikram Sambat date using
@@ -46,46 +52,46 @@ export function validateLedgerRow(
 ): ValidationResult {
   // Incomplete: no user input at all
   if (!row.miti && !row.partyId && !row.taxableAmount) {
-    return { status: "incomplete", error: undefined, warnings: [] };
+    return { status: STATUS_INCOMPLETE, error: undefined, warnings: [] };
   }
 
   const warnings: string[] = [];
 
   // Miti
   if (!row.miti) {
-    return { status: "error", error: "Miti required", warnings };
+    return { status: STATUS_ERROR, error: "Miti required", warnings };
   }
   const fy = getFiscalYearFromMiti(row.miti);
   if (!fy.ok) {
-    return { status: "error", error: "Invalid date", warnings };
+    return { status: STATUS_ERROR, error: "Invalid date", warnings };
   }
   if (fy.fiscalYearName !== fiscalYearName) {
     return {
-      status: "error",
-      error: `Date falls in FY ${fy.fiscalYearName}`,
+      status: STATUS_ERROR,
+      error: `Date falls in FY ${fy.fiscalYearName} — expected ${fiscalYearName}. Check if this is an AD date.`,
       warnings,
     };
   }
 
   // Party
   if (!row.partyResolved || !row.partyId) {
-    return { status: "error", error: "Select a valid party", warnings };
+    return { status: STATUS_ERROR, error: "Select a valid party", warnings };
   }
 
   // Invoice number
   if (!row.invoiceNumber.trim()) {
-    return { status: "error", error: "Invoice number required", warnings };
+    return { status: STATUS_ERROR, error: "Invoice number required", warnings };
   }
 
   // Category
   if (!row.categoryId) {
-    return { status: "error", error: "Category required", warnings };
+    return { status: STATUS_ERROR, error: "Category required", warnings };
   }
 
   // Taxable amount
   if (!row.taxableAmount || parseFloat(row.taxableAmount) <= 0) {
     return {
-      status: "error",
+      status: STATUS_ERROR,
       error: "Taxable amount must be greater than 0",
       warnings,
     };
@@ -96,15 +102,15 @@ export function validateLedgerRow(
 
   if (existingInvoices.has(key)) {
     return {
-      status: "duplicate",
+      status: STATUS_DUPLICATE,
       error: `Invoice ${row.invoiceNumber} already exists for this party`,
       warnings,
     };
   }
 
   if ((duplicateIndex.get(key) ?? 0) > 1) {
-    return { status: "duplicate", error: "Duplicate in batch", warnings };
+    return { status: STATUS_DUPLICATE, error: "Duplicate in batch", warnings };
   }
 
-  return { status: "pending", error: undefined, warnings };
+  return { status: STATUS_PENDING, error: undefined, warnings };
 }

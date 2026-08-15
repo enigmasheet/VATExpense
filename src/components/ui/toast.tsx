@@ -1,11 +1,19 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  TOAST_KIND_SUCCESS,
+  TOAST_KIND_ERROR,
+  TOAST_KIND_INFO,
+  TOAST_SUCCESS_MS,
+  TOAST_INFO_MS,
+  TOAST_ERROR_MS,
+} from "@/lib/status-constants";
 
 interface Toast {
   id: number;
   message: string;
-  kind: "success" | "error" | "info";
+  kind: typeof TOAST_KIND_SUCCESS | typeof TOAST_KIND_ERROR | typeof TOAST_KIND_INFO;
 }
 
 interface ToastContextValue {
@@ -17,9 +25,9 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 let nextId = 0;
 
 const TOAST_TIMEOUT: Record<Toast["kind"], number> = {
-  success: 3000,
-  info: 3000,
-  error: 6000,
+  [TOAST_KIND_SUCCESS]: TOAST_SUCCESS_MS,
+  [TOAST_KIND_INFO]: TOAST_INFO_MS,
+  [TOAST_KIND_ERROR]: TOAST_ERROR_MS,
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -52,7 +60,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 
   const toast = useCallback(
-    (message: string, kind: Toast["kind"] = "success") => {
+    (message: string, kind: Toast["kind"] = TOAST_KIND_SUCCESS) => {
       const id = nextId++;
       setToasts((prev) => [...prev, { id, message, kind }]);
       const timer = setTimeout(() => remove(id), TOAST_TIMEOUT[kind]);
@@ -71,9 +79,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             className={`pointer-events-auto flex items-start gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg transition-all ${
-              t.kind === "success"
+              t.kind === TOAST_KIND_SUCCESS
                 ? "border-success/30 bg-success/10 text-success"
-                : t.kind === "error"
+                : t.kind === TOAST_KIND_ERROR
                   ? "border-danger/30 bg-danger/10 text-danger"
                   : "border-border bg-surface text-foreground"
             }`}

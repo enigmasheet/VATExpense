@@ -1,3 +1,12 @@
+import {
+  STATUS_PENDING,
+  STATUS_SAVING,
+  STATUS_SAVED,
+  STATUS_ERROR,
+  STATUS_DUPLICATE,
+  STATUS_INCOMPLETE,
+} from "@/lib/status-constants";
+
 export interface Party {
   id: string;
   name: string;
@@ -12,12 +21,12 @@ export interface Category {
 }
 
 export type LedgerRowStatus =
-  | "pending"
-  | "saving"
-  | "saved"
-  | "error"
-  | "duplicate"
-  | "incomplete";
+  | typeof STATUS_PENDING
+  | typeof STATUS_SAVING
+  | typeof STATUS_SAVED
+  | typeof STATUS_ERROR
+  | typeof STATUS_DUPLICATE
+  | typeof STATUS_INCOMPLETE;
 
 export interface LedgerRow {
   id: string;

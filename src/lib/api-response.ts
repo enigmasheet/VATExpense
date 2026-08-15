@@ -1,4 +1,15 @@
 import { NextResponse } from "next/server";
+import {
+  HTTP_OK,
+  HTTP_BAD_REQUEST,
+  HTTP_UNAUTHORIZED,
+  HTTP_FORBIDDEN,
+  HTTP_NOT_FOUND,
+  HTTP_CONFLICT,
+  HTTP_UNPROCESSABLE,
+  HTTP_INTERNAL_ERROR,
+  ERR_UNEXPECTED,
+} from "@/lib/status-constants";
 
 export interface ApiErrorBody {
   title: string;
@@ -8,7 +19,7 @@ export interface ApiErrorBody {
   [key: string]: unknown;
 }
 
-export function apiOk<T>(data: T, status = 200, init?: ResponseInit): NextResponse {
+export function apiOk<T>(data: T, status = HTTP_OK, init?: ResponseInit): NextResponse {
   return NextResponse.json(data, { ...init, status });
 }
 
@@ -30,32 +41,32 @@ export function apiError(options: {
 }
 
 export function badRequest(detail: string): NextResponse<ApiErrorBody> {
-  return apiError({ title: "Bad Request", detail, status: 400 });
+  return apiError({ title: "Bad Request", detail, status: HTTP_BAD_REQUEST });
 }
 
 export function unprocessableEntity(detail: string, errors: string[]): NextResponse<ApiErrorBody> {
-  return apiError({ title: "Unprocessable Entity", detail, status: 422, errors });
+  return apiError({ title: "Unprocessable Entity", detail, status: HTTP_UNPROCESSABLE, errors });
 }
 
 export function notFound(detail: string): NextResponse<ApiErrorBody> {
-  return apiError({ title: "Not Found", detail, status: 404 });
+  return apiError({ title: "Not Found", detail, status: HTTP_NOT_FOUND });
 }
 
 export function conflict(
   detail: string,
   extra?: Record<string, unknown>,
 ): NextResponse<ApiErrorBody> {
-  return apiError({ title: "Conflict", detail, status: 409, extra });
+  return apiError({ title: "Conflict", detail, status: HTTP_CONFLICT, extra });
 }
 
-export function internalError(detail = "An unexpected error occurred"): NextResponse<ApiErrorBody> {
-  return apiError({ title: "Internal Server Error", detail, status: 500 });
+export function internalError(detail = ERR_UNEXPECTED): NextResponse<ApiErrorBody> {
+  return apiError({ title: "Internal Server Error", detail, status: HTTP_INTERNAL_ERROR });
 }
 
 export function unauthorized(detail = "Authentication required"): NextResponse<ApiErrorBody> {
-  return apiError({ title: "Unauthorized", detail, status: 401 });
+  return apiError({ title: "Unauthorized", detail, status: HTTP_UNAUTHORIZED });
 }
 
 export function forbidden(detail = "Access denied"): NextResponse<ApiErrorBody> {
-  return apiError({ title: "Forbidden", detail, status: 403 });
+  return apiError({ title: "Forbidden", detail, status: HTTP_FORBIDDEN });
 }

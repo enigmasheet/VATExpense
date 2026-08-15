@@ -1,6 +1,12 @@
 import type { LedgerRow } from "./ledger-types";
 import { calcFromTaxable, calcFromTotal } from "./ledger-calculation";
 import { createLedgerRow } from "./ledger-utils";
+import {
+  STATUS_PENDING,
+  STATUS_SAVING,
+  STATUS_SAVED,
+  STATUS_ERROR,
+} from "@/lib/status-constants";
 
 export type LedgerAction =
   | {
@@ -35,7 +41,7 @@ export type LedgerAction =
   | {
       type: "SET_ROW_RESULT";
       rowId: string;
-      status: "saved" | "error";
+      status: typeof STATUS_SAVED | typeof STATUS_ERROR;
       error?: string;
       warnings?: string[];
     }
@@ -53,13 +59,13 @@ export type LedgerAction =
 
 function clearTerminalStatus(row: LedgerRow): LedgerRow {
   if (
-    row.status !== "saved" &&
-    row.status !== "error" &&
-    row.status !== "saving"
+    row.status !== STATUS_SAVED &&
+    row.status !== STATUS_ERROR &&
+    row.status !== STATUS_SAVING
   ) {
     return row;
   }
-  return { ...row, status: "pending", error: undefined };
+  return { ...row, status: STATUS_PENDING, error: undefined };
 }
 
 export function ledgerReducer(
@@ -166,17 +172,17 @@ export function ledgerReducer(
     case "RESET_STATUS": {
       return rows.map((r) => {
         if (r.id !== action.rowId) return r;
-        return { ...r, status: "pending", error: undefined };
+        return { ...r, status: STATUS_PENDING, error: undefined };
       });
     }
 
     case "CLEAR_SAVED": {
-      return rows.filter((r) => r.status !== "saved");
+      return rows.filter((r) => r.status !== STATUS_SAVED);
     }
 
     case "MARK_PENDING_AS_SAVING": {
       return rows.map((r) =>
-        r.status === "pending" ? { ...r, status: "saving" as const } : r,
+        r.status === STATUS_PENDING ? { ...r, status: STATUS_SAVING } : r,
       );
     }
 
@@ -194,8 +200,8 @@ export function ledgerReducer(
 
     case "MARK_SAVING_AS_ERROR": {
       return rows.map((r) =>
-        r.status === "saving"
-          ? { ...r, status: "error" as const, error: action.error }
+        r.status === STATUS_SAVING
+          ? { ...r, status: STATUS_ERROR, error: action.error }
           : r,
       );
     }
@@ -209,7 +215,7 @@ export function ledgerReducer(
         if (!result) return r;
         return {
           ...r,
-          status: result.ok ? ("saved" as const) : ("error" as const),
+          status: result.ok ? STATUS_SAVED : STATUS_ERROR,
           error: result.error,
           warnings: result.warnings,
         };

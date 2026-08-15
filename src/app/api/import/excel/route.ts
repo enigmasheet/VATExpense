@@ -3,11 +3,20 @@ import { importBatches, importBatchRows, fiscalYears } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { VAT_RATE, BATCH_SIZE_LIMIT } from "@/lib/constants";
+import {
+  BATCH_STATUS_PENDING,
+  BATCH_ROW_STATUS_PENDING,
+  HTTP_CREATED,
+  IMPORT_BODY_SIZE_LIMIT,
+  IMPORT_DATE_FORMAT,
+  ALLOWED_IMPORT_EXTENSIONS,
+  RUNTIME_NODEJS,
+} from "@/lib/status-constants";
 import * as XLSX from "xlsx";
 import { eq, and } from "drizzle-orm";
 
-export const runtime = "nodejs";
-export const maxBodySize = "10mb";
+export const runtime = RUNTIME_NODEJS;
+export const maxBodySize = IMPORT_BODY_SIZE_LIMIT;
 
 interface ParsedRow {
   miti: string;
@@ -105,13 +114,13 @@ export async function POST(request: Request) {
 
   // Validate file extension
   const ext = file.name.split(".").pop()?.toLowerCase();
-  if (!["xlsx", "xls", "csv"].includes(ext || "")) {
+  if (!ALLOWED_IMPORT_EXTENSIONS.includes(ext || "")) {
     return badRequest("File must be .xlsx, .xls, or .csv");
   }
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const workbook = XLSX.read(buffer, { type: "buffer", dateNF: "DD/MM/YYYY" });
+    const workbook = XLSX.read(buffer, { type: "buffer", dateNF: IMPORT_DATE_FORMAT });
     const sheetName = workbook.SheetNames[0];
     if (!sheetName) return badRequest("File has no sheets");
 
@@ -150,7 +159,7 @@ export async function POST(request: Request) {
         companyId,
         fiscalYearId,
         filename: file.name,
-        status: "pending",
+        status: BATCH_STATUS_PENDING,
         rowCount: rows.length,
       })
       .returning();
@@ -180,7 +189,7 @@ export async function POST(request: Request) {
       batchRows.push({
         batchId: batch.id,
         rowIndex: i + 1,
-        status: "pending",
+        status: BATCH_ROW_STATUS_PENDING,
         rawMiti: row.miti,
         rawInvoiceNumber: row.invoiceNumber,
         rawPartyName: row.partyName,
@@ -205,10 +214,10 @@ export async function POST(request: Request) {
         batchId: batch.id,
         filename: file.name,
         rowCount: rows.length,
-        status: "pending",
+        status: BATCH_STATUS_PENDING,
         warnings,
       },
-    }, 201);
+    }, HTTP_CREATED);
   } catch (err) {
     console.error("POST /api/import/excel failed", err);
     return internalError();

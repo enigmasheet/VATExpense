@@ -37,6 +37,7 @@ interface AppContextValue {
   fiscalYears: FiscalYear[];
   fiscalYearId: string | null;
   setFiscalYearId: (id: string) => void;
+  setActiveFiscalYear: (id: string) => Promise<void>;
   activeFiscalYear: FiscalYear | null;
   loading: boolean;
 }
@@ -102,6 +103,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(FY_KEY, id);
   }, []);
 
+  const setActiveFiscalYear = useCallback(async (id: string) => {
+    try {
+      const { setActiveFiscalYear: activateAction } = await import("@/lib/actions/fiscal-years");
+      const result = await activateAction(id);
+      if (result.ok) {
+        setFiscalYearIdState(id);
+        localStorage.setItem(FY_KEY, id);
+        setFiscalYears((prev) =>
+          prev.map((fy) => ({ ...fy, isActive: fy.id === id })),
+        );
+      }
+    } catch (e) {
+      console.error("Failed to set active fiscal year:", e);
+    }
+  }, []);
+
   const activeFiscalYear = useMemo(
     () => fiscalYears.find((fy) => fy.id === fiscalYearId) ?? null,
     [fiscalYears, fiscalYearId],
@@ -120,10 +137,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       fiscalYears,
       fiscalYearId,
       setFiscalYearId,
+      setActiveFiscalYear,
       activeFiscalYear,
       loading,
     }),
-    [companies, companyId, activeCompany, fiscalYears, fiscalYearId, setFiscalYearId, activeFiscalYear, loading],
+    [companies, companyId, activeCompany, fiscalYears, fiscalYearId, setFiscalYearId, setActiveFiscalYear, activeFiscalYear, loading],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -4,8 +4,15 @@ import { badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { NEPALI_MONTHS, type NepaliMonth } from "@/lib/nepali-date";
 import { and, eq, sql, type SQL } from "drizzle-orm";
+import {
+  HTTP_NOT_FOUND,
+  CONTENT_TYPE_JSON,
+  CONTENT_TYPE_CSV,
+  CONTENT_TYPE_XLSX,
+  RUNTIME_NODEJS,
+} from "@/lib/status-constants";
 
-export const runtime = "nodejs";
+export const runtime = RUNTIME_NODEJS;
 
 export async function GET(request: Request) {
   const companyId = await requireCompanyIdFromSession(request);
@@ -74,7 +81,7 @@ export async function GET(request: Request) {
     if (rows.length === 0) {
       return new Response(
         JSON.stringify({ error: "No expenses found for this month" }),
-        { status: 404, headers: { "Content-Type": "application/json" } },
+        { status: HTTP_NOT_FOUND, headers: { "Content-Type": CONTENT_TYPE_JSON } },
       );
     }
 
@@ -102,7 +109,7 @@ export async function GET(request: Request) {
 
       return new Response(csv, {
         headers: {
-          "Content-Type": "text/csv",
+          "Content-Type": CONTENT_TYPE_CSV,
           "Content-Disposition": `attachment; filename="vat-report-${companyName}-${fyName}-${nepaliMonth}.csv"`,
         },
       });
@@ -182,7 +189,7 @@ export async function GET(request: Request) {
 
     return new Response(buf, {
       headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Type": CONTENT_TYPE_XLSX,
         "Content-Disposition": `attachment; filename="vat-report-${companyName}-${fyName}-${nepaliMonth}.xlsx"`,
       },
     });
