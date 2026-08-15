@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useLedgerSave } from "@/hooks/expenses/use-ledger-save";
 import { useLedgerNavigation } from "@/hooks/expenses/use-ledger-navigation";
-import { ledgerReducer, type FixActionType } from "@/lib/expenses/ledger-reducer";
+import { ledgerReducer } from "@/lib/expenses/ledger-reducer";
 import { createLedgerRow, getInvoiceKey } from "@/lib/expenses/ledger-utils";
-import { validateLedgerRow, buildDuplicateIndex, type FixableAction } from "@/lib/expenses/ledger-validation";
+import { validateLedgerRow, buildDuplicateIndex } from "@/lib/expenses/ledger-validation";
 import { useToast } from "@/components/ui/toast";
 import {
   STATUS_PENDING,

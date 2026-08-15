@@ -99,10 +99,6 @@ export function ExpensesListClient({
     router.push(PATH_EXPENSES);
   }
 
-  function goToPage(p: number) {
-    router.push(buildUrl({ page: p, q, partyId, categoryId, month }));
-  }
-
   async function confirmDeleteExpense() {
     if (!deleteTarget) return;
     const result = await deleteExpense(deleteTarget.id);
