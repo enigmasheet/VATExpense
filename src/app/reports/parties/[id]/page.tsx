@@ -95,6 +95,22 @@ export default async function PartyStatementPage({ params, searchParams }: Props
           </p>
         </div>
         <div className="flex gap-2">
+          <a
+            href={`/api/export/parties/${partyId}?fiscalYearId=${selectedFiscalYear.id}&format=xlsx`}
+            download
+          >
+            <Button variant="secondary" size="sm">
+              Export Excel
+            </Button>
+          </a>
+          <a
+            href={`/api/export/parties/${partyId}?fiscalYearId=${selectedFiscalYear.id}&format=csv`}
+            download
+          >
+            <Button variant="secondary" size="sm">
+              Export CSV
+            </Button>
+          </a>
           <Link href={`/reports/parties?fiscalYearId=${selectedFiscalYear.id}`}>
             <Button variant="secondary" size="sm">
               Back to Party Report
