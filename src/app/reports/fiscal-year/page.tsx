@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCompanyId, getActiveFiscalYear, getFiscalYearReport } from "@/lib/server-data";
 import { formatAmount } from "@/lib/format";
 import { FiscalYearReportExport } from "@/components/fiscal-year-report-export";
@@ -56,11 +57,18 @@ export default async function FiscalYearReportPage() {
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-semibold text-foreground">By Month</h2>
         <DataTable
-          rowClassName={(month) => (month.expenseCount > 0 ? "" : "text-muted")}
+          rowClassName={(month) => (month.expenseCount > 0 ? "hover:bg-surface-subtle cursor-pointer" : "text-muted")}
           columns={[
             {
               header: "Month",
-              cell: (month) => <span className="font-medium">{month.nepaliMonth}</span>,
+              cell: (month) => (
+                <Link
+                  href={`/reports/monthly?month=${month.nepaliMonth}`}
+                  className={month.expenseCount > 0 ? "font-medium text-primary hover:underline" : "font-medium"}
+                >
+                  {month.nepaliMonth}
+                </Link>
+              ),
             },
             {
               header: "Expenses",

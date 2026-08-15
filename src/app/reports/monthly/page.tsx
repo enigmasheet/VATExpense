@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCompanyId, getActiveFiscalYear, getMonthlyReport } from "@/lib/server-data";
 import { NEPALI_MONTHS } from "@/lib/nepali-date";
 import { formatAmount } from "@/lib/format";
@@ -37,6 +38,10 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
 
   const report = await getMonthlyReport(companyId, activeFiscalYear.id, nepaliMonth);
 
+  const monthIndex = NEPALI_MONTHS.indexOf(nepaliMonth);
+  const prevMonth = monthIndex > 0 ? NEPALI_MONTHS[monthIndex - 1] : null;
+  const nextMonth = monthIndex < NEPALI_MONTHS.length - 1 ? NEPALI_MONTHS[monthIndex + 1] : null;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between">
@@ -46,11 +51,30 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
             Category breakdown for {nepaliMonth} · FY {activeFiscalYear.name}
           </p>
         </div>
-        <MonthlyReportExport
-          companyId={companyId}
-          fiscalYearId={activeFiscalYear.id}
-          nepaliMonth={nepaliMonth}
-        />
+        <div className="flex items-center gap-3">
+          {prevMonth && (
+            <Link
+              href={`/reports/monthly?month=${prevMonth}`}
+              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-muted hover:bg-surface-hover"
+            >
+              ← {prevMonth}
+            </Link>
+          )}
+          <MonthSelector currentMonth={nepaliMonth} />
+          {nextMonth && (
+            <Link
+              href={`/reports/monthly?month=${nextMonth}`}
+              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-muted hover:bg-surface-hover"
+            >
+              {nextMonth} →
+            </Link>
+          )}
+          <MonthlyReportExport
+            companyId={companyId}
+            fiscalYearId={activeFiscalYear.id}
+            nepaliMonth={nepaliMonth}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -72,10 +96,18 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
           </div>
         ) : (
           <DataTable
+            rowClassName={() => "hover:bg-surface-subtle cursor-pointer"}
             columns={[
               {
                 header: "Category",
-                cell: (cat) => <span className="font-medium">{cat.categoryName}</span>,
+                cell: (cat) => (
+                  <Link
+                    href={`/expenses?categoryId=${cat.categoryId}&month=${nepaliMonth}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {cat.categoryName}
+                  </Link>
+                ),
               },
               {
                 header: "Expenses",
@@ -124,9 +156,6 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
           />
         )}
       </section>
-
-      {/* Month selector - client-side navigation */}
-      <MonthSelector currentMonth={nepaliMonth} />
     </div>
   );
 }
