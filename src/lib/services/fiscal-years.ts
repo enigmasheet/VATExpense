@@ -59,7 +59,7 @@ export async function createFiscalYear(
 export async function updateFiscalYear(
   id: string,
   companyId: string,
-  changes: { name?: string; isActive?: boolean },
+  changes: { name?: string; startYear?: number; endYear?: number; isActive?: boolean },
 ): Promise<ServiceResult<FiscalYear>> {
   if (changes.isActive) {
     await db.transaction(async (tx) => {
@@ -70,6 +70,8 @@ export async function updateFiscalYear(
 
       const values: Record<string, unknown> = {};
       if (changes.name !== undefined) values.name = changes.name;
+      if (changes.startYear !== undefined) values.startYear = changes.startYear;
+      if (changes.endYear !== undefined) values.endYear = changes.endYear;
       if (changes.isActive !== undefined) values.isActive = changes.isActive;
 
       await tx
@@ -90,6 +92,8 @@ export async function updateFiscalYear(
 
   const values: Record<string, unknown> = {};
   if (changes.name !== undefined) values.name = changes.name;
+  if (changes.startYear !== undefined) values.startYear = changes.startYear;
+  if (changes.endYear !== undefined) values.endYear = changes.endYear;
   if (changes.isActive !== undefined) values.isActive = changes.isActive;
 
   if (Object.keys(values).length === 0) {

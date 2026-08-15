@@ -25,13 +25,11 @@ export const createCompanySchema = z.object({
 export const createLocationSchema = z.object({
   companyId: companyIdSchema,
   name: z.string().trim().min(1, "Name is required").max(MAX_NAME_LENGTH),
-  isActive: z.boolean().optional().default(true),
 });
 
 export const createCategorySchema = z.object({
   companyId: companyIdSchema,
   name: z.string().trim().min(1, "Name is required").max(MAX_NAME_LENGTH),
-  isActive: z.boolean().optional().default(true),
 });
 
 export const createPartySchema = z.object({
@@ -45,7 +43,6 @@ export const createPartySchema = z.object({
   phone: optionalTextToNull,
   whatsapp: optionalTextToNull,
   comment: optionalTextToNull,
-  isActive: z.boolean().optional().default(true),
 });
 
 export const createFiscalYearSchema = z.object({
@@ -53,7 +50,6 @@ export const createFiscalYearSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(MAX_FY_NAME_LENGTH),
   startYear: z.coerce.number().int().min(SUPPORTED_MIN_BS_YEAR, "Start year out of supported range").max(SUPPORTED_MAX_BS_YEAR),
   endYear: z.coerce.number().int().min(SUPPORTED_MIN_BS_YEAR, "End year out of supported range").max(SUPPORTED_MAX_BS_YEAR),
-  isActive: z.boolean().optional().default(false),
 }).refine((d) => d.endYear > d.startYear, {
   message: "endYear must be greater than startYear",
   path: ["endYear"],
@@ -70,7 +66,6 @@ export const createTruckSchema = z.object({
   name: z.string().trim().min(1, "Truck number is required").max(MAX_NAME_LENGTH),
   ownerName: optionalTextToNull,
   truckType: optionalTextToNull,
-  isActive: z.boolean().optional().default(true),
 });
 
 export const updateTruckSchema = z.object({
@@ -97,3 +92,40 @@ export const updatePartySchema = z.object({
 });
 
 export type UpdatePartyInput = z.infer<typeof updatePartySchema>;
+
+export const updateCategorySchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(MAX_NAME_LENGTH).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const updateLocationSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(MAX_NAME_LENGTH).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const updateFiscalYearSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(MAX_FY_NAME_LENGTH).optional(),
+  startYear: z.coerce.number().int().min(SUPPORTED_MIN_BS_YEAR).max(SUPPORTED_MAX_BS_YEAR).optional(),
+  endYear: z.coerce.number().int().min(SUPPORTED_MIN_BS_YEAR).max(SUPPORTED_MAX_BS_YEAR).optional(),
+  isActive: z.boolean().optional(),
+}).refine((d) => d.startYear === undefined || d.endYear === undefined || d.endYear > d.startYear, {
+  message: "endYear must be greater than startYear",
+  path: ["endYear"],
+});
+
+export const updateCompanySchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(MAX_NAME_LENGTH).optional(),
+  vatNumber: optionalTextToNull.optional(),
+  address: optionalTextToNull.optional(),
+  phone: optionalTextToNull.optional(),
+  email: optionalTextToNull.optional(),
+  defaultVatRate: z.preprocess(
+    (v) => (v === null || v === undefined || v === "" ? undefined : toFixedStr(v, 2)),
+    z.string().regex(/^\d+(\.\d+)?$/, "Invalid default VAT rate").optional(),
+  ),
+});
+
+export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
+export type UpdateLocationInput = z.infer<typeof updateLocationSchema>;
+export type UpdateFiscalYearInput = z.infer<typeof updateFiscalYearSchema>;
+export type UpdateCompanyInput = z.infer<typeof updateCompanySchema>;

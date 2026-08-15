@@ -11,7 +11,7 @@ import { PartyFormModal } from "@/components/party-form-modal";
 import { useToast } from "@/components/ui/toast";
 
 import { VAT_RATE, VAT_RATE_DEFAULT } from "@/lib/constants";
-import { VAT_FACTOR } from "@/lib/expenses/ledger-calculation";
+import { calcFromTaxable as calcVatFromTaxable, calcFromTotal as calcVatFromTotal } from "@/lib/expenses/ledger-calculation";
 import { MessageList, type Message } from "@/components/ui/alert";
 
 interface FormValues {
@@ -149,8 +149,7 @@ export function ExpenseForm({
   function calcFromTaxable(taxableStr: string) {
     const taxable = Number(taxableStr);
     if (!Number.isFinite(taxable) || taxable <= 0) return;
-    const vat = round2((taxable * VAT_RATE) / 100);
-    const total = round2(taxable + vat);
+    const { vat, total } = calcVatFromTaxable(taxable);
     setValues((v) => ({
       ...v,
       taxableAmount: taxableStr,
@@ -162,8 +161,7 @@ export function ExpenseForm({
   function calcFromTotal(totalStr: string) {
     const total = Number(totalStr);
     if (!Number.isFinite(total) || total <= 0) return;
-    const taxable = round2(total / VAT_FACTOR);
-    const vat = round2(total - taxable);
+    const { taxable, vat } = calcVatFromTotal(total);
     setValues((v) => ({
       ...v,
       taxableAmount: String(taxable),

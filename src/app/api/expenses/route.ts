@@ -17,8 +17,9 @@ import {
   notFound,
   internalError,
 } from "@/lib/api-response";
-import { requireCompanyIdFromSession } from "@/lib/api-auth";
+import { requireCompanyIdFromSession, getSessionUser } from "@/lib/api-auth";
 import { findFiscalYearByIdAndCompany, findPartyByIdAndCompany } from "@/lib/db-helpers/entities";
+import { resolveFiscalYear } from "@/lib/actions/expenses-helpers";
 import { parseMiti } from "@/lib/nepali-date";
 import { checkInvoiceDuplicate, findSuspiciousDuplicates } from "@/lib/expenses/duplicates";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@/lib/constants";
@@ -126,6 +127,9 @@ export async function POST(request: Request) {
   const companyId = await requireCompanyIdFromSession(request);
   if (typeof companyId !== "string") return companyId;
 
+  const user = await getSessionUser();
+  const userId = user?.id;
+
   let body: unknown;
   try {
     body = await request.json();
@@ -139,22 +143,32 @@ export async function POST(request: Request) {
   const input = { ...parsed.data, companyId };
 
   try {
-    const company = (
-      await db.select().from(companies).where(eq(companies.id, input.companyId)).limit(1)
-    )[0];
+    // Parallel lookups for independent entities
+    const [company, party] = await Promise.all([
+      db.select().from(companies).where(eq(companies.id, input.companyId)).limit(1).then((r) => r[0]),
+      findPartyByIdAndCompany(input.partyId, input.companyId),
+    ]);
+
     if (!company) return notFound("Company not found");
-
-    const fiscalYear = await findFiscalYearByIdAndCompany(input.fiscalYearId, input.companyId);
-    if (!fiscalYear) return notFound("Fiscal year not found for this company");
-
-    const party = await findPartyByIdAndCompany(input.partyId, input.companyId);
     if (!party) return notFound("Party not found for this company");
+
+    // Resolve fiscal year — use provided ID or auto-resolve from miti
+    let fiscalYearId: string;
+    if (input.fiscalYearId) {
+      const fy = await findFiscalYearByIdAndCompany(input.fiscalYearId, input.companyId);
+      if (!fy) return notFound("Fiscal year not found for this company");
+      fiscalYearId = fy.id;
+    } else {
+      const resolved = await resolveFiscalYear(input.companyId, input.miti);
+      if ("error" in resolved) return notFound(resolved.error);
+      fiscalYearId = resolved.fiscalYearId;
+    }
 
     const vatRate = input.vatRate ?? company.defaultVatRate;
 
     const fingerprint = {
       companyId: input.companyId,
-      fiscalYearId: input.fiscalYearId,
+      fiscalYearId,
       partyId: input.partyId,
       invoiceNumber: input.invoiceNumber ?? null,
       miti: input.miti,
@@ -163,7 +177,12 @@ export async function POST(request: Request) {
       totalAmount: input.totalAmount,
     };
 
-    const duplicate = await checkInvoiceDuplicate(fingerprint);
+    // Parallel duplicate checks
+    const [duplicate, suspicious] = await Promise.all([
+      checkInvoiceDuplicate(fingerprint),
+      !input.invoiceNumber ? findSuspiciousDuplicates(fingerprint) : Promise.resolve([]),
+    ]);
+
     if (duplicate) {
       return conflict(
         duplicate.level === "exact"
@@ -177,13 +196,10 @@ export async function POST(request: Request) {
     }
 
     const warnings: string[] = [];
-    if (!input.invoiceNumber) {
-      const suspicious = await findSuspiciousDuplicates(fingerprint);
-      if (suspicious.length > 0) {
-        warnings.push(
-          `${suspicious.length} similar expense(s) already exist without an invoice number — possibly a duplicate`,
-        );
-      }
+    if (suspicious.length > 0) {
+      warnings.push(
+        `${suspicious.length} similar expense(s) already exist without an invoice number — possibly a duplicate`,
+      );
     }
 
     const toleranceWarnings = validateAmounts({
@@ -203,7 +219,7 @@ export async function POST(request: Request) {
       .insert(expenses)
       .values({
         companyId: input.companyId,
-        fiscalYearId: input.fiscalYearId,
+        fiscalYearId,
         partyId: input.partyId,
         categoryId: input.categoryId,
         locationId: input.locationId ?? null,
@@ -219,6 +235,8 @@ export async function POST(request: Request) {
         totalAmount: input.totalAmount,
         vatRate,
         remarks: input.remarks ?? null,
+        createdBy: userId ?? null,
+        updatedBy: userId ?? null,
       })
       .returning();
 

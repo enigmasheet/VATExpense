@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   if (!parsed.ok) return unprocessableEntity("Validation failed", parsed.errors);
 
   try {
-    const { name, ownerName, truckType, isActive } = parsed.data;
+    const { name, ownerName, truckType } = parsed.data;
     const normalizedName = normalizeName(name);
 
     const existing = await db
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
     const [created] = await db
       .insert(trucks)
-      .values({ companyId, name, normalizedName, ownerName: ownerName ?? null, truckType: truckType ?? null, isActive })
+      .values({ companyId, name, normalizedName, ownerName: ownerName ?? null, truckType: truckType ?? null, isActive: true })
       .returning();
     return apiOk({ data: created }, 201);
   } catch (err) {

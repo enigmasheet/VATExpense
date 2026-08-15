@@ -35,6 +35,7 @@ export async function GET(request: Request) {
   try {
     const where = and(...conditions);
 
+    // Single query with category grouping - compute totals from rows in JS
     const categoryBreakdown = await db
       .select({
         categoryId: expenses.categoryId,
@@ -50,15 +51,16 @@ export async function GET(request: Request) {
       .groupBy(expenses.categoryId, categories.name)
       .orderBy(sql`SUM(${expenses.totalAmount}) DESC`);
 
-    const totals = await db
-      .select({
-        totalTaxableAmount: sql<string>`COALESCE(SUM(${expenses.taxableAmount}), 0)`,
-        totalVatAmount: sql<string>`COALESCE(SUM(${expenses.vatAmount}), 0)`,
-        totalAmount: sql<string>`COALESCE(SUM(${expenses.totalAmount}), 0)`,
-        expenseCount: sql<number>`COUNT(*)`,
-      })
-      .from(expenses)
-      .where(where);
+    // Compute totals from category breakdown (single query instead of two)
+    const totals = categoryBreakdown.reduce(
+      (acc, row) => ({
+        totalTaxableAmount: String(Number(acc.totalTaxableAmount) + Number(row.totalTaxableAmount)),
+        totalVatAmount: String(Number(acc.totalVatAmount) + Number(row.totalVatAmount)),
+        totalAmount: String(Number(acc.totalAmount) + Number(row.totalAmount)),
+        expenseCount: acc.expenseCount + row.expenseCount,
+      }),
+      { totalTaxableAmount: "0", totalVatAmount: "0", totalAmount: "0", expenseCount: 0 },
+    );
 
     return apiOk({
       data: {
@@ -66,12 +68,7 @@ export async function GET(request: Request) {
         fiscalYearId,
         companyId,
         categories: categoryBreakdown,
-        totals: {
-          totalTaxableAmount: totals[0].totalTaxableAmount,
-          totalVatAmount: totals[0].totalVatAmount,
-          totalAmount: totals[0].totalAmount,
-          expenseCount: totals[0].expenseCount,
-        },
+        totals,
       },
     });
   } catch (err) {

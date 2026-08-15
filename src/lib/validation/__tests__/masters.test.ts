@@ -221,25 +221,6 @@ describe("createTruckSchema", () => {
     });
     expect(result.ok).toBe(true);
   });
-
-  it("defaults isActive to true", () => {
-    const result = safeParse(createTruckSchema, validInput);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data.isActive).toBe(true);
-    }
-  });
-
-  it("accepts isActive: false", () => {
-    const result = safeParse(createTruckSchema, {
-      ...validInput,
-      isActive: false,
-    });
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data.isActive).toBe(false);
-    }
-  });
 });
 
 describe("updateTruckSchema", () => {

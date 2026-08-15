@@ -20,7 +20,10 @@ export function requiredNumeric(scale: number) {
 
 export const expenseInputSchema = z.object({
   companyId: companyIdSchema,
-  fiscalYearId: z.uuid("fiscalYearId must be a valid UUID"),
+  fiscalYearId: z.preprocess(
+    (v) => (v === null || v === undefined || v === "" ? null : v),
+    z.uuid("fiscalYearId must be a valid UUID").nullable().optional(),
+  ),
   partyId: z.uuid("partyId must be a valid UUID"),
   categoryId: z.uuid("categoryId must be a valid UUID"),
   locationId: z.preprocess(

@@ -38,38 +38,44 @@ export async function GET(request: Request) {
     const wb = XLSX.utils.book_new();
 
     if (detail) {
-      // Detailed export - one sheet per month with all rows
+      // Detailed export - fetch all expenses in ONE query, group by month in JS
+      const allRows = await db
+        .select({
+          nepaliMonth: expenses.nepaliMonth,
+          miti: expenses.miti,
+          invoiceNumber: expenses.invoiceNumber,
+          partyName: parties.name,
+          partyVatNumber: parties.vatNumber,
+          categoryName: categories.name,
+          locationName: locations.name,
+          item: expenses.item,
+          quantity: expenses.quantity,
+          rate: expenses.rate,
+          taxableAmount: expenses.taxableAmount,
+          vatAmount: expenses.vatAmount,
+          totalAmount: expenses.totalAmount,
+          vatRate: expenses.vatRate,
+          remarks: expenses.remarks,
+          createdAt: expenses.createdAt,
+        })
+        .from(expenses)
+        .leftJoin(parties, eq(expenses.partyId, parties.id))
+        .leftJoin(categories, eq(expenses.categoryId, categories.id))
+        .leftJoin(locations, eq(expenses.locationId, locations.id))
+        .where(and(...conditions))
+        .orderBy(sql`${expenses.miti} desc, ${expenses.createdAt} desc`);
+
+      // Group by month in JS
+      const monthGroups = new Map<string, typeof allRows>();
+      for (const row of allRows) {
+        const month = row.nepaliMonth;
+        if (!monthGroups.has(month)) monthGroups.set(month, []);
+        monthGroups.get(month)!.push(row);
+      }
+
       for (const month of NEPALI_MONTHS) {
-        const monthConditions: SQL[] = [
-          ...conditions,
-          eq(expenses.nepaliMonth, month),
-        ];
-
-        const rows = await db
-          .select({
-            miti: expenses.miti,
-            invoiceNumber: expenses.invoiceNumber,
-            partyName: parties.name,
-            partyVatNumber: parties.vatNumber,
-            categoryName: categories.name,
-            locationName: locations.name,
-            item: expenses.item,
-            quantity: expenses.quantity,
-            rate: expenses.rate,
-            taxableAmount: expenses.taxableAmount,
-            vatAmount: expenses.vatAmount,
-            totalAmount: expenses.totalAmount,
-            vatRate: expenses.vatRate,
-            remarks: expenses.remarks,
-          })
-          .from(expenses)
-          .leftJoin(parties, eq(expenses.partyId, parties.id))
-          .leftJoin(categories, eq(expenses.categoryId, categories.id))
-          .leftJoin(locations, eq(expenses.locationId, locations.id))
-          .where(and(...monthConditions))
-          .orderBy(sql`${expenses.miti} desc, ${expenses.createdAt} desc`);
-
-        if (rows.length === 0) continue;
+        const rows = monthGroups.get(month);
+        if (!rows || rows.length === 0) continue;
 
         const data = rows.map((r, i) => ({
           "S.N.": i + 1,

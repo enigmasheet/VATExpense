@@ -10,9 +10,10 @@ import {
   notFound,
   internalError,
 } from "@/lib/api-response";
-import { requireCompanyIdFromSession } from "@/lib/api-auth";
+import { requireCompanyIdFromSession, getSessionUser } from "@/lib/api-auth";
 import { findExpenseById } from "@/lib/db-helpers/expenses";
 import { parseMiti } from "@/lib/nepali-date";
+import { checkInvoiceDuplicate, findSuspiciousDuplicates } from "@/lib/expenses/duplicates";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -22,6 +23,10 @@ const patchSchema = expenseInputSchema
   .extend({
     rowVersion: z.coerce.number().int().min(1, "rowVersion is required"),
   });
+
+const deleteSchema = z.object({
+  rowVersion: z.coerce.number().int().min(1, "rowVersion is required").optional(),
+});
 
 export async function GET(
   request: Request,
@@ -72,6 +77,9 @@ export async function PATCH(
       });
     }
 
+    const user = await getSessionUser();
+    const userId = user?.id;
+
     const values: Record<string, unknown> = {};
 
     const miti = changes.miti;
@@ -119,10 +127,59 @@ export async function PATCH(
 
     const warnings = validateAmounts(merged);
 
+    // Duplicate detection on PATCH (check if the updated expense would match another)
+    const effectiveFiscalYearId = (values.fiscalYearId as string) ?? current.fiscalYearId;
+    const effectivePartyId = (values.partyId as string) ?? current.partyId;
+    const effectiveInvoiceNumber = (values.invoiceNumber as string | null) ?? current.invoiceNumber;
+    const effectiveMiti = (values.miti as string) ?? current.miti;
+
+    const fingerprint = {
+      companyId,
+      fiscalYearId: effectiveFiscalYearId,
+      partyId: effectivePartyId,
+      invoiceNumber: effectiveInvoiceNumber,
+      miti: effectiveMiti,
+      taxableAmount: merged.taxableAmount,
+      vatAmount: merged.vatAmount,
+      totalAmount: merged.totalAmount,
+    };
+
+    // Skip duplicate check if nothing that affects duplicates changed
+    const affectsDuplicates =
+      values.fiscalYearId !== undefined ||
+      values.partyId !== undefined ||
+      values.invoiceNumber !== undefined ||
+      values.miti !== undefined ||
+      values.taxableAmount !== undefined ||
+      values.vatAmount !== undefined ||
+      values.totalAmount !== undefined;
+
+    if (affectsDuplicates) {
+      const duplicate = await checkInvoiceDuplicate(fingerprint, id);
+      if (duplicate) {
+        return conflict(
+          duplicate.level === "exact"
+            ? "This exact invoice has already been recorded for this party and fiscal year"
+            : "An invoice with this number already exists for this party and fiscal year — review before saving",
+          { duplicateLevel: duplicate.level, existing: duplicate.existing },
+        );
+      }
+
+      if (!effectiveInvoiceNumber) {
+        const suspicious = await findSuspiciousDuplicates(fingerprint, id);
+        if (suspicious.length > 0) {
+          warnings.push(
+            `${suspicious.length} similar expense(s) already exist without an invoice number — possibly a duplicate`,
+          );
+        }
+      }
+    }
+
     const [updated] = await db
       .update(expenses)
       .set({
         ...values,
+        updatedBy: userId ?? null,
         rowVersion: current.rowVersion + 1,
         updatedAt: sql`now()`,
       })
@@ -150,18 +207,51 @@ export async function DELETE(
   const companyId = await requireCompanyIdFromSession(request);
   if (typeof companyId !== "string") return companyId;
 
+  let body: unknown = {};
+  try {
+    if (request.headers.get("content-type")?.includes("application/json")) {
+      body = await request.json();
+    }
+  } catch {
+    // ignore parse errors for DELETE with no body
+  }
+
+  const parsed = deleteSchema.safeParse(body);
+  if (!parsed.success) return badRequest(parsed.error.issues.map((i) => i.message).join("; "));
+
   try {
     const current = await findExpenseById(id, companyId);
     if (!current || current.isDeleted) return notFound("Expense not found");
 
-    await db
+    // Optimistic concurrency check if rowVersion provided
+    if (parsed.data.rowVersion !== undefined && current.rowVersion !== parsed.data.rowVersion) {
+      return conflict("This expense was changed by someone else — refresh and try again", {
+        currentRowVersion: current.rowVersion,
+        sentRowVersion: parsed.data.rowVersion,
+      });
+    }
+
+    const result = await db
       .update(expenses)
       .set({
         isDeleted: true,
         deletedAt: sql`now()`,
         updatedAt: sql`now()`,
       })
-      .where(and(eq(expenses.id, id), eq(expenses.companyId, companyId)));
+      .where(
+        and(
+          eq(expenses.id, id),
+          eq(expenses.companyId, companyId),
+          eq(expenses.rowVersion, current.rowVersion),
+        ),
+      )
+      .returning();
+
+    if (!result.length) {
+      return conflict("This expense was changed by someone else — refresh and try again", {
+        currentRowVersion: current.rowVersion,
+      });
+    }
 
     return apiOk({ data: { id, isDeleted: true } });
   } catch (err) {

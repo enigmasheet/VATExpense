@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import {
   getCompanyId,
   getActiveFiscalYear,
@@ -131,18 +132,23 @@ export default async function PartyPurchaseReportPage({ searchParams }: Props) {
           </div>
         ) : (
           <DataTable
-            columns={[
-              {
-                header: "Party",
-                cell: (row) => (
-                  <div className="flex flex-col">
-                    <span className="font-medium">{row.partyName}</span>
-                    {row.vatNumber && (
-                      <span className="text-xs text-muted">VAT {row.vatNumber}</span>
-                    )}
-                  </div>
-                ),
-              },
+              columns={[
+                {
+                  header: "Party",
+                  cell: (row) => (
+                    <Link
+                      href={`/reports/parties/${row.partyId}?fiscalYearId=${selectedFiscalYear.id}`}
+                      className="hover:underline"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium text-primary">{row.partyName}</span>
+                        {row.vatNumber && (
+                          <span className="text-xs text-muted">VAT {row.vatNumber}</span>
+                        )}
+                      </div>
+                    </Link>
+                  ),
+                },
               {
                 header: "Transactions",
                 align: "right",
@@ -175,26 +181,31 @@ export default async function PartyPurchaseReportPage({ searchParams }: Props) {
             rows={report}
             getKey={(row) => row.partyId}
             mobileCard={(row) => (
-              <>
-                <div className="flex items-start justify-between">
-                  <div className="flex flex-col">
-                    <span className="font-medium">{row.partyName}</span>
-                    {row.vatNumber && (
-                      <span className="text-xs text-muted">VAT {row.vatNumber}</span>
-                    )}
+              <Link
+                href={`/reports/parties/${row.partyId}?fiscalYearId=${selectedFiscalYear.id}`}
+                className="block"
+              >
+                <>
+                  <div className="flex items-start justify-between">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-primary">{row.partyName}</span>
+                      {row.vatNumber && (
+                        <span className="text-xs text-muted">VAT {row.vatNumber}</span>
+                      )}
+                    </div>
+                    <span className="tabular-amount font-medium">
+                      {formatAmount(row.totalAmount)}
+                    </span>
                   </div>
-                  <span className="tabular-amount font-medium">
-                    {formatAmount(row.totalAmount)}
-                  </span>
-                </div>
-                <div className="mt-1 flex gap-4 text-xs text-muted">
-                  <span>
-                    {row.expenseCount} transaction{row.expenseCount === 1 ? "" : "s"}
-                  </span>
-                  <span>Taxable {formatAmount(row.totalTaxableAmount)}</span>
-                  <span>VAT {formatAmount(row.totalVatAmount)}</span>
-                </div>
-              </>
+                  <div className="mt-1 flex gap-4 text-xs text-muted">
+                    <span>
+                      {row.expenseCount} transaction{row.expenseCount === 1 ? "" : "s"}
+                    </span>
+                    <span>Taxable {formatAmount(row.totalTaxableAmount)}</span>
+                    <span>VAT {formatAmount(row.totalVatAmount)}</span>
+                  </div>
+                </>
+              </Link>
             )}
           />
         )}

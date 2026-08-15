@@ -40,12 +40,12 @@ interface Option {
 }
 
 /**
- * Renders a company-scoped master-record management page.
+ * Renders a company-scoped master-record management page with full CRUD.
  *
  * @param title - The page title
  * @param description - Optional text displayed below the title
  * @param listUrl - API endpoint used to list and modify records
- * @param fields - Definitions for fields in the add-record form
+ * @param fields - Definitions for fields in the add-record form (also used for edit)
  * @param columns - Custom columns rendered for each record
  * @param buildPayload - Creates the API payload from the company ID and form values
  * @param emptyHint - Message displayed when no records exist
@@ -122,7 +122,12 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
 
   function startEdit(item: T) {
     setEditingId(item.id);
-    setEditValues({ name: item.name });
+    const initial: Record<string, string> = {};
+    for (const f of fields) {
+      const val = item[f.name as keyof T];
+      initial[f.name] = val !== null && val !== undefined ? String(val) : "";
+    }
+    setEditValues(initial);
   }
 
   function cancelEdit() {
@@ -135,9 +140,16 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
     setSubmitting(true);
     setError(null);
     try {
+      const body: Record<string, unknown> = {};
+      for (const f of fields) {
+        if (f.name in editValues) {
+          const val = editValues[f.name];
+          body[f.name] = val === "" ? null : val;
+        }
+      }
       await api(`${listUrl}/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name: editValues.name }),
+        body: JSON.stringify(body),
       });
       setEditingId(null);
       setEditValues({});
@@ -184,22 +196,57 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
     ? items.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()))
     : items;
 
+  function renderEditField(field: FieldSpec) {
+    const id = `edit-${field.name}`;
+    const value = editValues[field.name] ?? "";
+
+    if (field.type === "select") {
+      return (
+        <Field key={field.name} label={field.label} htmlFor={id}>
+          <Select
+            id={id}
+            value={value}
+            onChange={(e) => setEditValues((v) => ({ ...v, [field.name]: e.target.value }))}
+          >
+            <option value="">—</option>
+            {(options[field.optionsUrl ?? ""] ?? []).map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      );
+    }
+
+    return (
+      <Field key={field.name} label={field.label} htmlFor={id}>
+        <Input
+          id={id}
+          type={field.type}
+          required={field.required}
+          placeholder={field.placeholder}
+          value={value}
+          onChange={(e) => setEditValues((v) => ({ ...v, [field.name]: e.target.value }))}
+        />
+      </Field>
+    );
+  }
+
   const nameCell = (item: T) =>
     editingId === item.id ? (
-      <div className="flex items-center gap-2">
-        <input
-          type="text"
-          value={editValues.name ?? ""}
-          onChange={(e) => setEditValues((v) => ({ ...v, name: e.target.value }))}
-          className="h-8 rounded-md border border-border bg-background px-2 text-sm"
-          autoFocus
-        />
-        <Button size="sm" onClick={() => saveEdit(item.id)} disabled={submitting}>
-          Save
-        </Button>
-        <Button size="sm" variant="ghost" onClick={cancelEdit}>
-          Cancel
-        </Button>
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {fields.map(renderEditField)}
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => saveEdit(item.id)} disabled={submitting}>
+            {submitting ? "Saving..." : "Save"}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={cancelEdit}>
+            Cancel
+          </Button>
+        </div>
       </div>
     ) : (
       <span className="font-medium">{item.name}</span>
@@ -220,16 +267,12 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
   const mobileCard = (item: T) =>
     editingId === item.id ? (
       <div className="flex flex-col gap-3">
-        <input
-          type="text"
-          value={editValues.name ?? ""}
-          onChange={(e) => setEditValues((v) => ({ ...v, name: e.target.value }))}
-          className="h-10 rounded-md border border-border bg-background px-3 text-sm"
-          autoFocus
-        />
+        <div className="grid grid-cols-1 gap-3">
+          {fields.map(renderEditField)}
+        </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={() => saveEdit(item.id)} disabled={submitting}>
-            Save
+            {submitting ? "Saving..." : "Save"}
           </Button>
           <Button size="sm" variant="ghost" onClick={cancelEdit}>
             Cancel
@@ -329,7 +372,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
         </div>
         <div>
           <Button type="submit" disabled={submitting || !companyId}>
-            {submitting ? "Saving…" : "Add"}
+            {submitting ? "Saving..." : "Add"}
           </Button>
         </div>
         {error && <p className="text-sm text-danger">{error}</p>}

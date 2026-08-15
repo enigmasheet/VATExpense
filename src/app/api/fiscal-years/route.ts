@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   if (!parsed.ok) return unprocessableEntity("Validation failed", parsed.errors);
 
   try {
-    const { name, startYear, endYear, isActive } = parsed.data;
+    const { name, startYear, endYear } = parsed.data;
 
     const existing = await db
       .select({ id: fiscalYears.id, name: fiscalYears.name })
@@ -49,16 +49,15 @@ export async function POST(request: Request) {
     }
 
     const created = await db.transaction(async (tx) => {
-      if (isActive) {
-        await tx
-          .update(fiscalYears)
-          .set({ isActive: false, updatedAt: sql`now()` })
-          .where(eq(fiscalYears.companyId, companyId));
-      }
+      // Deactivate other active fiscal years for this company
+      await tx
+        .update(fiscalYears)
+        .set({ isActive: false, updatedAt: sql`now()` })
+        .where(and(eq(fiscalYears.companyId, companyId), eq(fiscalYears.isActive, true)));
 
       const [result] = await tx
         .insert(fiscalYears)
-        .values({ companyId, name, startYear, endYear, isActive })
+        .values({ companyId, name, startYear, endYear, isActive: true })
         .returning();
 
       return result;
