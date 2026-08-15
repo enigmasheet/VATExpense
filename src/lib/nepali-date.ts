@@ -24,7 +24,7 @@ export const SUPPORTED_MAX_BS_YEAR = 2099;
 export const FISCAL_YEAR_START_MONTH = 4;
 
 const MITI_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
-const MITI_DDMMYYYY_RE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+const MITI_DDMMYYYY_RE = /^(\d{2})[\/\-.](\d{2})[\/\-.](\d{4})$/;
 
 /**
  * Normalizes a Miti string to `YYYY-MM-DD` when it is provided in a supported format.
@@ -74,7 +74,7 @@ export function parseMiti(miti: string): ParsedMiti {
   const normalMiti = normalizeMiti(miti);
   const match = MITI_RE.exec(normalMiti);
   if (!match) {
-    return { ok: false, error: "Miti must be in YYYY-MM-DD or DD/MM/YYYY format" };
+    return { ok: false, error: "Miti must be in YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, or DD.MM.YYYY format" };
   }
   const year = Number(match[1]);
   const month = Number(match[2]); // 1-based

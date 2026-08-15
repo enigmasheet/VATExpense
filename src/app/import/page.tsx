@@ -97,11 +97,12 @@ export default function ImportPage() {
 
   const downloadTemplate = useCallback(() => {
     const headers = [
-      "Miti (DD/MM/YYYY BS)",
+      "Sno",
+      "Miti",
       "Invoice No",
       "Party",
       "Location",
-      "VAT No",
+      "Vat No",
       "Item",
       "Quantity",
       "Rate",
@@ -110,17 +111,18 @@ export default function ImportPage() {
       "Total Amount",
     ];
     const sampleRow = [
-      "2082-05-15",
-      "INV-001",
-      "Kathmandu Transport Co.",
-      "Kathmandu",
-      "123456789",
-      "Diesel",
-      "100",
-      "130",
-      "13000",
-      "1690",
-      "14690",
+      "1",
+      "01/11/2082",
+      "3217",
+      "dinbandhu oil and trading house",
+      "birgunj",
+      "300035058",
+      "diesel",
+      "42.84",
+      "120.8",
+      "5175.07",
+      "672.76",
+      "5848",
     ];
     const csvContent = [headers.join(","), sampleRow.join(",")].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });

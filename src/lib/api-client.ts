@@ -20,8 +20,9 @@ export async function api<T>(
   url: string,
   options?: RequestInit,
 ): Promise<T> {
+  const isFormData = options?.body instanceof FormData;
   const res = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
+    ...(isFormData ? {} : { headers: { "Content-Type": "application/json" } }),
     ...options,
   });
   const body = await res.json().catch(() => null);

@@ -1,9 +1,10 @@
 import { db } from "@/lib/db";
-import { importBatches, importBatchRows } from "@/lib/db/schema";
+import { importBatches, importBatchRows, fiscalYears } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
-import { VAT_RATE } from "@/lib/constants";
+import { VAT_RATE, BATCH_SIZE_LIMIT } from "@/lib/constants";
 import * as XLSX from "xlsx";
+import { eq, and } from "drizzle-orm";
 
 export const runtime = "nodejs";
 export const maxBodySize = "10mb";
@@ -38,8 +39,12 @@ function mapExcelRow(row: Record<string, unknown>): ParsedRow | null {
   const values = Object.values(row).map((v) => (v === null || v === undefined ? "" : String(v).trim()));
   if (values.every((v) => v === "")) return null;
 
+  const normalizeHeader = (s: string) =>
+    s.toLowerCase().replace(/[\n\r]+/g, " ").replace(/\s+/g, " ").trim();
+
   const get = (header: string) => {
-    const key = Object.keys(row).find((k) => k.toLowerCase().includes(header.toLowerCase()));
+    const normalizedSearch = header.toLowerCase();
+    const key = Object.keys(row).find((k) => normalizeHeader(k).includes(normalizedSearch));
     return key ? String(row[key] ?? "").trim() : "";
   };
 
@@ -90,6 +95,14 @@ export async function POST(request: Request) {
   if (!file) return badRequest("file is required");
   if (!fiscalYearId) return badRequest("fiscalYearId is required");
 
+  // Validate fiscalYearId exists and belongs to this company
+  const [fy] = await db
+    .select({ id: fiscalYears.id })
+    .from(fiscalYears)
+    .where(and(eq(fiscalYears.id, fiscalYearId), eq(fiscalYears.companyId, companyId)))
+    .limit(1);
+  if (!fy) return badRequest("Invalid fiscal year for this company");
+
   // Validate file extension
   const ext = file.name.split(".").pop()?.toLowerCase();
   if (!["xlsx", "xls", "csv"].includes(ext || "")) {
@@ -98,7 +111,7 @@ export async function POST(request: Request) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const workbook = XLSX.read(buffer, { type: "buffer", dateNF: "DD/MM/YYYY" });
     const sheetName = workbook.SheetNames[0];
     if (!sheetName) return badRequest("File has no sheets");
 
@@ -111,7 +124,7 @@ export async function POST(request: Request) {
     }
 
     const sheet = workbook.Sheets[sheetName];
-    const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+    const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: false });
 
     if (jsonData.length === 0) {
       return badRequest("File has no data rows");
@@ -125,6 +138,10 @@ export async function POST(request: Request) {
 
     if (rows.length === 0) {
       return badRequest("No valid data rows found in file");
+    }
+
+    if (rows.length > BATCH_SIZE_LIMIT) {
+      return badRequest(`File has ${rows.length} rows, exceeding the maximum of ${BATCH_SIZE_LIMIT}`);
     }
 
     const [batch] = await db

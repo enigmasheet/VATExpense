@@ -1,12 +1,12 @@
 import { db } from "@/lib/db";
-import { importBatches, importBatchRows, parties, categories, locations } from "@/lib/db/schema";
+import { importBatches, importBatchRows, parties, categories, locations, expenses } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError, notFound, forbidden } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { loadActiveMasterData } from "@/lib/db-helpers/masters";
 import { parseMiti } from "@/lib/nepali-date";
 import { normalizeName, normalizeVatNumber, findSimilarNames } from "@/lib/normalize";
-import { VAT_RATE } from "@/lib/constants";
-import { eq } from "drizzle-orm";
+import { VAT_RATE, MIN_AMOUNT_TOLERANCE, AMOUNT_TOLERANCE_RATIO } from "@/lib/constants";
+import { eq, and } from "drizzle-orm";
 
 function inferCategoryFromItem(item: string): string {
   const normalized = item.toLowerCase().trim();
@@ -68,6 +68,11 @@ export async function GET(
     const createdCategories: typeof existingCategories = [];
     const createdLocations: typeof existingLocations = [];
 
+    // Deduplication maps: collapse concurrent creates for the same normalized name into one DB insert
+    const pendingPartyCreates = new Map<string, Promise<(typeof existingParties)[number]>>();
+    const pendingCategoryCreates = new Map<string, Promise<(typeof existingCategories)[number]>>();
+    const pendingLocationCreates = new Map<string, Promise<(typeof existingLocations)[number]>>();
+
     const resolvedRows = await Promise.all(
       rows.map(async (row) => {
         const errors: string[] = [];
@@ -78,54 +83,72 @@ export async function GET(
         const partySuggestions: string[] = [];
         if (!party && autoCreate && row.rawPartyName) {
           const partyNorm = normalizeName(row.rawPartyName);
-          const [newParty] = await db
-            .insert(parties)
-            .values({
-              companyId: batch.companyId,
-              name: row.rawPartyName!,
-              normalizedName: partyNorm,
-              vatNumber: normalizeVatNumber(row.rawVatNumber),
-            })
-            .returning();
-          party = newParty;
-          partyMap.set(partyNorm, newParty);
-          createdParties.push(newParty);
-          warnings.push(`Party "${row.rawPartyName}" will be created`);
+          if (!pendingPartyCreates.has(partyNorm)) {
+            pendingPartyCreates.set(
+              partyNorm,
+              db
+                .insert(parties)
+                .values({
+                  companyId: batch.companyId,
+                  name: row.rawPartyName!,
+                  normalizedName: partyNorm,
+                  vatNumber: normalizeVatNumber(row.rawVatNumber),
+                  normalizedVatNumber: normalizeVatNumber(row.rawVatNumber),
+                })
+                .returning()
+                .then((r) => r[0]),
+            );
+          }
+          party = await pendingPartyCreates.get(partyNorm)!;
+          if (!partyMap.has(partyNorm)) {
+            partyMap.set(partyNorm, party);
+            createdParties.push(party);
+            warnings.push(`Party "${row.rawPartyName}" will be created`);
+          }
         } else if (!party) {
           errors.push(`Party "${row.rawPartyName}" not found`);
-          // Find fuzzy suggestions
           if (row.rawPartyName) {
             const matches = findSimilarNames(row.rawPartyName, existingPartyNames);
             partySuggestions.push(...matches);
           }
         }
 
-        // Resolve category
-        let category = categoryMap.get(normalizeName(row.rawCategoryName ?? ""));
+        // Resolve category — always infer from item when category is empty
+        const rawCatName = row.rawCategoryName ?? "";
+        let category = categoryMap.get(normalizeName(rawCatName));
         const categorySuggestions: string[] = [];
-        if (!category && autoCreate) {
-          const inferredName = row.rawCategoryName || inferCategoryFromItem(row.rawItem ?? "");
-          const categoryNorm = normalizeName(inferredName);
+        const inferredName = rawCatName || inferCategoryFromItem(row.rawItem ?? "");
+        const categoryNorm = normalizeName(inferredName);
+
+        if (!category) {
           category = categoryMap.get(categoryNorm);
-          if (!category) {
-            const [newCategory] = await db
-              .insert(categories)
-              .values({
-                companyId: batch.companyId,
-                name: inferredName,
-                normalizedName: categoryNorm,
-              })
-              .returning();
-            category = newCategory;
-            categoryMap.set(categoryNorm, newCategory);
-            createdCategories.push(newCategory);
+        }
+
+        if (!category && autoCreate) {
+          if (!pendingCategoryCreates.has(categoryNorm)) {
+            pendingCategoryCreates.set(
+              categoryNorm,
+              db
+                .insert(categories)
+                .values({
+                  companyId: batch.companyId,
+                  name: inferredName,
+                  normalizedName: categoryNorm,
+                })
+                .returning()
+                .then((r) => r[0]),
+            );
+          }
+          category = await pendingCategoryCreates.get(categoryNorm)!;
+          if (!categoryMap.has(categoryNorm)) {
+            categoryMap.set(categoryNorm, category);
+            createdCategories.push(category);
             warnings.push(`Category "${inferredName}" will be created`);
           }
         } else if (!category) {
-          errors.push(`Category "${row.rawCategoryName}" not found`);
-          // Find fuzzy suggestions
-          if (row.rawCategoryName) {
-            const matches = findSimilarNames(row.rawCategoryName, existingCategoryNames);
+          errors.push(`Category "${inferredName}" not found`);
+          if (inferredName) {
+            const matches = findSimilarNames(inferredName, existingCategoryNames);
             categorySuggestions.push(...matches);
           }
         }
@@ -137,17 +160,25 @@ export async function GET(
           const locationNorm = normalizeName(row.rawLocationName);
           let location = locationMap.get(locationNorm);
           if (!location && autoCreate) {
-            const [newLocation] = await db
-              .insert(locations)
-              .values({
-                companyId: batch.companyId,
-                name: row.rawLocationName!,
-                normalizedName: locationNorm,
-              })
-              .returning();
-            location = newLocation;
-            locationMap.set(locationNorm, newLocation);
-            createdLocations.push(newLocation);
+            if (!pendingLocationCreates.has(locationNorm)) {
+              pendingLocationCreates.set(
+                locationNorm,
+                db
+                  .insert(locations)
+                  .values({
+                    companyId: batch.companyId,
+                    name: row.rawLocationName!,
+                    normalizedName: locationNorm,
+                  })
+                  .returning()
+                  .then((r) => r[0]),
+              );
+            }
+            location = await pendingLocationCreates.get(locationNorm)!;
+            if (!locationMap.has(locationNorm)) {
+              locationMap.set(locationNorm, location);
+              createdLocations.push(location);
+            }
           }
           if (location) {
             resolvedLocationId = location.id;
@@ -160,19 +191,59 @@ export async function GET(
           errors.push(`Invalid miti: ${mitiResult.error}`);
         }
 
-        const taxable = parseFloat(row.rawTaxableAmount ?? "0") || 0;
-        const vat = parseFloat(row.rawVatAmount ?? "0") || 0;
-        const total = parseFloat(row.rawTotalAmount ?? "0") || 0;
+        const rawTaxable = row.rawTaxableAmount ?? "";
+        const rawVat = row.rawVatAmount ?? "";
+        const rawTotal = row.rawTotalAmount ?? "";
 
-        if (taxable <= 0) errors.push("Taxable amount must be positive");
-        if (vat < 0) errors.push("VAT amount cannot be negative");
-        if (total <= 0) errors.push("Total amount must be positive");
+        const taxable = parseFloat(rawTaxable);
+        const vat = parseFloat(rawVat);
+        const total = parseFloat(rawTotal);
 
-        // Amount consistency check (warning, not error)
-        if (taxable > 0 && vat >= 0 && total > 0) {
-          const expectedTotal = Math.round((taxable + vat) * 100) / 100;
-          if (Math.abs(expectedTotal - total) > 0.02) {
-            warnings.push(`Amount mismatch: ${taxable} + ${vat} = ${expectedTotal}, but total is ${total}`);
+        if (rawTaxable !== "" && Number.isNaN(taxable)) {
+          errors.push("Taxable amount is not a valid number");
+        }
+        if (rawVat !== "" && Number.isNaN(vat)) {
+          errors.push("VAT amount is not a valid number");
+        }
+        if (rawTotal !== "" && Number.isNaN(total)) {
+          errors.push("Total amount is not a valid number");
+        }
+
+        const taxableVal = Number.isNaN(taxable) ? 0 : taxable;
+        const vatVal = Number.isNaN(vat) ? 0 : vat;
+        const totalVal = Number.isNaN(total) ? 0 : total;
+
+        if (taxableVal <= 0) errors.push("Taxable amount must be positive");
+        if (vatVal < 0) errors.push("VAT amount cannot be negative");
+        if (totalVal <= 0) errors.push("Total amount must be positive");
+
+        // Amount consistency check using proper tolerance
+        if (taxableVal > 0 && vatVal >= 0 && totalVal > 0) {
+          const tolerance = Math.max(MIN_AMOUNT_TOLERANCE, taxableVal * AMOUNT_TOLERANCE_RATIO);
+
+          // Check taxable + vat ~= total
+          const expectedTotal = Math.round((taxableVal + vatVal) * 100) / 100;
+          if (Math.abs(expectedTotal - totalVal) > tolerance) {
+            warnings.push(`Amount mismatch: ${taxableVal} + ${vatVal} = ${expectedTotal}, but total is ${totalVal}`);
+          }
+
+          // Check taxable * vatRate / 100 ~= vat
+          const vatRate = parseFloat(row.rawVatRate || String(VAT_RATE)) || VAT_RATE;
+          const expectedVat = Math.round((taxableVal * vatRate) / 100 * 100) / 100;
+          if (Math.abs(expectedVat - vatVal) > tolerance) {
+            warnings.push(`VAT mismatch: ${taxableVal} × ${vatRate}% = ${expectedVat}, but VAT is ${vatVal}`);
+          }
+
+          // Check quantity * rate ~= taxable (if both provided)
+          if (row.rawQuantity && row.rawRate) {
+            const qty = parseFloat(row.rawQuantity);
+            const rate = parseFloat(row.rawRate);
+            if (!Number.isNaN(qty) && !Number.isNaN(rate)) {
+              const expectedTaxable = Math.round(qty * rate * 100) / 100;
+              if (Math.abs(expectedTaxable - taxableVal) > tolerance) {
+                warnings.push(`Quantity × Rate = ${expectedTaxable} differs from Taxable (${taxableVal})`);
+              }
+            }
           }
         }
 
@@ -204,9 +275,9 @@ export async function GET(
             locationName: resolvedLocationName,
             miti: mitiResult.ok ? row.rawMiti : null,
             nepaliMonth: mitiResult.ok ? mitiResult.monthName : null,
-            taxableAmount: String(taxable),
-            vatAmount: String(vat),
-            totalAmount: String(total),
+            taxableAmount: String(taxableVal),
+            vatAmount: String(vatVal),
+            totalAmount: String(totalVal),
             vatRate: row.rawVatRate || String(VAT_RATE),
           },
           errors,
@@ -222,9 +293,9 @@ export async function GET(
             resolvedLocationId,
             resolvedMiti: mitiResult.ok ? row.rawMiti : null,
             resolvedNepaliMonth: mitiResult.ok ? mitiResult.monthName : null,
-            resolvedTaxableAmount: String(taxable),
-            resolvedVatAmount: String(vat),
-            resolvedTotalAmount: String(total),
+            resolvedTaxableAmount: String(taxableVal),
+            resolvedVatAmount: String(vatVal),
+            resolvedTotalAmount: String(totalVal),
             resolvedVatRate: row.rawVatRate || String(VAT_RATE),
             errors: errors.length > 0 ? JSON.stringify(errors) : null,
           },
@@ -249,6 +320,49 @@ export async function GET(
             const others = rowIndices.filter((i) => i !== row.rowIndex);
             row.warnings.push(
               `Duplicate invoice "${inv}" also in row${others.length > 1 ? "s" : ""} ${others.join(", ")}`,
+            );
+          }
+        }
+      }
+    }
+
+    // Cross-DB duplicate detection: check for existing expenses with same invoice+party
+    const invoicePartyPairs = resolvedRows
+      .filter((r) => r.raw.invoiceNumber && r.resolved.partyId)
+      .map((r) => ({
+        rowId: r.id,
+        invoiceNumber: r.raw.invoiceNumber!.trim(),
+        partyId: r.resolved.partyId!,
+        rowIndex: r.rowIndex,
+      }));
+
+    if (invoicePartyPairs.length > 0) {
+      const existingExpenses = await db
+        .select({
+          invoiceNumber: expenses.invoiceNumber,
+          partyId: expenses.partyId,
+        })
+        .from(expenses)
+        .where(
+          and(
+            eq(expenses.companyId, batch.companyId),
+            eq(expenses.fiscalYearId, batch.fiscalYearId),
+          ),
+        );
+
+      const existingSet = new Set(
+        existingExpenses
+          .filter((e) => e.invoiceNumber)
+          .map((e) => `${e.partyId}|${e.invoiceNumber}`),
+      );
+
+      for (const pair of invoicePartyPairs) {
+        const key = `${pair.partyId}|${pair.invoiceNumber}`;
+        if (existingSet.has(key)) {
+          const row = resolvedRows.find((r) => r.id === pair.rowId);
+          if (row) {
+            row.warnings.push(
+              `Invoice "${pair.invoiceNumber}" already exists for this party in the ledger`,
             );
           }
         }
