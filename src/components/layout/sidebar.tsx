@@ -108,7 +108,7 @@ export function Sidebar({
                   active={
                     item.href === "/"
                       ? pathname === "/"
-                      : pathname === item.href
+                      : pathname === item.href || pathname.startsWith(item.href + "/")
                   }
                 />
               ))}

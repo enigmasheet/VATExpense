@@ -347,6 +347,7 @@ export async function GET(
           and(
             eq(expenses.companyId, batch.companyId),
             eq(expenses.fiscalYearId, batch.fiscalYearId),
+            eq(expenses.isDeleted, false),
           ),
         );
 

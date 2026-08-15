@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { expenses } from "@/lib/db/schema";
 import { amountsClose } from "@/lib/money";
 import { SUSPICIOUS_DUPLICATE_FETCH_LIMIT } from "@/lib/constants";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 
 export type DuplicateLevel = "exact" | "invoice";
 
@@ -25,21 +25,23 @@ export interface ExpenseFingerprint {
  */
 export async function checkInvoiceDuplicate(
   fingerprint: ExpenseFingerprint,
+  excludeId?: string,
 ): Promise<{ level: DuplicateLevel; existing: (typeof expenses.$inferSelect) } | null> {
   if (!fingerprint.invoiceNumber) return null;
+
+  const conditions = [
+    eq(expenses.companyId, fingerprint.companyId),
+    eq(expenses.fiscalYearId, fingerprint.fiscalYearId),
+    eq(expenses.partyId, fingerprint.partyId),
+    eq(expenses.invoiceNumber, fingerprint.invoiceNumber),
+    eq(expenses.isDeleted, false),
+  ];
+  if (excludeId) conditions.push(ne(expenses.id, excludeId));
 
   const existing = await db
     .select()
     .from(expenses)
-    .where(
-      and(
-        eq(expenses.companyId, fingerprint.companyId),
-        eq(expenses.fiscalYearId, fingerprint.fiscalYearId),
-        eq(expenses.partyId, fingerprint.partyId),
-        eq(expenses.invoiceNumber, fingerprint.invoiceNumber),
-        eq(expenses.isDeleted, false),
-      ),
-    )
+    .where(and(...conditions))
     .limit(1);
 
   if (existing.length === 0) return null;
@@ -61,21 +63,23 @@ export async function checkInvoiceDuplicate(
  */
 export async function findSuspiciousDuplicates(
   fingerprint: ExpenseFingerprint,
+  excludeId?: string,
 ): Promise<(typeof expenses.$inferSelect)[]> {
   if (fingerprint.invoiceNumber) return [];
+
+  const conditions = [
+    eq(expenses.companyId, fingerprint.companyId),
+    eq(expenses.fiscalYearId, fingerprint.fiscalYearId),
+    eq(expenses.partyId, fingerprint.partyId),
+    eq(expenses.miti, fingerprint.miti),
+    eq(expenses.isDeleted, false),
+  ];
+  if (excludeId) conditions.push(ne(expenses.id, excludeId));
 
   const candidates = await db
     .select()
     .from(expenses)
-    .where(
-      and(
-        eq(expenses.companyId, fingerprint.companyId),
-        eq(expenses.fiscalYearId, fingerprint.fiscalYearId),
-        eq(expenses.partyId, fingerprint.partyId),
-        eq(expenses.miti, fingerprint.miti),
-        eq(expenses.isDeleted, false),
-      ),
-    )
+    .where(and(...conditions))
     .limit(SUSPICIOUS_DUPLICATE_FETCH_LIMIT);
 
   return candidates.filter(

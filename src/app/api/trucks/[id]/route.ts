@@ -1,5 +1,7 @@
-import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
+import { apiOk, badRequest, notFound, unprocessableEntity, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
+import { updateTruckSchema } from "@/lib/validation/masters";
+import { safeParse } from "@/lib/validation/utils";
 import * as truckService from "@/lib/services/trucks";
 
 /**
@@ -20,19 +22,15 @@ export async function PATCH(
     return badRequest("Invalid JSON body");
   }
 
-  const data = body as Record<string, unknown>;
-  const changes: { name?: string; ownerName?: string | null; truckType?: string | null; isActive?: boolean } = {};
-  if ("name" in data && typeof data.name === "string") changes.name = data.name;
-  if ("ownerName" in data) changes.ownerName = data.ownerName as string | null;
-  if ("truckType" in data) changes.truckType = data.truckType as string | null;
-  if ("isActive" in data && typeof data.isActive === "boolean") changes.isActive = data.isActive;
+  const parsed = safeParse(updateTruckSchema, body);
+  if (!parsed.ok) return unprocessableEntity("Validation failed", parsed.errors);
 
-  if (Object.keys(changes).length === 0) {
+  if (Object.keys(parsed.data).length === 0) {
     return badRequest("No valid fields to update");
   }
 
   try {
-    const result = await truckService.updateTruck(id, companyId, changes);
+    const result = await truckService.updateTruck(id, companyId, parsed.data);
     if (!result.ok) return notFound(result.error);
     return apiOk({ data: result.data });
   } catch (err) {
