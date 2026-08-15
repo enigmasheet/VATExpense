@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Alert } from "@/components/ui/alert";
 
 interface BatchRow {
   id: string;
@@ -291,7 +292,7 @@ export default function ImportPage() {
         </div>
       </div>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <Alert kind="danger">{error}</Alert>}
 
       {result && (
         <div className="rounded-lg border border-success bg-success/10 p-4">

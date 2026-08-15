@@ -40,17 +40,18 @@ interface MessageListProps {
 }
 
 /**
- * Displays a styled list of messages based on the first message's severity.
+ * Displays a styled list of messages, each with its own severity tone.
  *
  * @param messages - The messages to display.
  */
 export function MessageList({ messages }: MessageListProps) {
   if (messages.length === 0) return null;
-  const tone = messages[0].kind;
   return (
-    <div className={`flex flex-col gap-1 rounded-lg border p-4 text-sm ${toneClass[tone]}`}>
+    <div className="flex flex-col gap-1">
       {messages.map((m, i) => (
-        <span key={i}>{m.text}</span>
+        <div key={i} className={`rounded-lg border p-4 text-sm ${toneClass[m.kind]}`}>
+          {m.text}
+        </div>
       ))}
     </div>
   );
