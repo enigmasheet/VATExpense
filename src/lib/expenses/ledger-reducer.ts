@@ -239,13 +239,12 @@ export function ledgerReducer(
     case "AUTO_FIX": {
       return rows.map((r) => {
         if (r.id !== action.rowId) return r;
-        let next = { ...r, status: STATUS_PENDING, error: undefined };
+        let next = clearTerminalStatus(r);
 
         if (action.fixType === "fillTodayMiti") {
-          next.miti = action.value;
+          next = { ...next, miti: action.value };
         } else if (action.fixType === "selectGeneralCategory") {
-          next.categoryId = action.value;
-          next.categoryName = action.categoryName ?? DEFAULT_CATEGORY_GENERAL;
+          next = { ...next, categoryId: action.value, categoryName: action.categoryName ?? DEFAULT_CATEGORY_GENERAL };
         }
 
         return next;

@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useLedgerSave } from "@/hooks/expenses/use-ledger-save";
 import { useLedgerNavigation } from "@/hooks/expenses/use-ledger-navigation";
-import { ledgerReducer } from "@/lib/expenses/ledger-reducer";
+import { ledgerReducer, type FixActionType } from "@/lib/expenses/ledger-reducer";
 import { createLedgerRow, getInvoiceKey } from "@/lib/expenses/ledger-utils";
-import { validateLedgerRow, buildDuplicateIndex } from "@/lib/expenses/ledger-validation";
+import { validateLedgerRow, buildDuplicateIndex, type FixableAction } from "@/lib/expenses/ledger-validation";
 import {
   STATUS_PENDING,
   STATUS_SAVING,
@@ -220,7 +220,13 @@ export function LedgerGrid({
         onSearchParty={searchParty}
         onDuplicate={duplicateRow}
         onRemove={(rowId) => dispatch({ type: "REMOVE_ROW", rowId })}
-        onFix={(rowId) => dispatch({ type: "RESET_STATUS", rowId })}
+        onFix={(rowId, action) => dispatch({
+          type: "AUTO_FIX",
+          rowId,
+          fixType: action.fixType,
+          value: action.value,
+          categoryName: action.categoryName,
+        })}
         onCellKeyDown={handleCellKeyDown}
       />
 

@@ -12,6 +12,7 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
+import { Pagination } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/toast";
 
 interface ExpenseRow {
@@ -289,29 +290,13 @@ export function ExpensesListClient({
         )}
       </div>
 
-      <div className="flex items-center justify-between text-sm text-muted">
-        <span>
-          Page {initialPage} of {totalPages}
-        </span>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={initialPage <= 1}
-            onClick={() => goToPage(initialPage - 1)}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={initialPage >= totalPages}
-            onClick={() => goToPage(initialPage + 1)}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <Pagination
+        page={initialPage}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        basePath={PATH_EXPENSES}
+      />
 
       <ConfirmDialog
         open={deleteTarget !== null}
