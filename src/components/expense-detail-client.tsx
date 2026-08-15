@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ExpenseForm, type ExpenseInitial } from "@/components/expenses/expense-form";
 import { formatAmount } from "@/lib/format";
 
@@ -21,6 +22,11 @@ export function ExpenseDetailClient({
   return (
     <div className="flex flex-col gap-6">
       <div>
+        <nav className="mb-2 flex items-center gap-1 text-sm text-muted">
+          <Link href="/expenses" className="hover:text-foreground">Expenses</Link>
+          <span>/</span>
+          <span className="text-foreground">Edit</span>
+        </nav>
         <h1 className="font-display text-2xl font-semibold text-foreground">Edit expense</h1>
         <p className="mt-1 text-sm text-muted">
           {initial.item} · {formatAmount(initial.totalAmount)}
