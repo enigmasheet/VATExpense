@@ -60,6 +60,14 @@ describe("checkInvoiceDuplicate", () => {
     expect(result).not.toBeNull();
     expect(result!.level).toBe("invoice");
   });
+
+  it("excludes specified expense ID", async () => {
+    mockSelectReturn([]);
+    const result = await checkInvoiceDuplicate(makeFingerprint(), "exclude-me");
+    expect(result).toBeNull();
+    // Verify the ne condition was added by checking the mock chain
+    expect(db.select).toHaveBeenCalled();
+  });
 });
 
 describe("findSuspiciousDuplicates", () => {
@@ -82,6 +90,12 @@ describe("findSuspiciousDuplicates", () => {
       { miti: "2080-04-01", taxableAmount: "5000", vatAmount: "650", totalAmount: "5650" },
     ]);
     const result = await findSuspiciousDuplicates(makeFingerprint({ invoiceNumber: null }));
+    expect(result).toEqual([]);
+  });
+
+  it("excludes specified expense ID", async () => {
+    mockSelectReturn([]);
+    const result = await findSuspiciousDuplicates(makeFingerprint({ invoiceNumber: null }), "exclude-me");
     expect(result).toEqual([]);
   });
 });

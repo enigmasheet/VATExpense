@@ -8,6 +8,10 @@ import {
   createTruckSchema,
   updatePartySchema,
   updateTruckSchema,
+  updateCategorySchema,
+  updateLocationSchema,
+  updateFiscalYearSchema,
+  updateCompanySchema,
 } from "../masters";
 import { safeParse } from "../utils";
 
@@ -252,5 +256,126 @@ describe("updateTruckSchema", () => {
   it("rejects empty name string", () => {
     const result = safeParse(updateTruckSchema, { name: "" });
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("updateCategorySchema", () => {
+  it("accepts empty object", () => {
+    const result = safeParse(updateCategorySchema, {});
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts name only", () => {
+    const result = safeParse(updateCategorySchema, { name: "Fuel" });
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts isActive only", () => {
+    const result = safeParse(updateCategorySchema, { isActive: false });
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts name and isActive", () => {
+    const result = safeParse(updateCategorySchema, { name: "Fuel", isActive: true });
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects empty name string", () => {
+    const result = safeParse(updateCategorySchema, { name: "" });
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe("updateLocationSchema", () => {
+  it("accepts empty object", () => {
+    const result = safeParse(updateLocationSchema, {});
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts name only", () => {
+    const result = safeParse(updateLocationSchema, { name: "Kathmandu" });
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts isActive only", () => {
+    const result = safeParse(updateLocationSchema, { isActive: false });
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects empty name string", () => {
+    const result = safeParse(updateLocationSchema, { name: "" });
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe("updateFiscalYearSchema", () => {
+  it("accepts empty object", () => {
+    const result = safeParse(updateFiscalYearSchema, {});
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts name only", () => {
+    const result = safeParse(updateFiscalYearSchema, { name: "2082-2083" });
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts startYear and endYear", () => {
+    const result = safeParse(updateFiscalYearSchema, { startYear: 2082, endYear: 2083 });
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts isActive only", () => {
+    const result = safeParse(updateFiscalYearSchema, { isActive: true });
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects endYear <= startYear", () => {
+    const result = safeParse(updateFiscalYearSchema, { startYear: 2083, endYear: 2082 });
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects endYear == startYear", () => {
+    const result = safeParse(updateFiscalYearSchema, { startYear: 2082, endYear: 2082 });
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe("updateCompanySchema", () => {
+  it("accepts empty object", () => {
+    const result = safeParse(updateCompanySchema, {});
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts name only", () => {
+    const result = safeParse(updateCompanySchema, { name: "Updated Co" });
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts vatNumber as null", () => {
+    const result = safeParse(updateCompanySchema, { vatNumber: null });
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts phone and email", () => {
+    const result = safeParse(updateCompanySchema, {
+      phone: "9841234567",
+      email: "info@test.com",
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts defaultVatRate", () => {
+    const result = safeParse(updateCompanySchema, { defaultVatRate: "15" });
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects empty name string", () => {
+    const result = safeParse(updateCompanySchema, { name: "" });
+    expect(result.ok).toBe(false);
+  });
+
+  it("accepts address as null", () => {
+    const result = safeParse(updateCompanySchema, { address: null });
+    expect(result.ok).toBe(true);
   });
 });
