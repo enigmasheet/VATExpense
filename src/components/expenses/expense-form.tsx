@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { api, ApiError } from "@/lib/api-client";
 import { useApp } from "@/lib/useApp";
 import { round2 } from "@/lib/money";
@@ -154,6 +155,12 @@ export function ExpenseForm({
   const [partyModalOpen, setPartyModalOpen] = useState(false);
   const [partySearch, setPartySearch] = useState("");
   const [partyResolved, setPartyResolved] = useState(false);
+  const [partyResults, setPartyResults] = useState<Party[]>([]);
+  const [partyOpen, setPartyOpen] = useState(false);
+  const [partyHighlightIdx, setPartyHighlightIdx] = useState(-1);
+  const partyInputRef = useRef<HTMLInputElement>(null);
+  const partyDropdownRef = useRef<HTMLDivElement>(null);
+  const partyPrevValueRef = useRef("");
 
   function refreshParties() {
     if (!companyId) return;
@@ -161,6 +168,56 @@ export function ExpenseForm({
       .then(({ data }) => setParties(data))
       .catch(() => toast("Failed to refresh parties", "error"));
   }
+
+  function searchParties(q: string) {
+    if (q.length < 1) {
+      setPartyResults([]);
+      setPartyOpen(false);
+      return;
+    }
+    const lower = q.toLowerCase();
+    const isVat = /\d{5,}/.test(q);
+    const matched = isVat
+      ? parties.filter((p) => p.vatNumber?.includes(q))
+      : parties.filter(
+          (p) =>
+            p.name.toLowerCase().includes(lower) ||
+            (p.vatNumber && p.vatNumber.includes(q)),
+        );
+    setPartyResults(matched.slice(0, 8));
+    setPartyOpen(matched.length > 0);
+    setPartyHighlightIdx(-1);
+  }
+
+  function selectParty(party: Party) {
+    setPartySearch(party.name);
+    setPartyResolved(true);
+    setPartyOpen(false);
+    setValues((v) => ({ ...v, partyId: party.id }));
+  }
+
+  // Click outside to close party dropdown
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (partyDropdownRef.current && !partyDropdownRef.current.contains(e.target as Node)) {
+        setPartyOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Initialize partySearch from initial values (edit mode)
+  useEffect(() => {
+    if (mode === "edit" && initial && initial.partyId && parties.length > 0) {
+      const found = parties.find((p) => p.id === initial.partyId);
+      if (found) {
+        setPartySearch(found.name);
+        setPartyResolved(true);
+        partyPrevValueRef.current = found.name;
+      }
+    }
+  }, [mode, initial, parties]);
 
   useEffect(() => {
     if (!companyId) return;
@@ -342,9 +399,10 @@ export function ExpenseForm({
             />
           </Field>
           <Field label="Party / supplier" htmlFor="e-party">
-            <div className="flex gap-2">
+            <div className="flex gap-2" ref={partyDropdownRef}>
               <div className="relative flex-1">
                 <input
+                  ref={partyInputRef}
                   id="e-party"
                   type="text"
                   required
@@ -352,18 +410,41 @@ export function ExpenseForm({
                   onChange={(e) => {
                     const val = e.target.value;
                     setPartySearch(val);
-                    const match = parties.find((p) => p.name.toLowerCase() === val.toLowerCase());
-                    if (match) {
-                      setValues((v) => ({ ...v, partyId: match.id }));
-                      setPartyResolved(true);
-                    } else {
-                      setValues((v) => ({ ...v, partyId: "" }));
-                      setPartyResolved(false);
+                    setPartyResolved(false);
+                    setValues((v) => ({ ...v, partyId: "" }));
+                    searchParties(val);
+                  }}
+                  onFocus={() => {
+                    if (partyResults.length > 0) setPartyOpen(true);
+                    else if (partySearch.length > 0) {
+                      searchParties(partySearch);
+                      setPartyOpen(partyResults.length > 0);
                     }
                   }}
-                  onFocus={() => setPartyResolved(false)}
+                  onKeyDown={(e) => {
+                    if (!partyOpen) return;
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setPartyHighlightIdx((i) => Math.min(i + 1, partyResults.length - 1));
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setPartyHighlightIdx((i) => Math.max(i - 1, 0));
+                    } else if (e.key === "Enter" && partyHighlightIdx >= 0) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      selectParty(partyResults[partyHighlightIdx]);
+                    } else if (e.key === "Escape") {
+                      setPartyOpen(false);
+                    } else if (e.key === "Tab") {
+                      setPartyOpen(false);
+                    }
+                  }}
                   placeholder="Search party by name or VAT number..."
-                  className="h-10 w-full rounded border bg-transparent px-3 pr-8 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 border-border/50"
+                  className={`h-10 w-full rounded border bg-transparent px-3 pr-8 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
+                    !partyResolved && partySearch
+                      ? "border-danger/40 bg-danger/5"
+                      : "border-border/50"
+                  }`}
                 />
                 {partyResolved && (
                   <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-emerald-500">
@@ -371,6 +452,39 @@ export function ExpenseForm({
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                     </svg>
                   </span>
+                )}
+                {partyOpen && partyResults.length > 0 && createPortal(
+                  <div
+                    role="listbox"
+                    className="fixed max-h-48 overflow-y-auto rounded-lg border border-border/50 bg-surface py-1 shadow-lg z-50"
+                    style={{
+                      top: (partyInputRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
+                      left: partyInputRef.current?.getBoundingClientRect().left ?? 0,
+                      width: partyInputRef.current?.getBoundingClientRect().width ?? 0,
+                    }}
+                  >
+                    {partyResults.map((party, idx) => (
+                      <button
+                        key={party.id}
+                        type="button"
+                        role="option"
+                        aria-selected={party.id === values.partyId}
+                        className={`block w-full px-3 py-2.5 text-left text-sm hover:bg-surface-hover ${
+                          idx === partyHighlightIdx ? "bg-surface-hover" : ""
+                        } ${party.id === values.partyId ? "font-medium text-primary" : "text-foreground"}`}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          selectParty(party);
+                        }}
+                      >
+                        <span className="font-medium">{party.name}</span>
+                        {party.vatNumber && (
+                          <span className="ml-2 text-muted">VAT: {party.vatNumber}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>,
+                  document.body,
                 )}
               </div>
               <Button type="button" variant="secondary" size="sm" onClick={() => setPartyModalOpen(true)}>

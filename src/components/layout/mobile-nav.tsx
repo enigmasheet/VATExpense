@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useApp } from "@/lib/useApp";
@@ -153,6 +153,7 @@ export function MobileHeader() {
 
 function MobileNavPanel({ onClose }: { onClose: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
   const { fiscalYears, fiscalYearId, setActiveFiscalYear, activeCompany } = useApp();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -226,7 +227,11 @@ function MobileNavPanel({ onClose }: { onClose: () => void }) {
               <select
                 id="mobile-fiscal-year-select"
                 value={fiscalYearId ?? ""}
-                onChange={(e) => e.target.value && setActiveFiscalYear(e.target.value)}
+                onChange={async (e) => {
+                  if (!e.target.value) return;
+                  await setActiveFiscalYear(e.target.value);
+                  router.refresh();
+                }}
                 className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground"
               >
                 {fiscalYears.map((fy) => (

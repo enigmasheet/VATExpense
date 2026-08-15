@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useApp } from "@/lib/useApp";
 import { PATH_LOGIN } from "@/lib/constants";
@@ -96,6 +96,7 @@ export function Sidebar({
   onToggleCollapsed: () => void;
   }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { fiscalYears, fiscalYearId, setActiveFiscalYear, activeCompany } = useApp();
   const { data: session } = useSession();
 
@@ -198,7 +199,11 @@ export function Sidebar({
                 <select
                   id="fiscal-year-select"
                   value={fiscalYearId ?? ""}
-                  onChange={(e) => e.target.value && setActiveFiscalYear(e.target.value)}
+                  onChange={async (e) => {
+                    if (!e.target.value) return;
+                    await setActiveFiscalYear(e.target.value);
+                    router.refresh();
+                  }}
                   className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground"
                 >
                   {fiscalYears.map((fy) => (
