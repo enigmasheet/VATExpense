@@ -17,8 +17,8 @@ const NAV_GROUPS: NavGroup[] = [
     title: "Main",
     items: [
       { href: "/", label: "Dashboard", icon: "dashboard" },
-      { href: "/expenses/new", label: "Add Expense", icon: "quickAdd" },
-      { href: "/expenses/create", label: "New Expense", icon: "expenses" },
+      { href: "/expenses/new", label: "Batch Entry", icon: "quickAdd" },
+      { href: "/expenses/create", label: "Quick Add", icon: "expenses" },
       { href: PATH_EXPENSES, label: "Expenses", icon: "expenses" },
       { href: "/import", label: "Import", icon: "import" },
     ],
@@ -53,5 +53,8 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
 ];
 
 export function getNavGroups(role?: string): NavGroup[] {
-  return role === ROLE_SUPER_ADMIN ? ADMIN_NAV_GROUPS : NAV_GROUPS;
+  if (role === ROLE_SUPER_ADMIN) {
+    return [...ADMIN_NAV_GROUPS, ...NAV_GROUPS];
+  }
+  return NAV_GROUPS;
 }
