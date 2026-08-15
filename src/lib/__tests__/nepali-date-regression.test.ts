@@ -182,6 +182,14 @@ describe("nepali-date regression protection", () => {
       expect(normalizeMiti("01/04/2080")).toBe("2080-04-01");
     });
 
+    it("converts DD-MM-YYYY to YYYY-MM-DD", () => {
+      expect(normalizeMiti("01-04-2080")).toBe("2080-04-01");
+    });
+
+    it("converts DD.MM.YYYY to YYYY-MM-DD", () => {
+      expect(normalizeMiti("01.04.2080")).toBe("2080-04-01");
+    });
+
     it("returns unrecognized format as-is (trimmed)", () => {
       expect(normalizeMiti("  hello  ")).toBe("hello");
     });

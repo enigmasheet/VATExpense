@@ -42,12 +42,14 @@ export async function POST(
       return badRequest("No valid rows to import");
     }
 
-    const inserted = await db.transaction(async (tx) => {
-      // Filter to rows that have all required resolved fields
-      const importableRows = validRows.filter(
-        (r) => r.resolvedPartyId && r.resolvedCategoryId && r.resolvedMiti && r.resolvedNepaliMonth,
-      );
+    // Filter to rows that have all required resolved fields
+    const importableRows = validRows.filter(
+      (r) => r.resolvedPartyId && r.resolvedCategoryId && r.resolvedMiti && r.resolvedNepaliMonth,
+    );
 
+    const skippedCount = validRows.length - importableRows.length;
+
+    const inserted = await db.transaction(async (tx) => {
       if (importableRows.length === 0) return [];
 
       // Batch insert all expenses at once
@@ -93,6 +95,7 @@ export async function POST(
         batchId: batch.id,
         status: "confirmed",
         importedCount: inserted.length,
+        skippedCount: skippedCount ?? 0,
       },
     });
   } catch (err) {

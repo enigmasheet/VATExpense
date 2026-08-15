@@ -1,12 +1,12 @@
 import { db } from "@/lib/db";
-import { importBatches, importBatchRows, parties, categories, locations } from "@/lib/db/schema";
+import { importBatches, importBatchRows, parties, categories, locations, expenses } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError, notFound, forbidden } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { loadActiveMasterData } from "@/lib/db-helpers/masters";
 import { parseMiti } from "@/lib/nepali-date";
 import { normalizeName, normalizeVatNumber, findSimilarNames } from "@/lib/normalize";
-import { VAT_RATE } from "@/lib/constants";
-import { eq } from "drizzle-orm";
+import { VAT_RATE, MIN_AMOUNT_TOLERANCE, AMOUNT_TOLERANCE_RATIO } from "@/lib/constants";
+import { eq, and } from "drizzle-orm";
 
 function inferCategoryFromItem(item: string): string {
   const normalized = item.toLowerCase().trim();
@@ -160,19 +160,59 @@ export async function GET(
           errors.push(`Invalid miti: ${mitiResult.error}`);
         }
 
-        const taxable = parseFloat(row.rawTaxableAmount ?? "0") || 0;
-        const vat = parseFloat(row.rawVatAmount ?? "0") || 0;
-        const total = parseFloat(row.rawTotalAmount ?? "0") || 0;
+        const rawTaxable = row.rawTaxableAmount ?? "";
+        const rawVat = row.rawVatAmount ?? "";
+        const rawTotal = row.rawTotalAmount ?? "";
 
-        if (taxable <= 0) errors.push("Taxable amount must be positive");
-        if (vat < 0) errors.push("VAT amount cannot be negative");
-        if (total <= 0) errors.push("Total amount must be positive");
+        const taxable = parseFloat(rawTaxable);
+        const vat = parseFloat(rawVat);
+        const total = parseFloat(rawTotal);
 
-        // Amount consistency check (warning, not error)
-        if (taxable > 0 && vat >= 0 && total > 0) {
-          const expectedTotal = Math.round((taxable + vat) * 100) / 100;
-          if (Math.abs(expectedTotal - total) > 0.02) {
-            warnings.push(`Amount mismatch: ${taxable} + ${vat} = ${expectedTotal}, but total is ${total}`);
+        if (rawTaxable !== "" && Number.isNaN(taxable)) {
+          errors.push("Taxable amount is not a valid number");
+        }
+        if (rawVat !== "" && Number.isNaN(vat)) {
+          errors.push("VAT amount is not a valid number");
+        }
+        if (rawTotal !== "" && Number.isNaN(total)) {
+          errors.push("Total amount is not a valid number");
+        }
+
+        const taxableVal = Number.isNaN(taxable) ? 0 : taxable;
+        const vatVal = Number.isNaN(vat) ? 0 : vat;
+        const totalVal = Number.isNaN(total) ? 0 : total;
+
+        if (taxableVal <= 0) errors.push("Taxable amount must be positive");
+        if (vatVal < 0) errors.push("VAT amount cannot be negative");
+        if (totalVal <= 0) errors.push("Total amount must be positive");
+
+        // Amount consistency check using proper tolerance
+        if (taxableVal > 0 && vatVal >= 0 && totalVal > 0) {
+          const tolerance = Math.max(MIN_AMOUNT_TOLERANCE, taxableVal * AMOUNT_TOLERANCE_RATIO);
+
+          // Check taxable + vat ~= total
+          const expectedTotal = Math.round((taxableVal + vatVal) * 100) / 100;
+          if (Math.abs(expectedTotal - totalVal) > tolerance) {
+            warnings.push(`Amount mismatch: ${taxableVal} + ${vatVal} = ${expectedTotal}, but total is ${totalVal}`);
+          }
+
+          // Check taxable * vatRate / 100 ~= vat
+          const vatRate = parseFloat(row.rawVatRate || String(VAT_RATE)) || VAT_RATE;
+          const expectedVat = Math.round((taxableVal * vatRate) / 100 * 100) / 100;
+          if (Math.abs(expectedVat - vatVal) > tolerance) {
+            warnings.push(`VAT mismatch: ${taxableVal} × ${vatRate}% = ${expectedVat}, but VAT is ${vatVal}`);
+          }
+
+          // Check quantity * rate ~= taxable (if both provided)
+          if (row.rawQuantity && row.rawRate) {
+            const qty = parseFloat(row.rawQuantity);
+            const rate = parseFloat(row.rawRate);
+            if (!Number.isNaN(qty) && !Number.isNaN(rate)) {
+              const expectedTaxable = Math.round(qty * rate * 100) / 100;
+              if (Math.abs(expectedTaxable - taxableVal) > tolerance) {
+                warnings.push(`Quantity × Rate = ${expectedTaxable} differs from Taxable (${taxableVal})`);
+              }
+            }
           }
         }
 
@@ -204,9 +244,9 @@ export async function GET(
             locationName: resolvedLocationName,
             miti: mitiResult.ok ? row.rawMiti : null,
             nepaliMonth: mitiResult.ok ? mitiResult.monthName : null,
-            taxableAmount: String(taxable),
-            vatAmount: String(vat),
-            totalAmount: String(total),
+            taxableAmount: String(taxableVal),
+            vatAmount: String(vatVal),
+            totalAmount: String(totalVal),
             vatRate: row.rawVatRate || String(VAT_RATE),
           },
           errors,
@@ -222,9 +262,9 @@ export async function GET(
             resolvedLocationId,
             resolvedMiti: mitiResult.ok ? row.rawMiti : null,
             resolvedNepaliMonth: mitiResult.ok ? mitiResult.monthName : null,
-            resolvedTaxableAmount: String(taxable),
-            resolvedVatAmount: String(vat),
-            resolvedTotalAmount: String(total),
+            resolvedTaxableAmount: String(taxableVal),
+            resolvedVatAmount: String(vatVal),
+            resolvedTotalAmount: String(totalVal),
             resolvedVatRate: row.rawVatRate || String(VAT_RATE),
             errors: errors.length > 0 ? JSON.stringify(errors) : null,
           },
@@ -249,6 +289,49 @@ export async function GET(
             const others = rowIndices.filter((i) => i !== row.rowIndex);
             row.warnings.push(
               `Duplicate invoice "${inv}" also in row${others.length > 1 ? "s" : ""} ${others.join(", ")}`,
+            );
+          }
+        }
+      }
+    }
+
+    // Cross-DB duplicate detection: check for existing expenses with same invoice+party
+    const invoicePartyPairs = resolvedRows
+      .filter((r) => r.raw.invoiceNumber && r.resolved.partyId)
+      .map((r) => ({
+        rowId: r.id,
+        invoiceNumber: r.raw.invoiceNumber!.trim(),
+        partyId: r.resolved.partyId!,
+        rowIndex: r.rowIndex,
+      }));
+
+    if (invoicePartyPairs.length > 0) {
+      const existingExpenses = await db
+        .select({
+          invoiceNumber: expenses.invoiceNumber,
+          partyId: expenses.partyId,
+        })
+        .from(expenses)
+        .where(
+          and(
+            eq(expenses.companyId, batch.companyId),
+            eq(expenses.fiscalYearId, batch.fiscalYearId),
+          ),
+        );
+
+      const existingSet = new Set(
+        existingExpenses
+          .filter((e) => e.invoiceNumber)
+          .map((e) => `${e.partyId}|${e.invoiceNumber}`),
+      );
+
+      for (const pair of invoicePartyPairs) {
+        const key = `${pair.partyId}|${pair.invoiceNumber}`;
+        if (existingSet.has(key)) {
+          const row = resolvedRows.find((r) => r.id === pair.rowId);
+          if (row) {
+            row.warnings.push(
+              `Invoice "${pair.invoiceNumber}" already exists for this party in the ledger`,
             );
           }
         }
