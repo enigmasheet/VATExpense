@@ -19,6 +19,7 @@ import {
 } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { findFiscalYearByIdAndCompany, findPartyByIdAndCompany } from "@/lib/db-helpers/entities";
+import { resolveFiscalYear } from "@/lib/actions/expenses-helpers";
 import { parseMiti } from "@/lib/nepali-date";
 import { checkInvoiceDuplicate, findSuspiciousDuplicates } from "@/lib/expenses/duplicates";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@/lib/constants";
@@ -144,8 +145,17 @@ export async function POST(request: Request) {
     )[0];
     if (!company) return notFound("Company not found");
 
-    const fiscalYear = await findFiscalYearByIdAndCompany(input.fiscalYearId, input.companyId);
-    if (!fiscalYear) return notFound("Fiscal year not found for this company");
+    // Resolve fiscal year — use provided ID or auto-resolve from miti
+    let fiscalYearId: string;
+    if (input.fiscalYearId) {
+      const fy = await findFiscalYearByIdAndCompany(input.fiscalYearId, input.companyId);
+      if (!fy) return notFound("Fiscal year not found for this company");
+      fiscalYearId = fy.id;
+    } else {
+      const resolved = await resolveFiscalYear(input.companyId, input.miti);
+      if ("error" in resolved) return notFound(resolved.error);
+      fiscalYearId = resolved.fiscalYearId;
+    }
 
     const party = await findPartyByIdAndCompany(input.partyId, input.companyId);
     if (!party) return notFound("Party not found for this company");
@@ -154,7 +164,7 @@ export async function POST(request: Request) {
 
     const fingerprint = {
       companyId: input.companyId,
-      fiscalYearId: input.fiscalYearId,
+      fiscalYearId,
       partyId: input.partyId,
       invoiceNumber: input.invoiceNumber ?? null,
       miti: input.miti,
@@ -203,7 +213,7 @@ export async function POST(request: Request) {
       .insert(expenses)
       .values({
         companyId: input.companyId,
-        fiscalYearId: input.fiscalYearId,
+        fiscalYearId,
         partyId: input.partyId,
         categoryId: input.categoryId,
         locationId: input.locationId ?? null,

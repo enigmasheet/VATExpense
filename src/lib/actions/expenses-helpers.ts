@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { expenses, fiscalYears, parties } from "@/lib/db/schema";
 import { validateAmounts, type ExpenseInput } from "@/lib/validation/expense";
-import { parseMiti } from "@/lib/nepali-date";
+import { parseMiti, fyName } from "@/lib/nepali-date";
 import {
   checkInvoiceDuplicate,
   findSuspiciousDuplicates,
@@ -9,10 +9,48 @@ import {
 } from "@/lib/expenses/duplicates";
 import { and, eq } from "drizzle-orm";
 
+/**
+ * Resolves a fiscal year from a BS miti date. Looks up by companyId + FY name.
+ * If not found, auto-creates a new fiscal year.
+ */
+export async function resolveFiscalYear(
+  companyId: string,
+  miti: string,
+): Promise<{ fiscalYearId: string; fiscalYear: typeof fiscalYears.$inferSelect } | { error: string }> {
+  const parsed = parseMiti(miti);
+  if (!parsed.ok) return { error: `Invalid date: ${parsed.error}` };
+
+  const name = fyName(parsed.fiscalYear);
+
+  // Look up existing FY
+  const [existing] = await db
+    .select()
+    .from(fiscalYears)
+    .where(and(eq(fiscalYears.companyId, companyId), eq(fiscalYears.name, name)))
+    .limit(1);
+
+  if (existing) return { fiscalYearId: existing.id, fiscalYear: existing };
+
+  // Auto-create FY
+  const [created] = await db
+    .insert(fiscalYears)
+    .values({
+      companyId,
+      name,
+      startYear: parsed.fiscalYear,
+      endYear: parsed.fiscalYear + 1,
+      isActive: false,
+    })
+    .returning();
+
+  return { fiscalYearId: created.id, fiscalYear: created };
+}
+
 export type { ExpenseInput };
 
 export interface ExpenseContext {
   fiscalYear: typeof fiscalYears.$inferSelect;
+  fiscalYearId: string;
   party: typeof parties.$inferSelect;
   vatRate: string;
 }
@@ -29,10 +67,11 @@ export interface DuplicateMessages {
 export function buildExpenseFingerprint(
   companyId: string,
   data: ExpenseInput,
+  fiscalYearId: string,
 ): ExpenseFingerprint {
   return {
     companyId,
-    fiscalYearId: data.fiscalYearId,
+    fiscalYearId,
     partyId: data.partyId,
     invoiceNumber: data.invoiceNumber ?? null,
     miti: data.miti,
@@ -55,16 +94,23 @@ export async function loadExpenseReferences(
   data: ExpenseInput,
   defaultVatRate: string,
 ): Promise<{ context: ExpenseContext } | { error: string }> {
-  const fiscalYear = (
-    await db
+  // Resolve fiscal year — use provided ID or auto-resolve from miti
+  let fiscalYear: typeof fiscalYears.$inferSelect;
+  if (data.fiscalYearId) {
+    const [fy] = await db
       .select()
       .from(fiscalYears)
       .where(
         and(eq(fiscalYears.id, data.fiscalYearId), eq(fiscalYears.companyId, companyId)),
       )
-      .limit(1)
-  )[0];
-  if (!fiscalYear) return { error: "Fiscal year not found" };
+      .limit(1);
+    if (!fy) return { error: "Fiscal year not found" };
+    fiscalYear = fy;
+  } else {
+    const resolved = await resolveFiscalYear(companyId, data.miti);
+    if ("error" in resolved) return { error: resolved.error };
+    fiscalYear = resolved.fiscalYear;
+  }
 
   const party = (
     await db
@@ -78,6 +124,7 @@ export async function loadExpenseReferences(
   return {
     context: {
       fiscalYear,
+      fiscalYearId: fiscalYear.id,
       party,
       vatRate: data.vatRate ?? defaultVatRate,
     },
@@ -112,7 +159,7 @@ export async function prepareValidatedExpense(
   if ("error" in references) return { ok: false, error: references.error };
 
   const { context } = references;
-  const fingerprint = buildExpenseFingerprint(companyId, data);
+  const fingerprint = buildExpenseFingerprint(companyId, data, context.fiscalYearId);
 
   const duplicate = await checkInvoiceDuplicate(fingerprint);
   if (duplicate) {
@@ -154,7 +201,7 @@ export async function prepareValidatedExpense(
       monthName: miti.monthName,
       insert: {
         companyId,
-        fiscalYearId: data.fiscalYearId,
+        fiscalYearId: context.fiscalYearId,
         partyId: data.partyId,
         categoryId: data.categoryId,
         locationId: data.locationId ?? null,

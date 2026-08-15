@@ -4,7 +4,7 @@ import { createFiscalYearSchema } from "@/lib/validation/masters";
 import { safeParse } from "@/lib/validation/utils";
 import { apiOk, badRequest, conflict, unprocessableEntity, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export async function GET(request: Request) {
   const companyId = await requireCompanyIdFromSession(request);
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   if (!parsed.ok) return unprocessableEntity("Validation failed", parsed.errors);
 
   try {
-    const { name, startYear, endYear, isActive } = parsed.data;
+    const { name, startYear, endYear } = parsed.data;
 
     const existing = await db
       .select({ id: fiscalYears.id, name: fiscalYears.name })
@@ -49,16 +49,9 @@ export async function POST(request: Request) {
     }
 
     const created = await db.transaction(async (tx) => {
-      if (isActive) {
-        await tx
-          .update(fiscalYears)
-          .set({ isActive: false, updatedAt: sql`now()` })
-          .where(eq(fiscalYears.companyId, companyId));
-      }
-
       const [result] = await tx
         .insert(fiscalYears)
-        .values({ companyId, name, startYear, endYear, isActive })
+        .values({ companyId, name, startYear, endYear, isActive: true })
         .returning();
 
       return result;

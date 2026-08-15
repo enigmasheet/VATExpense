@@ -1,5 +1,6 @@
 import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
+import { updateFiscalYearSchema } from "@/lib/validation/masters";
 import * as fiscalYearService from "@/lib/services/fiscal-years";
 
 /**
@@ -25,17 +26,17 @@ export async function PATCH(
     return badRequest("Invalid JSON body");
   }
 
-  const data = body as Record<string, unknown>;
-  const changes: { name?: string; isActive?: boolean } = {};
-  if (typeof data.name === "string") changes.name = data.name;
-  if (typeof data.isActive === "boolean") changes.isActive = data.isActive;
+  const parsed = updateFiscalYearSchema.safeParse(body);
+  if (!parsed.success) {
+    return badRequest(parsed.error.issues.map((i) => i.message).join("; "));
+  }
 
-  if (Object.keys(changes).length === 0) {
+  if (Object.keys(parsed.data).length === 0) {
     return badRequest("No valid fields to update");
   }
 
   try {
-    const result = await fiscalYearService.updateFiscalYear(id, companyId, changes);
+    const result = await fiscalYearService.updateFiscalYear(id, companyId, parsed.data);
     if (!result.ok) return notFound(result.error);
     return apiOk({ data: result.data });
   } catch (err) {

@@ -36,48 +36,48 @@ function makeInput(overrides: Partial<ExpenseInput> = {}): ExpenseInput {
 describe("buildExpenseFingerprint", () => {
   it("returns deterministic output for same inputs", () => {
     const input = makeInput();
-    const fp1 = buildExpenseFingerprint(COMPANY_ID, input);
-    const fp2 = buildExpenseFingerprint(COMPANY_ID, input);
+    const fp1 = buildExpenseFingerprint(COMPANY_ID, input, FY_ID);
+    const fp2 = buildExpenseFingerprint(COMPANY_ID, input, FY_ID);
     expect(fp1).toEqual(fp2);
   });
 
   it("produces different fingerprint for different partyId", () => {
     const input1 = makeInput({ partyId: PARTY_ID });
     const input2 = makeInput({ partyId: "660e8400-e29b-41d4-a716-446655440099" });
-    const fp1 = buildExpenseFingerprint(COMPANY_ID, input1);
-    const fp2 = buildExpenseFingerprint(COMPANY_ID, input2);
+    const fp1 = buildExpenseFingerprint(COMPANY_ID, input1, FY_ID);
+    const fp2 = buildExpenseFingerprint(COMPANY_ID, input2, FY_ID);
     expect(fp1.partyId).not.toBe(fp2.partyId);
   });
 
   it("produces different fingerprint for different taxableAmount", () => {
     const input1 = makeInput({ taxableAmount: "1000" });
     const input2 = makeInput({ taxableAmount: "2000" });
-    const fp1 = buildExpenseFingerprint(COMPANY_ID, input1);
-    const fp2 = buildExpenseFingerprint(COMPANY_ID, input2);
+    const fp1 = buildExpenseFingerprint(COMPANY_ID, input1, FY_ID);
+    const fp2 = buildExpenseFingerprint(COMPANY_ID, input2, FY_ID);
     expect(fp1.taxableAmount).not.toBe(fp2.taxableAmount);
   });
 
   it("sets invoiceNumber to null when undefined", () => {
     const input = makeInput({ invoiceNumber: undefined });
-    const fp = buildExpenseFingerprint(COMPANY_ID, input);
+    const fp = buildExpenseFingerprint(COMPANY_ID, input, FY_ID);
     expect(fp.invoiceNumber).toBeNull();
   });
 
   it("sets invoiceNumber to null when null", () => {
     const input = makeInput({ invoiceNumber: null });
-    const fp = buildExpenseFingerprint(COMPANY_ID, input);
+    const fp = buildExpenseFingerprint(COMPANY_ID, input, FY_ID);
     expect(fp.invoiceNumber).toBeNull();
   });
 
   it("includes companyId in fingerprint", () => {
     const input = makeInput();
-    const fp = buildExpenseFingerprint(COMPANY_ID, input);
+    const fp = buildExpenseFingerprint(COMPANY_ID, input, FY_ID);
     expect(fp.companyId).toBe(COMPANY_ID);
   });
 
   it("includes all required fields", () => {
     const input = makeInput({ invoiceNumber: "INV-001" });
-    const fp = buildExpenseFingerprint(COMPANY_ID, input);
+    const fp = buildExpenseFingerprint(COMPANY_ID, input, FY_ID);
     expect(fp).toHaveProperty("companyId");
     expect(fp).toHaveProperty("fiscalYearId");
     expect(fp).toHaveProperty("partyId");
@@ -90,7 +90,7 @@ describe("buildExpenseFingerprint", () => {
 
   it("preserves invoiceNumber when provided", () => {
     const input = makeInput({ invoiceNumber: "INV-001" });
-    const fp = buildExpenseFingerprint(COMPANY_ID, input);
+    const fp = buildExpenseFingerprint(COMPANY_ID, input, FY_ID);
     expect(fp.invoiceNumber).toBe("INV-001");
   });
 });

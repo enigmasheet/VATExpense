@@ -40,7 +40,7 @@ export async function createFiscalYear(input: {
  */
 export async function updateFiscalYear(
   id: string,
-  changes: { name?: string; isActive?: boolean },
+  changes: { name?: string; startYear?: number; endYear?: number; isActive?: boolean },
 ): Promise<ActionResult<FiscalYear>> {
   let companyId: string;
   try {

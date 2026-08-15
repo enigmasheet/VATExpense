@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   if (!parsed.ok) return unprocessableEntity("Validation failed", parsed.errors);
 
   try {
-    const { name, vatNumber, locationId, phone, whatsapp, comment, isActive } = parsed.data;
+    const { name, vatNumber, locationId, phone, whatsapp, comment } = parsed.data;
     const normalizedName = normalizeName(name);
     const normalizedVatNumber = normalizeVatNumber(vatNumber);
 
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
         phone: phone ?? null,
         whatsapp: whatsapp ?? null,
         comment: comment ?? null,
-        isActive,
+        isActive: true,
       })
       .returning();
     return apiOk({ data: created }, 201);
