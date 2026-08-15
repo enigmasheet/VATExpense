@@ -22,6 +22,9 @@ export const companies = pgTable("companies", {
   defaultVatRate: numeric("default_vat_rate", { precision: 5, scale: 2 })
     .notNull()
     .default(VAT_RATE_DEFAULT),
+  brandName: text("brand_name"),
+  logoUrl: text("logo_url"),
+  primaryColor: text("primary_color"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

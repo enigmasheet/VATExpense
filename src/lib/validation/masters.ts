@@ -123,6 +123,9 @@ export const updateCompanySchema = z.object({
     (v) => (v === null || v === undefined || v === "" ? undefined : toFixedStr(v, 2)),
     z.string().regex(/^\d+(\.\d+)?$/, "Invalid default VAT rate").optional(),
   ),
+  brandName: optionalTextToNull.optional(),
+  logoUrl: optionalTextToNull.optional(),
+  primaryColor: z.string().trim().max(7).nullable().optional(),
 });
 
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;

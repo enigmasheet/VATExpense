@@ -20,16 +20,28 @@ interface CompanyRow {
   userCount: number;
 }
 
+interface UserRow {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  companyId: string;
+  companyName: string | null;
+  createdAt: string;
+}
+
 interface AdminDashboardProps {
   resetEnabled: boolean;
 }
 
-/**
- * Superadmin dashboard: lists all companies, provisions new tenants, and provides DB reset.
- */
+type AdminTab = "companies" | "users";
+
 export function AdminDashboard({ resetEnabled }: AdminDashboardProps) {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<AdminTab>("companies");
   const [companies, setCompanies] = useState<CompanyRow[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,9 +65,20 @@ export function AdminDashboard({ resetEnabled }: AdminDashboardProps) {
       .finally(() => setLoading(false));
   }, []);
 
+  const loadUsers = useCallback(() => {
+    api<{ data: UserRow[] }>("/api/admin/users")
+      .then(({ data }) => setUsers(data))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : "Failed to load users"))
+      .finally(() => setLoading(false));
+  }, []);
+
   useEffect(() => {
-    loadCompanies();
-  }, [loadCompanies]);
+    if (activeTab === "companies") {
+      loadCompanies();
+    } else {
+      loadUsers();
+    }
+  }, [activeTab, loadCompanies, loadUsers]);
 
   async function handleProvision(e: React.FormEvent) {
     e.preventDefault();
@@ -119,11 +142,37 @@ export function AdminDashboard({ resetEnabled }: AdminDashboardProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold text-foreground">Admin</h1>
-          <p className="mt-1 text-sm text-muted">Manage companies and tenants</p>
+          <p className="mt-1 text-sm text-muted">Manage companies, users, and system settings</p>
         </div>
         <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: PATH_LOGIN })}>
           Sign out
         </Button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-border">
+        <button
+          type="button"
+          onClick={() => setActiveTab("companies")}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "companies"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted hover:text-foreground"
+          }`}
+        >
+          Companies ({companies.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("users")}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "users"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted hover:text-foreground"
+          }`}
+        >
+          Users ({users.length})
+        </button>
       </div>
 
       {/* Provision form */}
@@ -192,43 +241,102 @@ export function AdminDashboard({ resetEnabled }: AdminDashboardProps) {
         </form>
       </section>
 
-      {/* Companies list */}
-      <section>
-        <h2 className="font-display text-lg font-semibold text-foreground">Companies</h2>
-        {loading ? (
-          <p className="mt-4 text-sm text-muted">Loading...</p>
-        ) : companies.length === 0 ? (
-          <div className="mt-4 rounded-lg border border-border bg-surface p-8 text-center">
-            <p className="text-sm text-muted">No companies provisioned yet.</p>
-            <p className="mt-1 text-xs text-muted">Use the form above to create your first company.</p>
-          </div>
-        ) : (
-          <div className="mt-4 overflow-x-auto rounded-lg border border-border bg-surface">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                  <th scope="col" className="px-4 py-3">Name</th>
-                  <th scope="col" className="px-4 py-3">VAT</th>
-                  <th scope="col" className="px-4 py-3 text-right">Users</th>
-                  <th scope="col" className="px-4 py-3">Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {companies.map((c) => (
-                  <tr key={c.id} className="border-b border-border last:border-b-0">
-                    <td className="px-4 py-3 font-medium">{c.name}</td>
-                    <td className="px-4 py-3 text-muted">{c.vatNumber ?? "—"}</td>
-                    <td className="px-4 py-3 text-right tabular-amount">{c.userCount}</td>
-                    <td className="px-4 py-3 text-muted">
-                      {formatDate(c.createdAt)}
-                    </td>
+      {/* Companies tab */}
+      {activeTab === "companies" && (
+        <section>
+          <h2 className="font-display text-lg font-semibold text-foreground">Companies</h2>
+          {loading ? (
+            <p className="mt-4 text-sm text-muted">Loading...</p>
+          ) : companies.length === 0 ? (
+            <div className="mt-4 rounded-lg border border-border bg-surface p-8 text-center">
+              <p className="text-sm text-muted">No companies provisioned yet.</p>
+              <p className="mt-1 text-xs text-muted">Use the form above to create your first company.</p>
+            </div>
+          ) : (
+            <div className="mt-4 overflow-x-auto rounded-lg border border-border bg-surface">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+                    <th scope="col" className="px-4 py-3">Name</th>
+                    <th scope="col" className="px-4 py-3">VAT</th>
+                    <th scope="col" className="px-4 py-3 text-right">Users</th>
+                    <th scope="col" className="px-4 py-3">Created</th>
+                    <th scope="col" className="px-4 py-3">ID</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                </thead>
+                <tbody>
+                  {companies.map((c) => (
+                    <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-muted/30">
+                      <td className="px-4 py-3 font-medium">{c.name}</td>
+                      <td className="px-4 py-3 text-muted">{c.vatNumber ?? "—"}</td>
+                      <td className="px-4 py-3 text-right tabular-amount">{c.userCount}</td>
+                      <td className="px-4 py-3 text-muted">
+                        {formatDate(c.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted font-mono">{c.id.slice(0, 8)}...</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Users tab */}
+      {activeTab === "users" && (
+        <section>
+          <h2 className="font-display text-lg font-semibold text-foreground">Users</h2>
+          {loading ? (
+            <p className="mt-4 text-sm text-muted">Loading...</p>
+          ) : users.length === 0 ? (
+            <div className="mt-4 rounded-lg border border-border bg-surface p-8 text-center">
+              <p className="text-sm text-muted">No users found.</p>
+            </div>
+          ) : (
+            <div className="mt-4 overflow-x-auto rounded-lg border border-border bg-surface">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+                    <th scope="col" className="px-4 py-3">Name</th>
+                    <th scope="col" className="px-4 py-3">Email</th>
+                    <th scope="col" className="px-4 py-3">Role</th>
+                    <th scope="col" className="px-4 py-3">Company</th>
+                    <th scope="col" className="px-4 py-3">Status</th>
+                    <th scope="col" className="px-4 py-3">Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.id} className="border-b border-border last:border-b-0 hover:bg-muted/30">
+                      <td className="px-4 py-3 font-medium">{u.name}</td>
+                      <td className="px-4 py-3 text-muted">{u.email}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          u.role === "Admin" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                        }`}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-muted">{u.companyName ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          u.isActive ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+                        }`}>
+                          {u.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-muted">
+                        {formatDate(u.createdAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Danger zone */}
       <section className="rounded-lg border border-danger/30 bg-surface p-5">

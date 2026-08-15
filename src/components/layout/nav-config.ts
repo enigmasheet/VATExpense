@@ -5,6 +5,7 @@ export interface NavItem {
   href: string;
   label: string;
   icon: IconName;
+  children?: NavItem[];
 }
 
 export interface NavGroup {
@@ -17,9 +18,16 @@ const NAV_GROUPS: NavGroup[] = [
     title: "Main",
     items: [
       { href: "/", label: "Dashboard", icon: "dashboard" },
-      { href: "/expenses/new", label: "Batch Entry", icon: "quickAdd" },
-      { href: "/expenses/create", label: "Quick Add", icon: "expenses" },
-      { href: PATH_EXPENSES, label: "Expenses", icon: "expenses" },
+      {
+        href: PATH_EXPENSES,
+        label: "Expenses",
+        icon: "expenses",
+        children: [
+          { href: PATH_EXPENSES, label: "All Expenses", icon: "expenses" },
+          { href: "/expenses/create", label: "Quick Add", icon: "quickAdd" },
+          { href: "/expenses/new", label: "Batch Entry", icon: "quickAdd" },
+        ],
+      },
       { href: "/import", label: "Import", icon: "import" },
     ],
   },

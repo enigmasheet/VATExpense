@@ -17,6 +17,9 @@ export async function updateCompany(
     phone?: string | null;
     email?: string | null;
     defaultVatRate?: string;
+    brandName?: string | null;
+    logoUrl?: string | null;
+    primaryColor?: string | null;
   },
 ): Promise<ServiceResult<Company>> {
   const values: Record<string, unknown> = {};
@@ -26,6 +29,9 @@ export async function updateCompany(
   if (changes.phone !== undefined) values.phone = changes.phone;
   if (changes.email !== undefined) values.email = changes.email;
   if (changes.defaultVatRate !== undefined) values.defaultVatRate = changes.defaultVatRate;
+  if (changes.brandName !== undefined) values.brandName = changes.brandName;
+  if (changes.logoUrl !== undefined) values.logoUrl = changes.logoUrl;
+  if (changes.primaryColor !== undefined) values.primaryColor = changes.primaryColor;
 
   if (Object.keys(values).length === 0) {
     return { ok: false, error: "No valid fields to update" };

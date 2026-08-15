@@ -27,7 +27,7 @@ export function FiscalYearSelector({
         <select
           id="fy-nav"
           name="fiscalYearId"
-          defaultValue={currentFiscalYearId}
+          value={currentFiscalYearId}
           onChange={(e) => e.target.form?.requestSubmit()}
           className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
         >

@@ -11,6 +11,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { PATH_LOGIN } from "@/lib/constants";
+import { PartyStatementExport } from "@/components/party-statement-export";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -95,22 +96,10 @@ export default async function PartyStatementPage({ params, searchParams }: Props
           </p>
         </div>
         <div className="flex gap-2">
-          <a
-            href={`/api/export/parties/${partyId}?fiscalYearId=${selectedFiscalYear.id}&format=xlsx`}
-            download
-          >
-            <Button variant="secondary" size="sm">
-              Export Excel
-            </Button>
-          </a>
-          <a
-            href={`/api/export/parties/${partyId}?fiscalYearId=${selectedFiscalYear.id}&format=csv`}
-            download
-          >
-            <Button variant="secondary" size="sm">
-              Export CSV
-            </Button>
-          </a>
+          <PartyStatementExport
+            partyId={partyId}
+            fiscalYearId={selectedFiscalYear.id}
+          />
           <Link href={`/reports/parties?fiscalYearId=${selectedFiscalYear.id}`}>
             <Button variant="secondary" size="sm">
               Back to Party Report

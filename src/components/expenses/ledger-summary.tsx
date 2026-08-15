@@ -8,20 +8,17 @@ interface LedgerSummaryProps {
   rowCount: number;
 }
 
-/**
- * Renders summary cards and row count for the expense ledger.
- */
 export function LedgerSummary({ totals, rowCount }: LedgerSummaryProps) {
   return (
-    <>
+    <div className="flex flex-col gap-2">
       <div className="grid grid-cols-3 gap-3">
-        <StatCard size="sm" label={`Taxable (Excl. VAT)`} value={formatAmount(totals.taxable)} />
+        <StatCard size="sm" label="Taxable (Excl. VAT)" value={formatAmount(totals.taxable)} />
         <StatCard size="sm" label={`VAT (${VAT_RATE}%)`} value={formatAmount(totals.vat)} />
-        <StatCard size="sm" label="Total (Incl. VAT)" value={formatAmount(totals.total)} />
+        <StatCard size="sm" label="Total (Incl. VAT)" value={formatAmount(totals.total)} accent />
       </div>
-      <div className="text-xs text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         {rowCount} row{rowCount !== 1 ? "s" : ""} — {totals.count} ready to save
-      </div>
-    </>
+      </p>
+    </div>
   );
 }

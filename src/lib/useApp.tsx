@@ -17,6 +17,9 @@ export interface Company {
   name: string;
   vatNumber: string | null;
   defaultVatRate: string;
+  brandName: string | null;
+  logoUrl: string | null;
+  primaryColor: string | null;
 }
 
 export interface FiscalYear {
@@ -30,6 +33,7 @@ export interface FiscalYear {
 interface AppContextValue {
   companies: Company[];
   companyId: string | null;
+  activeCompany: Company | null;
   fiscalYears: FiscalYear[];
   fiscalYearId: string | null;
   setFiscalYearId: (id: string) => void;
@@ -103,17 +107,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [fiscalYears, fiscalYearId],
   );
 
+  const activeCompany = useMemo(
+    () => companies.find((c) => c.id === companyId) ?? null,
+    [companies, companyId],
+  );
+
   const value = useMemo(
     () => ({
       companies,
       companyId,
+      activeCompany,
       fiscalYears,
       fiscalYearId,
       setFiscalYearId,
       activeFiscalYear,
       loading,
     }),
-    [companies, companyId, fiscalYears, fiscalYearId, setFiscalYearId, activeFiscalYear, loading],
+    [companies, companyId, activeCompany, fiscalYears, fiscalYearId, setFiscalYearId, activeFiscalYear, loading],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

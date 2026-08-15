@@ -18,12 +18,12 @@ interface PartyReportExportProps {
  * @param basis - The amount basis used for the report threshold
  */
 export function PartyReportExport({ companyId, fiscalYearId, basis }: PartyReportExportProps) {
-  const [downloading, setDownloading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
 
   async function handleExport() {
     const params = new URLSearchParams({ companyId, fiscalYearId, basis });
-    setDownloading(true);
+    setExporting(true);
     try {
       const res = await fetch(`/api/export/parties?${params.toString()}`);
       if (!res.ok) {
@@ -43,13 +43,13 @@ export function PartyReportExport({ companyId, fiscalYearId, basis }: PartyRepor
     } catch (e) {
       toast(e instanceof Error ? e.message : "Export failed", "error");
     } finally {
-      setDownloading(false);
+      setExporting(false);
     }
   }
 
   return (
-    <Button variant="secondary" onClick={handleExport} disabled={downloading}>
-      {downloading ? "Exporting…" : "Export .xlsx"}
+    <Button variant="secondary" onClick={handleExport} disabled={exporting}>
+      {exporting ? "Exporting…" : "Export .xlsx"}
     </Button>
   );
 }

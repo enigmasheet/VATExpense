@@ -18,7 +18,7 @@ export function MonthSelector({ currentMonth }: { currentMonth: string }) {
         <select
           id="month-nav"
           name="month"
-          defaultValue={currentMonth}
+          value={currentMonth}
           onChange={(e) => e.target.form?.requestSubmit()}
           className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
         >

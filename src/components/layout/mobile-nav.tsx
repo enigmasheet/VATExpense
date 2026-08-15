@@ -8,8 +8,54 @@ import { useApp } from "@/lib/useApp";
 import { PATH_LOGIN } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { NavIcon } from "./icons";
-import { getNavGroups } from "./nav-config";
+import { getNavGroups, type NavItem } from "./nav-config";
 import { SidebarLink } from "./sidebar";
+
+function isItemActive(href: string, pathname: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
+function MobileSubmenu({ item, pathname, onClose }: { item: NavItem; pathname: string; onClose: () => void }) {
+  const hasChildren = item.children && item.children.length > 0;
+  const isActive = isItemActive(item.href, pathname);
+  const isExpanded = hasChildren && (isActive || item.children?.some((child) => isItemActive(child.href, pathname)));
+  const [open, setOpen] = useState(isExpanded);
+
+  if (!hasChildren) {
+    return <SidebarLink {...item} active={isActive} onClose={onClose} />;
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+          isActive
+            ? "bg-primary/10 text-primary"
+            : "text-muted hover:bg-surface-hover hover:text-foreground"
+        }`}
+      >
+        <NavIcon name={item.icon} className="h-5 w-5 shrink-0" />
+        <span className="flex-1 text-left">{item.label}</span>
+        <NavIcon name={open ? "chevronDown" : "chevronRight"} className="h-4 w-4 shrink-0 opacity-50" />
+      </button>
+      {open && (
+        <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-border/50 pl-3">
+          {item.children!.map((child) => (
+            <SidebarLink
+              key={child.href}
+              {...child}
+              active={isItemActive(child.href, pathname)}
+              onClose={onClose}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Renders a read-only active fiscal-year indicator. Shown in the content area
@@ -38,6 +84,9 @@ export function ActiveFiscalYearIndicator() {
 export function MobileHeader() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { activeCompany } = useApp();
+
+  const displayName = activeCompany?.brandName || activeCompany?.name || "VAT Ledger";
 
   // Close menu on route change. Run asynchronously to avoid synchronous setState in effect.
   useEffect(() => {
@@ -73,7 +122,7 @@ export function MobileHeader() {
           </svg>
         </button>
         <Link href="/" className="font-display text-lg font-semibold text-foreground">
-          VAT Ledger
+          {displayName}
         </Link>
       </header>
 
@@ -101,8 +150,10 @@ export function MobileHeader() {
 function MobileNavPanel({ onClose }: { onClose: () => void }) {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const { fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
+  const { fiscalYears, fiscalYearId, setFiscalYearId, activeCompany } = useApp();
   const panelRef = useRef<HTMLDivElement>(null);
+
+  const displayName = activeCompany?.brandName || activeCompany?.name || "VAT Ledger";
 
   useEffect(() => {
     const panel = panelRef.current;
@@ -139,7 +190,7 @@ function MobileNavPanel({ onClose }: { onClose: () => void }) {
       <div className="flex h-full flex-col">
         <div className="border-b border-border px-4 py-5">
           <Link href="/" className="font-display text-xl font-semibold text-foreground" onClick={onClose}>
-            VAT Ledger
+            {displayName}
           </Link>
           <p className="mt-0.5 text-xs text-muted">Nepali fiscal-year purchase register</p>
         </div>
@@ -152,14 +203,10 @@ function MobileNavPanel({ onClose }: { onClose: () => void }) {
               </p>
               <div className="flex flex-col gap-1">
                 {group.items.map((item) => (
-                  <SidebarLink
+                  <MobileSubmenu
                     key={item.href}
-                    {...item}
-                    active={
-                      item.href === "/"
-                        ? pathname === "/"
-                        : pathname === item.href
-                    }
+                    item={item}
+                    pathname={pathname}
                     onClose={onClose}
                   />
                 ))}

@@ -4,24 +4,20 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 
-interface FiscalYearReportExportProps {
-  companyId: string;
+interface PartyStatementExportProps {
+  partyId: string;
   fiscalYearId: string;
 }
 
-export function FiscalYearReportExport({
-  companyId,
-  fiscalYearId,
-}: FiscalYearReportExportProps) {
-  const [exportingDetail, setExportingDetail] = useState<boolean | null>(null);
+export function PartyStatementExport({ partyId, fiscalYearId }: PartyStatementExportProps) {
+  const [exportingFormat, setExportingFormat] = useState<string | null>(null);
   const { toast } = useToast();
 
-  async function handleExport(detail: boolean) {
-    const params = new URLSearchParams({ companyId, fiscalYearId });
-    if (detail) params.set("detail", "true");
-    setExportingDetail(detail);
+  async function handleExport(format: "xlsx" | "csv") {
+    const params = new URLSearchParams({ fiscalYearId, format });
+    setExportingFormat(format);
     try {
-      const res = await fetch(`/api/export/fiscal-year?${params.toString()}`);
+      const res = await fetch(`/api/export/parties/${partyId}?${params.toString()}`);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: "Export failed" }));
         throw new Error(errorData.error || "Export failed");
@@ -30,7 +26,7 @@ export function FiscalYearReportExport({
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `fiscal-year-report${detail ? "-detail" : ""}.xlsx`;
+      link.download = `party-statement.${format}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -39,26 +35,28 @@ export function FiscalYearReportExport({
     } catch (e) {
       toast(e instanceof Error ? e.message : "Export failed", "error");
     } finally {
-      setExportingDetail(null);
+      setExportingFormat(null);
     }
   }
 
   return (
-    <div className="flex gap-2">
+    <>
       <Button
         variant="secondary"
-        onClick={() => handleExport(false)}
-        disabled={exportingDetail !== null}
+        size="sm"
+        onClick={() => handleExport("xlsx")}
+        disabled={exportingFormat !== null}
       >
-        {exportingDetail === false ? "Exporting…" : "Export Summary"}
+        {exportingFormat === "xlsx" ? "Exporting…" : "Export Excel"}
       </Button>
       <Button
         variant="secondary"
-        onClick={() => handleExport(true)}
-        disabled={exportingDetail !== null}
+        size="sm"
+        onClick={() => handleExport("csv")}
+        disabled={exportingFormat !== null}
       >
-        {exportingDetail === true ? "Exporting…" : "Export Detail"}
+        {exportingFormat === "csv" ? "Exporting…" : "Export CSV"}
       </Button>
-    </div>
+    </>
   );
 }

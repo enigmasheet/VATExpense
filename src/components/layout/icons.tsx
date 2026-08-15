@@ -13,6 +13,7 @@ type IconName =
   | "fiscalYears"
   | "chevronLeft"
   | "chevronRight"
+  | "chevronDown"
   | "signOut"
   | "calendarDays"
   | "management"
@@ -95,6 +96,9 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
   chevronRight: (
     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
   ),
+  chevronDown: (
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+  ),
   signOut: (
     <path
       strokeLinecap="round"
@@ -117,11 +121,9 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
     />
   ),
   truck: (
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25m-2.25 0h-2.286a3 3 0 00-2.121.879l-.151.151m0 0a3 3 0 01-2.121.879H3.375m0 0A3 3 0 011.5 15.375V16.5m16.5-3.75V15a3 3 0 01-3 3h-.375m0 0H6.375m0 0H4.875c-.621 0-1.125-.504-1.125-1.125V14.25m0 0h16.5"
-    />
+    <>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 9V5.25A2.25 2.25 0 0011.25 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 005.25 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+    </>
   ),
 };
 

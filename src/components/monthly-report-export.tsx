@@ -15,7 +15,7 @@ export function MonthlyReportExport({
   fiscalYearId,
   nepaliMonth,
 }: MonthlyReportExportProps) {
-  const [downloading, setDownloading] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<string | null>(null);
   const { toast } = useToast();
 
   async function handleExport(format: "standard" | "reimport") {
@@ -25,7 +25,7 @@ export function MonthlyReportExport({
       nepaliMonth,
       format,
     });
-    setDownloading(true);
+    setExportingFormat(format);
     try {
       const res = await fetch(`/api/export/monthly?${params.toString()}`);
       if (!res.ok) {
@@ -45,17 +45,25 @@ export function MonthlyReportExport({
     } catch (e) {
       toast(e instanceof Error ? e.message : "Export failed", "error");
     } finally {
-      setDownloading(false);
+      setExportingFormat(null);
     }
   }
 
   return (
     <div className="flex gap-2">
-      <Button variant="secondary" onClick={() => handleExport("standard")} disabled={downloading}>
-        {downloading ? "Exporting…" : "Export .xlsx"}
+      <Button
+        variant="secondary"
+        onClick={() => handleExport("standard")}
+        disabled={exportingFormat !== null}
+      >
+        {exportingFormat === "standard" ? "Exporting…" : "Export .xlsx"}
       </Button>
-      <Button variant="secondary" onClick={() => handleExport("reimport")} disabled={downloading}>
-        {downloading ? "Exporting…" : "Export .csv"}
+      <Button
+        variant="secondary"
+        onClick={() => handleExport("reimport")}
+        disabled={exportingFormat !== null}
+      >
+        {exportingFormat === "reimport" ? "Exporting…" : "Export .csv"}
       </Button>
     </div>
   );

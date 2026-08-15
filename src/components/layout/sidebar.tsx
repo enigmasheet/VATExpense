@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useApp } from "@/lib/useApp";
@@ -8,6 +9,11 @@ import { PATH_LOGIN } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { NavIcon } from "./icons";
 import { getNavGroups, type NavItem } from "./nav-config";
+
+function isItemActive(href: string, pathname: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(href + "/");
+}
 
 export function SidebarLink({ href, label, icon, active, collapsed = false, onClose }: NavItem & { active: boolean; collapsed?: boolean; onClose?: () => void }) {
   return (
@@ -32,6 +38,47 @@ export function SidebarLink({ href, label, icon, active, collapsed = false, onCl
   );
 }
 
+function SidebarSubmenu({ item, pathname, collapsed, onClose }: { item: NavItem; pathname: string; collapsed: boolean; onClose?: () => void }) {
+  const hasChildren = item.children && item.children.length > 0;
+  const isActive = isItemActive(item.href, pathname);
+  const isExpanded = hasChildren && (isActive || item.children?.some((child) => isItemActive(child.href, pathname)));
+  const [open, setOpen] = useState(isExpanded);
+
+  if (collapsed || !hasChildren) {
+    return <SidebarLink {...item} active={isActive} collapsed={collapsed} onClose={onClose} />;
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+          isActive
+            ? "bg-primary/10 text-primary"
+            : "text-muted hover:bg-surface-hover hover:text-foreground"
+        }`}
+      >
+        <NavIcon name={item.icon} className="h-5 w-5 shrink-0" />
+        <span className="flex-1 text-left">{item.label}</span>
+        <NavIcon name={open ? "chevronDown" : "chevronRight"} className="h-4 w-4 shrink-0 opacity-50" />
+      </button>
+      {open && (
+        <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-border/50 pl-3">
+          {item.children!.map((child) => (
+            <SidebarLink
+              key={child.href}
+              {...child}
+              active={isItemActive(child.href, pathname)}
+              onClose={onClose}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Renders the desktop sidebar with grouped navigation, fiscal-year selection,
  * authenticated user information, and sign-out controls. Collapses to an
@@ -45,8 +92,10 @@ export function Sidebar({
   onToggleCollapsed: () => void;
   }) {
   const pathname = usePathname();
-  const { fiscalYears, fiscalYearId, setFiscalYearId } = useApp();
+  const { fiscalYears, fiscalYearId, setFiscalYearId, activeCompany } = useApp();
   const { data: session } = useSession();
+
+  const displayName = activeCompany?.brandName || activeCompany?.name || "VAT Ledger";
 
   const userInitials = session?.user?.name
     ? session.user.name
@@ -68,9 +117,9 @@ export function Sidebar({
         <Link
           href="/"
           className={`font-display font-semibold text-foreground ${collapsed ? "text-lg" : "text-xl"}`}
-          title={collapsed ? "VAT Ledger" : undefined}
+          title={collapsed ? displayName : undefined}
         >
-          {collapsed ? "VL" : "VAT Ledger"}
+          {collapsed ? (displayName.length > 2 ? displayName.slice(0, 2).toUpperCase() : displayName) : displayName}
         </Link>
         {!collapsed && (
           <p className="text-xs text-muted">Nepali fiscal-year purchase register</p>
@@ -101,15 +150,11 @@ export function Sidebar({
             )}
             <div className={`flex flex-col gap-1 ${collapsed ? "items-center" : ""}`}>
               {group.items.map((item) => (
-                <SidebarLink
+                <SidebarSubmenu
                   key={item.href}
-                  {...item}
+                  item={item}
+                  pathname={pathname}
                   collapsed={collapsed}
-                  active={
-                    item.href === "/"
-                      ? pathname === "/"
-                      : pathname === item.href || pathname.startsWith(item.href + "/")
-                  }
                 />
               ))}
             </div>
