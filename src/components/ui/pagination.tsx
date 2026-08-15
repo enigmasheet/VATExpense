@@ -105,7 +105,7 @@ export function Pagination({
               variant={p === page ? "primary" : "secondary"}
               size="sm"
               onClick={() => goToPage(p)}
-              className="min-w-[32px]"
+              className="min-w-8"
             >
               {p}
             </Button>
