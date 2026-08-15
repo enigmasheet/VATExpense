@@ -9,6 +9,7 @@ import {
   STATUS_DUPLICATE,
   STATUS_INCOMPLETE,
   STATUS_SAVED,
+  STATUS_SAVING,
 } from "@/lib/status-constants";
 import type { Party, Category, LedgerRow, CellField } from "@/lib/expenses/ledger-types";
 import { getFixableAction } from "@/lib/expenses/ledger-validation";
@@ -23,16 +24,18 @@ function isIssueRow(row: LedgerRow): boolean {
 
 function cellBg(status: LedgerRow["status"]): string {
   switch (status) {
-    case STATUS_SAVED: return "bg-success/5";
-    case STATUS_ERROR: return "bg-danger/5";
-    case STATUS_DUPLICATE: return "bg-warning/5";
+    case STATUS_SAVED: return "bg-success/8";
+    case STATUS_SAVING: return "bg-primary/5";
+    case STATUS_ERROR: return "bg-danger/10";
+    case STATUS_DUPLICATE: return "bg-warning/10";
+    case STATUS_INCOMPLETE: return "bg-surface";
     default: return "";
   }
 }
 
 function inputClass(hasError: boolean, isEmpty: boolean): string {
   const base = "h-9 w-full rounded border bg-transparent px-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors";
-  if (hasError) return `${base} border-destructive bg-danger/5 focus:ring-destructive/40`;
+  if (hasError) return `${base} border-danger/40 bg-danger/5 focus:ring-danger/30`;
   if (isEmpty) return `${base} text-muted-foreground border-border/50`;
   return `${base} border-border/50 hover:border-border`;
 }

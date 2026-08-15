@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/toast";
 import { VAT_RATE, VAT_RATE_DEFAULT } from "@/lib/constants";
 import { calcFromTaxable as calcVatFromTaxable, calcFromTotal as calcVatFromTotal } from "@/lib/expenses/ledger-calculation";
 import { MessageList, type Message } from "@/components/ui/alert";
+import type { Party } from "@/lib/expenses/ledger-types";
 
 interface FormValues {
   miti: string;
@@ -145,16 +146,18 @@ export function ExpenseForm({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const [parties, setParties] = useState<{ id: string; name: string }[]>([]);
+  const [parties, setParties] = useState<Party[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
   const [trucks, setTrucks] = useState<{ id: string; name: string; ownerName: string | null }[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [partyModalOpen, setPartyModalOpen] = useState(false);
+  const [partySearch, setPartySearch] = useState("");
+  const [partyResolved, setPartyResolved] = useState(false);
 
   function refreshParties() {
     if (!companyId) return;
-    api<{ data: { id: string; name: string }[] }>(`/api/parties?companyId=${companyId}`)
+    api<{ data: Party[] }>(`/api/parties?companyId=${companyId}`)
       .then(({ data }) => setParties(data))
       .catch(() => toast("Failed to refresh parties", "error"));
   }
@@ -162,7 +165,7 @@ export function ExpenseForm({
   useEffect(() => {
     if (!companyId) return;
     Promise.all([
-      api<{ data: { id: string; name: string }[] }>(`/api/parties?companyId=${companyId}`)
+      api<{ data: Party[] }>(`/api/parties?companyId=${companyId}`)
         .then(({ data }) => setParties(data))
         .catch((e) => console.error("Failed to load parties:", e)),
       api<{ data: { id: string; name: string }[] }>(`/api/categories?companyId=${companyId}`)
@@ -340,14 +343,36 @@ export function ExpenseForm({
           </Field>
           <Field label="Party / supplier" htmlFor="e-party">
             <div className="flex gap-2">
-              <Select id="e-party" required value={values.partyId} onChange={set("partyId")} className="flex-1">
-                <option value="">Select party</option>
-                {parties.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </Select>
+              <div className="relative flex-1">
+                <input
+                  id="e-party"
+                  type="text"
+                  required
+                  value={partySearch}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPartySearch(val);
+                    const match = parties.find((p) => p.name.toLowerCase() === val.toLowerCase());
+                    if (match) {
+                      setValues((v) => ({ ...v, partyId: match.id }));
+                      setPartyResolved(true);
+                    } else {
+                      setValues((v) => ({ ...v, partyId: "" }));
+                      setPartyResolved(false);
+                    }
+                  }}
+                  onFocus={() => setPartyResolved(false)}
+                  placeholder="Search party by name or VAT number..."
+                  className="h-10 w-full rounded border bg-transparent px-3 pr-8 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 border-border/50"
+                />
+                {partyResolved && (
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-emerald-500">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  </span>
+                )}
+              </div>
               <Button type="button" variant="secondary" size="sm" onClick={() => setPartyModalOpen(true)}>
                 Add
               </Button>

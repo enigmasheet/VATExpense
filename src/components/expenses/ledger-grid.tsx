@@ -6,6 +6,7 @@ import { useLedgerNavigation } from "@/hooks/expenses/use-ledger-navigation";
 import { ledgerReducer, type FixActionType } from "@/lib/expenses/ledger-reducer";
 import { createLedgerRow, getInvoiceKey } from "@/lib/expenses/ledger-utils";
 import { validateLedgerRow, buildDuplicateIndex, type FixableAction } from "@/lib/expenses/ledger-validation";
+import { useToast } from "@/components/ui/toast";
 import {
   STATUS_PENDING,
   STATUS_SAVING,
@@ -45,6 +46,8 @@ export function LedgerGrid({
   const [existingInvoices, setExistingInvoices] = useState<Set<string>>(new Set());
   const [existingInvoicesError, setExistingInvoicesError] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const prevErrorsRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
     if (!companyId || !fiscalYearId) return;
@@ -96,6 +99,22 @@ export function LedgerGrid({
       return { ...row, status: result.status, error: result.error, warnings: result.warnings };
     });
   }, [rows, duplicateIndex, existingInvoices, fiscalYearName]);
+
+  // Toast when new duplicate errors appear
+  useEffect(() => {
+    const prevErrors = prevErrorsRef.current;
+    for (const row of enrichedRows) {
+      const prevError = prevErrors.get(row.id);
+      if (row.error && row.error !== prevError && row.error.includes("already exists")) {
+        toast(row.error, "error");
+      }
+    }
+    const nextErrors = new Map<string, string>();
+    for (const row of enrichedRows) {
+      if (row.error) nextErrors.set(row.id, row.error);
+    }
+    prevErrorsRef.current = nextErrors;
+  }, [enrichedRows, toast]);
 
   const { saving, saveResult, statusMessage, saveAll } = useLedgerSave({
     enrichedRows,
@@ -196,11 +215,6 @@ export function LedgerGrid({
     <div className="flex flex-col gap-3" ref={gridRef}>
       <div aria-live="polite" className="sr-only">
         {statusMessage}
-      </div>
-
-      {/* Keyboard hints */}
-      <div className="sr-only text-[11px] text-muted-foreground">
-        Use Tab or Enter to move between fields, Ctrl+Enter to save all, F2 to duplicate a row, Esc to delete a row.
       </div>
 
       {/* Invoice index load error */}
