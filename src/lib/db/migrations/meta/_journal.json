@@ -29,6 +29,27 @@
       "when": 1786507515855,
       "tag": "0003_new_surge",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786776954453,
+      "tag": "0004_tough_slipstream",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786777018496,
+      "tag": "0005_blushing_thor",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786790887703,
+      "tag": "0006_absent_nitro",
+      "breakpoints": true
     }
   ]
 }

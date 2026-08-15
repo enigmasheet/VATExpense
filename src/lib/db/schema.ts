@@ -126,6 +126,30 @@ export const parties = pgTable(
 export type Party = typeof parties.$inferSelect;
 export type NewParty = typeof parties.$inferInsert;
 
+export const trucks = pgTable(
+  "trucks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    ownerName: text("owner_name"),
+    truckType: text("truck_type"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("trucks_company_name_uq").on(t.companyId, t.normalizedName),
+    index("trucks_company_idx").on(t.companyId),
+  ],
+);
+
+export type Truck = typeof trucks.$inferSelect;
+export type NewTruck = typeof trucks.$inferInsert;
+
 export const expenses = pgTable(
   "expenses",
   {
@@ -143,6 +167,7 @@ export const expenses = pgTable(
       .notNull()
       .references(() => categories.id),
     locationId: uuid("location_id").references(() => locations.id, { onDelete: "set null" }),
+    truckId: uuid("truck_id").references(() => trucks.id, { onDelete: "set null" }),
     miti: text("miti").notNull(), // "YYYY-MM-DD" Bikram Sambat
     nepaliMonth: text("nepali_month").notNull(), // e.g. "Chaitra"
     invoiceNumber: text("invoice_number"),
@@ -170,6 +195,7 @@ export const expenses = pgTable(
     index("expenses_fiscal_year_idx").on(t.companyId, t.fiscalYearId),
     index("expenses_party_idx").on(t.companyId, t.partyId),
     index("expenses_fiscal_month_cat_idx").on(t.companyId, t.fiscalYearId, t.nepaliMonth, t.categoryId),
+    index("expenses_active_fy_idx").on(t.companyId, t.fiscalYearId).where(sql`${t.isDeleted} = false`),
   ],
 );
 
@@ -224,6 +250,7 @@ export const importBatchRows = pgTable(
     rawVatRate: text("raw_vat_rate"),
     rawRemarks: text("raw_remarks"),
     rawLocationName: text("raw_location_name"),
+    rawVatNumber: text("raw_vat_number"),
     resolvedPartyId: uuid("resolved_party_id"),
     resolvedCategoryId: uuid("resolved_category_id"),
     resolvedLocationId: uuid("resolved_location_id"),

@@ -14,6 +14,9 @@ import { ilike, eq } from "drizzle-orm";
  * @returns A successful response containing the matching companies, or an internal-error response if the query fails.
  */
 export async function GET(request: Request) {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
+
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
 

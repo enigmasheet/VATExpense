@@ -1,18 +1,12 @@
 import { db } from "@/lib/db";
-import { expenses } from "@/lib/db/schema";
+import { expenses, parties, categories, locations, fiscalYears } from "@/lib/db/schema";
 import { badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { NEPALI_MONTHS, type NepaliMonth } from "@/lib/nepali-date";
 import { and, eq, sql, type SQL } from "drizzle-orm";
-import * as XLSX from "xlsx";
 
 export const runtime = "nodejs";
 
-/**
- * Exports the selected month's non-deleted expenses as an Excel VAT report.
- *
- * @returns A downloadable XLSX response containing expense details and totals, or an error response for invalid parameters or processing failures.
- */
 export async function GET(request: Request) {
   const companyId = await requireCompanyIdFromSession(request);
   if (typeof companyId !== "string") return companyId;
@@ -20,6 +14,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const fiscalYearId = url.searchParams.get("fiscalYearId");
   const nepaliMonth = url.searchParams.get("nepaliMonth");
+  const format = url.searchParams.get("format") || "standard";
 
   if (!fiscalYearId) return badRequest("fiscalYearId query parameter is required");
   if (!nepaliMonth) return badRequest("nepaliMonth query parameter is required");
@@ -37,12 +32,29 @@ export async function GET(request: Request) {
   try {
     const where = and(...conditions);
 
+    // Get company and fiscal year names for filename
+    const [company] = await db
+      .select({ name: sql<string>`(SELECT name FROM companies WHERE id = ${companyId})` })
+      .from(expenses)
+      .limit(1);
+
+    const [fy] = await db
+      .select({ name: fiscalYears.name })
+      .from(fiscalYears)
+      .where(eq(fiscalYears.id, fiscalYearId))
+      .limit(1);
+
+    const companyName = company?.name ?? "company";
+    const fyName = fy?.name ?? "fy";
+
     const rows = await db
       .select({
         miti: expenses.miti,
         invoiceNumber: expenses.invoiceNumber,
-        partyName: sql<string>`COALESCE((SELECT name FROM parties WHERE id = ${expenses.partyId}), '')`,
-        categoryName: sql<string>`COALESCE((SELECT name FROM categories WHERE id = ${expenses.categoryId}), '')`,
+        partyName: parties.name,
+        partyVatNumber: parties.vatNumber,
+        categoryName: categories.name,
+        locationName: locations.name,
         item: expenses.item,
         quantity: expenses.quantity,
         rate: expenses.rate,
@@ -53,23 +65,68 @@ export async function GET(request: Request) {
         remarks: expenses.remarks,
       })
       .from(expenses)
+      .leftJoin(parties, eq(expenses.partyId, parties.id))
+      .leftJoin(categories, eq(expenses.categoryId, categories.id))
+      .leftJoin(locations, eq(expenses.locationId, locations.id))
       .where(where)
       .orderBy(sql`${expenses.miti} desc, ${expenses.createdAt} desc`);
 
+    if (rows.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "No expenses found for this month" }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    // CSV re-import format
+    if (format === "reimport") {
+      const data = rows.map((r, i) => ({
+        Sno: i + 1,
+        Miti: r.miti,
+        "Invoice No": r.invoiceNumber ?? "",
+        Party: r.partyName ?? "",
+        Location: r.locationName ?? "",
+        "Vat No": r.partyVatNumber ?? "",
+        Category: r.categoryName ?? "",
+        Item: r.item,
+        Quantity: r.quantity ? Number(r.quantity) : "",
+        Rate: r.rate ? Number(r.rate) : "",
+        "Taxable Amount": Number(r.taxableAmount),
+        "VAT Amount": Number(r.vatAmount),
+        "Total Amount": Number(r.totalAmount),
+      }));
+
+      const XLSX = await import("xlsx");
+      const ws = XLSX.utils.json_to_sheet(data);
+      const csv = XLSX.utils.sheet_to_csv(ws);
+
+      return new Response(csv, {
+        headers: {
+          "Content-Type": "text/csv",
+          "Content-Disposition": `attachment; filename="vat-report-${companyName}-${fyName}-${nepaliMonth}.csv"`,
+        },
+      });
+    }
+
+    // Standard XLSX format
+    const XLSX = await import("xlsx");
+
     const data = rows.map((r, i) => ({
       "S.N.": i + 1,
-      "Miti": r.miti,
+      Miti: r.miti,
       "Invoice No.": r.invoiceNumber ?? "",
-      "Party": r.partyName,
-      "Category": r.categoryName,
-      "Item": r.item,
-      "Qty": r.quantity ? Number(r.quantity) : 0,
-      "Rate": r.rate ? Number(r.rate) : 0,
+      Party: r.partyName ?? "",
+      "VAT No.": r.partyVatNumber ?? "",
+      Location: r.locationName ?? "",
+      Category: r.categoryName ?? "",
+      Item: r.item,
+      Qty: r.quantity ? Number(r.quantity) : 0,
+      Rate: r.rate ? Number(r.rate) : 0,
       "Taxable Amount": Number(r.taxableAmount),
       "VAT Amount": Number(r.vatAmount),
       "Total Amount": Number(r.totalAmount),
       "VAT Rate %": Number(r.vatRate),
-      "Remarks": r.remarks ?? "",
+      Remarks: r.remarks ?? "",
     }));
 
     const totals = rows.reduce(
@@ -83,18 +140,20 @@ export async function GET(request: Request) {
 
     data.push({
       "S.N.": 0,
-      "Miti": "",
+      Miti: "",
       "Invoice No.": "",
-      "Party": "",
-      "Category": "",
-      "Item": "TOTAL",
-      "Qty": 0,
-      "Rate": 0,
+      Party: "",
+      "VAT No.": "",
+      Location: "",
+      Category: "",
+      Item: "TOTAL",
+      Qty: 0,
+      Rate: 0,
       "Taxable Amount": totals.taxable,
       "VAT Amount": totals.vat,
       "Total Amount": totals.total,
       "VAT Rate %": 0,
-      "Remarks": "",
+      Remarks: "",
     });
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -102,7 +161,9 @@ export async function GET(request: Request) {
       { wch: 5 },   // S.N.
       { wch: 12 },  // Miti
       { wch: 12 },  // Invoice No.
-      { wch: 20 },  // Party
+      { wch: 25 },  // Party
+      { wch: 14 },  // VAT No.
+      { wch: 15 },  // Location
       { wch: 15 },  // Category
       { wch: 25 },  // Item
       { wch: 8 },   // Qty
@@ -122,7 +183,7 @@ export async function GET(request: Request) {
     return new Response(buf, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="vat-report-${nepaliMonth}.xlsx"`,
+        "Content-Disposition": `attachment; filename="vat-report-${companyName}-${fyName}-${nepaliMonth}.xlsx"`,
       },
     });
   } catch (err) {

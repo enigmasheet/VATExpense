@@ -14,6 +14,7 @@ interface ParsedRow {
   partyName: string;
   categoryName: string;
   locationName: string | null;
+  vatNumber: string | null;
   item: string;
   quantity: string | null;
   rate: string | null;
@@ -42,17 +43,25 @@ function mapExcelRow(row: Record<string, unknown>): ParsedRow | null {
     return key ? String(row[key] ?? "").trim() : "";
   };
 
+  const miti = get("miti") || get("date");
+  const partyName = get("party") || get("supplier") || get("vendor");
+
+  // Skip summary/total rows (rows without miti and party, or containing "total")
+  if (!miti && !partyName) return null;
+  if (partyName.toLowerCase().includes("total")) return null;
+
   return {
-    miti: get("miti") || get("date"),
+    miti,
     invoiceNumber: get("invoice") || null,
-    partyName: get("party") || get("supplier") || get("vendor"),
+    partyName,
     categoryName: get("category") || "",
     locationName: get("location") || get("place") || null,
+    vatNumber: get("vat") || get("vat no") || get("vat number") || null,
     item: get("item") || get("description") || "",
     quantity: get("qty") || get("quantity") || null,
     rate: get("rate") || null,
     taxableAmount: get("taxable") || get("taxable amount") || "0",
-    vatAmount: get("vat") || get("vat amount") || "0",
+    vatAmount: get("vat amount") || get("vat amt") || "0",
     totalAmount: get("total") || get("total amount") || "0",
     vatRate: get("vat rate") || get("rate %") || String(VAT_RATE),
     remarks: get("remarks") || null,
@@ -81,17 +90,31 @@ export async function POST(request: Request) {
   if (!file) return badRequest("file is required");
   if (!fiscalYearId) return badRequest("fiscalYearId is required");
 
+  // Validate file extension
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (!["xlsx", "xls", "csv"].includes(ext || "")) {
+    return badRequest("File must be .xlsx, .xls, or .csv");
+  }
+
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const workbook = XLSX.read(buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
-    if (!sheetName) return badRequest("Excel file has no sheets");
+    if (!sheetName) return badRequest("File has no sheets");
+
+    // Multi-sheet warning
+    const warnings: string[] = [];
+    if (workbook.SheetNames.length > 1) {
+      warnings.push(
+        `File has ${workbook.SheetNames.length} sheets; only "${sheetName}" will be imported`,
+      );
+    }
 
     const sheet = workbook.Sheets[sheetName];
     const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
 
     if (jsonData.length === 0) {
-      return badRequest("Excel file has no data rows");
+      return badRequest("File has no data rows");
     }
 
     const rows: ParsedRow[] = [];
@@ -101,7 +124,7 @@ export async function POST(request: Request) {
     }
 
     if (rows.length === 0) {
-      return badRequest("No valid data rows found in Excel file");
+      return badRequest("No valid data rows found in file");
     }
 
     const [batch] = await db
@@ -132,6 +155,7 @@ export async function POST(request: Request) {
       rawVatRate: string;
       rawRemarks: string | null;
       rawLocationName: string | null;
+      rawVatNumber: string | null;
     }> = [];
 
     for (let i = 0; i < rows.length; i++) {
@@ -153,6 +177,7 @@ export async function POST(request: Request) {
         rawVatRate: row.vatRate,
         rawRemarks: row.remarks,
         rawLocationName: row.locationName,
+        rawVatNumber: row.vatNumber,
       });
     }
 
@@ -164,6 +189,7 @@ export async function POST(request: Request) {
         filename: file.name,
         rowCount: rows.length,
         status: "pending",
+        warnings,
       },
     }, 201);
   } catch (err) {

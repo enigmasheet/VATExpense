@@ -20,6 +20,7 @@ export interface ExpenseInputPayload {
   partyId: string;
   categoryId: string;
   locationId?: string | null;
+  truckId?: string | null;
   miti: string;
   invoiceNumber?: string | null;
   item: string;
@@ -100,6 +101,7 @@ export interface BatchRowInput {
   partyId: string;
   categoryId: string;
   locationId?: string | null;
+  truckId?: string | null;
   invoiceNumber?: string | null;
   item: string;
   quantity?: string | null;
@@ -155,6 +157,9 @@ export async function batchSaveExpenses(
       index: number;
     }[] = [];
 
+    // Track seen duplicates within the batch
+    const seenInvoiceKeys = new Set<string>();
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const payload = { ...row, companyId };
@@ -162,6 +167,20 @@ export async function batchSaveExpenses(
       if (!parsed.ok) {
         results.push({ index: i, ok: false, error: parsed.errors.join("; ") });
         continue;
+      }
+
+      // Check within-batch duplicates
+      if (parsed.data.invoiceNumber) {
+        const key = `${parsed.data.partyId}:${parsed.data.invoiceNumber}`;
+        if (seenInvoiceKeys.has(key)) {
+          results.push({
+            index: i,
+            ok: false,
+            error: "Duplicate invoice number within this batch",
+          });
+          continue;
+        }
+        seenInvoiceKeys.add(key);
       }
 
       const prepared = await prepareValidatedExpense(
@@ -305,6 +324,7 @@ export async function updateExpense(
       "partyId",
       "categoryId",
       "locationId",
+      "truckId",
       "invoiceNumber",
       "item",
       "quantity",

@@ -5,6 +5,7 @@ import { api, ApiError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { useApp } from "@/lib/useApp";
+import { useToast } from "@/components/ui/toast";
 import { LocationFormModal } from "@/components/location-form-modal";
 
 interface Location {
@@ -43,6 +44,7 @@ function PartyFormInner({
   onCancel: () => void;
 }) {
   const { companyId } = useApp();
+  const { toast } = useToast();
   const isEdit = mode === "edit" && initial;
 
   const [name, setName] = useState(isEdit ? initial.name : initialName);
@@ -61,8 +63,8 @@ function PartyFormInner({
     if (!companyId) return;
     api<{ data: Location[] }>(`/api/locations?companyId=${companyId}`)
       .then(({ data }) => setLocations(data))
-      .catch(() => {});
-  }, [companyId]);
+      .catch(() => toast("Failed to load locations", "error"));
+  }, [companyId, toast]);
 
   function handleLocationSaved(loc: { id: string; name: string }) {
     setLocations((prev) => [...prev, loc].sort((a, b) => a.name.localeCompare(b.name)));

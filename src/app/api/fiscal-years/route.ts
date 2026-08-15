@@ -48,17 +48,22 @@ export async function POST(request: Request) {
       return conflict(`Fiscal year "${name}" already exists`, { existing: existing[0] });
     }
 
-    if (isActive) {
-      await db
-        .update(fiscalYears)
-        .set({ isActive: false, updatedAt: sql`now()` })
-        .where(eq(fiscalYears.companyId, companyId));
-    }
+    const created = await db.transaction(async (tx) => {
+      if (isActive) {
+        await tx
+          .update(fiscalYears)
+          .set({ isActive: false, updatedAt: sql`now()` })
+          .where(eq(fiscalYears.companyId, companyId));
+      }
 
-    const [created] = await db
-      .insert(fiscalYears)
-      .values({ companyId, name, startYear, endYear, isActive })
-      .returning();
+      const [result] = await tx
+        .insert(fiscalYears)
+        .values({ companyId, name, startYear, endYear, isActive })
+        .returning();
+
+      return result;
+    });
+
     return apiOk({ data: created }, 201);
   } catch (err) {
     console.error("POST /api/fiscal-years failed", err);

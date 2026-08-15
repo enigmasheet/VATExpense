@@ -18,6 +18,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/", label: "Dashboard", icon: "dashboard" },
       { href: "/expenses/new", label: "Add Expense", icon: "quickAdd" },
+      { href: "/expenses/create", label: "New Expense", icon: "expenses" },
       { href: PATH_EXPENSES, label: "Expenses", icon: "expenses" },
       { href: "/import", label: "Import", icon: "import" },
     ],
@@ -36,6 +37,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/parties", label: "Parties", icon: "parties" },
       { href: "/categories", label: "Categories", icon: "categories" },
       { href: "/locations", label: "Locations", icon: "locations" },
+      { href: "/trucks", label: "Trucks", icon: "truck" },
       { href: "/fiscal-years", label: "Fiscal Years", icon: "fiscalYears" },
     ],
   },

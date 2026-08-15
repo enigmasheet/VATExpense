@@ -16,7 +16,10 @@
     "db:seed": "node --env-file=.env.local --import tsx scripts/seed.ts",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:db:start": "docker run -d --name vatexpense-test-db -e POSTGRES_DB=vatexpense_test -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5430:5432 --tmpfs /var/lib/postgresql/18/docker postgres:18",
+    "test:db:stop": "docker stop vatexpense-test-db && docker rm vatexpense-test-db",
+    "test:integration": "powershell -File scripts/test-db.ps1"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

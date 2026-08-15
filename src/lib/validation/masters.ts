@@ -65,6 +65,24 @@ export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 export type CreatePartyInput = z.infer<typeof createPartySchema>;
 export type CreateFiscalYearInput = z.infer<typeof createFiscalYearSchema>;
 
+export const createTruckSchema = z.object({
+  companyId: companyIdSchema,
+  name: z.string().trim().min(1, "Truck number is required").max(MAX_NAME_LENGTH),
+  ownerName: optionalTextToNull,
+  truckType: optionalTextToNull,
+  isActive: z.boolean().optional().default(true),
+});
+
+export const updateTruckSchema = z.object({
+  name: z.string().trim().min(1, "Truck number is required").max(MAX_NAME_LENGTH).optional(),
+  ownerName: optionalTextToNull.optional(),
+  truckType: optionalTextToNull.optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type CreateTruckInput = z.infer<typeof createTruckSchema>;
+export type UpdateTruckInput = z.infer<typeof updateTruckSchema>;
+
 export const updatePartySchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(MAX_NAME_LENGTH).optional(),
   vatNumber: optionalTextToNull.optional(),

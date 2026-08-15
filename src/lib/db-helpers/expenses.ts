@@ -1,11 +1,12 @@
 import { db } from "@/lib/db";
-import { expenses, parties, categories, locations } from "@/lib/db/schema";
+import { expenses, parties, categories, locations, trucks } from "@/lib/db/schema";
 import { and, eq, aliasedTable } from "drizzle-orm";
 
 const locationAlias = aliasedTable(locations, "location");
+const truckAlias = aliasedTable(trucks, "truck");
 
 /**
- * Shared select columns for expense queries with joined party, category, and location names.
+ * Shared select columns for expense queries with joined party, category, location, and truck names.
  */
 export const EXPENSE_SELECT_WITH_JOINS = {
   id: expenses.id,
@@ -14,6 +15,7 @@ export const EXPENSE_SELECT_WITH_JOINS = {
   partyId: expenses.partyId,
   categoryId: expenses.categoryId,
   locationId: expenses.locationId,
+  truckId: expenses.truckId,
   miti: expenses.miti,
   nepaliMonth: expenses.nepaliMonth,
   invoiceNumber: expenses.invoiceNumber,
@@ -33,10 +35,11 @@ export const EXPENSE_SELECT_WITH_JOINS = {
   partyName: parties.name,
   categoryName: categories.name,
   locationName: locationAlias.name,
+  truckName: truckAlias.name,
 } as const;
 
 /**
- * Finds a single expense by ID, scoped to a company, with party, category, and location names.
+ * Finds a single expense by ID, scoped to a company, with party, category, location, and truck names.
  */
 export async function findExpenseById(id: string, companyId: string) {
   const row = await db
@@ -45,6 +48,7 @@ export async function findExpenseById(id: string, companyId: string) {
     .leftJoin(parties, eq(parties.id, expenses.partyId))
     .leftJoin(categories, eq(categories.id, expenses.categoryId))
     .leftJoin(locationAlias, eq(locationAlias.id, expenses.locationId))
+    .leftJoin(truckAlias, eq(truckAlias.id, expenses.truckId))
     .where(and(eq(expenses.id, id), eq(expenses.companyId, companyId)))
     .limit(1);
 

@@ -1,0 +1,1 @@
+ALTER TABLE "import_batch_rows" ADD COLUMN "raw_vat_number" text;

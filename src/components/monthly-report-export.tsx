@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 interface MonthlyReportExportProps {
   companyId: string;
@@ -8,31 +10,53 @@ interface MonthlyReportExportProps {
   nepaliMonth: string;
 }
 
-/**
- * Renders a button that opens the monthly report export.
- *
- * @param companyId - The company identifier included in the export request
- * @param fiscalYearId - The fiscal year identifier included in the export request
- * @param nepaliMonth - The Nepali month included in the export request
- * @returns A button for initiating the monthly report export
- */
 export function MonthlyReportExport({
   companyId,
   fiscalYearId,
   nepaliMonth,
 }: MonthlyReportExportProps) {
-  function handleExport() {
+  const [downloading, setDownloading] = useState(false);
+  const { toast } = useToast();
+
+  async function handleExport(format: "standard" | "reimport") {
     const params = new URLSearchParams({
       companyId,
       fiscalYearId,
       nepaliMonth,
+      format,
     });
-    window.open(`/api/export/monthly?${params.toString()}`, "_blank");
+    setDownloading(true);
+    try {
+      const res = await fetch(`/api/export/monthly?${params.toString()}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Export failed" }));
+        throw new Error(errorData.error || "Export failed");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `vat-report-${nepaliMonth}.${format === "reimport" ? "csv" : "xlsx"}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast("Export downloaded successfully", "success");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Export failed", "error");
+    } finally {
+      setDownloading(false);
+    }
   }
 
   return (
-    <Button variant="secondary" onClick={handleExport}>
-      Export .xlsx
-    </Button>
+    <div className="flex gap-2">
+      <Button variant="secondary" onClick={() => handleExport("standard")} disabled={downloading}>
+        {downloading ? "Exporting…" : "Export .xlsx"}
+      </Button>
+      <Button variant="secondary" onClick={() => handleExport("reimport")} disabled={downloading}>
+        {downloading ? "Exporting…" : "Export .csv"}
+      </Button>
+    </div>
   );
 }

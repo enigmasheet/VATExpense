@@ -17,6 +17,7 @@ interface DataTableProps<T> {
   className?: string;
   variant?: "responsive" | "desktop-only";
   compact?: boolean;
+  caption?: string;
 }
 
 /**
@@ -33,6 +34,7 @@ interface DataTableProps<T> {
  * @param className - Additional classes for the outer surface
  * @param variant - responsive renders both layouts; desktop-only keeps one table
  * @param compact - Reduces cell padding for dense tables
+ * @param caption - Optional caption for accessibility
  */
 export function DataTable<T>({
   columns,
@@ -45,6 +47,7 @@ export function DataTable<T>({
   className = "",
   variant = "responsive",
   compact = false,
+  caption,
 }: DataTableProps<T>) {
   const cell = compact ? "px-3 py-2" : "px-4 py-3";
   const alignClass = (align: "left" | "right" | undefined) =>
@@ -52,6 +55,7 @@ export function DataTable<T>({
 
   const table = (
     <table className="w-full text-left text-sm">
+      {caption && <caption className="sr-only">{caption}</caption>}
       <thead>
         <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
           {columns.map((col) => (

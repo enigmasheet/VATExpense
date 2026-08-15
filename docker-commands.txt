@@ -1,0 +1,13 @@
+Docker Test Database Commands (PostgreSQL 18, port 5430)
+
+Start:
+docker run -d --name vatexpense-test-db -e POSTGRES_DB=vatexpense_test -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5430:5432 --tmpfs /var/lib/postgresql/18/docker postgres:18
+
+Stop and remove:
+docker stop vatexpense-test-db && docker rm vatexpense-test-db
+
+Connect:
+docker exec -it vatexpense-test-db psql -U postgres -d vatexpense_test
+
+Check status:
+docker exec vatexpense-test-db pg_isready -U postgres

@@ -5,6 +5,7 @@ import {
   parties,
   categories,
   locations,
+  trucks,
 } from "@/lib/db/schema";
 import { expenseInputSchema, validateAmounts } from "@/lib/validation/expense";
 import { safeParse } from "@/lib/validation/utils";
@@ -24,6 +25,7 @@ import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@/lib/constants";
 import { and, eq, ilike, or, sql, aliasedTable, type SQL } from "drizzle-orm";
 
 const locationAlias = aliasedTable(locations, "location");
+const truckAlias = aliasedTable(trucks, "truck");
 
 export async function GET(request: Request) {
   const companyId = await requireCompanyIdFromSession(request);
@@ -81,6 +83,7 @@ export async function GET(request: Request) {
         partyId: expenses.partyId,
         categoryId: expenses.categoryId,
         locationId: expenses.locationId,
+        truckId: expenses.truckId,
         miti: expenses.miti,
         nepaliMonth: expenses.nepaliMonth,
         invoiceNumber: expenses.invoiceNumber,
@@ -100,11 +103,13 @@ export async function GET(request: Request) {
         partyName: parties.name,
         categoryName: categories.name,
         locationName: locationAlias.name,
+        truckName: truckAlias.name,
       })
       .from(expenses)
       .leftJoin(parties, eq(parties.id, expenses.partyId))
       .leftJoin(categories, eq(categories.id, expenses.categoryId))
       .leftJoin(locationAlias, eq(locationAlias.id, expenses.locationId))
+      .leftJoin(truckAlias, eq(truckAlias.id, expenses.truckId))
       .where(where)
       .orderBy(sql`${expenses.miti} desc, ${expenses.createdAt} desc`)
       .limit(pageSize)
@@ -202,6 +207,7 @@ export async function POST(request: Request) {
         partyId: input.partyId,
         categoryId: input.categoryId,
         locationId: input.locationId ?? null,
+        truckId: input.truckId ?? null,
         miti: input.miti,
         nepaliMonth: miti.monthName,
         invoiceNumber: input.invoiceNumber ?? null,

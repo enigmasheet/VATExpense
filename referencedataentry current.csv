@@ -1,0 +1,29 @@
+Sno,Miti,"Invoice
+No",Party,Location,Vat No,Item,Quantity,Rate,"Taxable 
+Amount","VAT 
+Amount",Total Amount
+1,01/11/2082,3217,dinbandhu oil and trading house,birgunj,300035058,diesel,42.84,120.8,5175.07,672.76,5848
+2,01/11/2082,1734,om enterprices,birgunj,304512140,parts,,,16750,2177.5,18928
+3,02/11/2082,8305,shree durga oils,birgunj,303927983,diesel,80.59,120.79,9734.47,1265.48,11000
+4,03/11/2082,1286,shree krishna fuel pvt ltd,katahari,302152610,diesel,62.2711,120.79,7521.73,977.82,8500
+5,03/11/2082,1053,pashupati auto mobile center pvt ltd,birgunj,300661590,diesel,200,120.79,24158,3140.54,27299
+6,04/11/2082,2835,baishano oil stores,bhokraha,302154539,diesel,67.88,123.84,8406.26,1092.81,9499
+7,04/11/2082,1058,pashupati auto mobile center pvt ltd,birgunj,300661590,diesel,200,123.45,24690,3209.7,27900
+8,05/11/2082,8456,shree durga oils,birgunj,303927983,diesel,90,123.45,11110.5,1444.37,12555
+9,06/11/2082,1066,pashupati auto mobile center pvt ltd,birgunj,300661590,diesel,200,123.45,24690,3209.7,27900
+10,07/11/2082,2872,baishano oil stores,bhokraha,302154539,diesel,71.45,123.84,8848.37,1150.29,9999
+11,07/11/2082,1073,pashupati auto mobile center pvt ltd,birgunj,300661590,diesel,200,123.45,24690,3209.7,27900
+12,08/11/2082,9932,purwanchal oil supplayers,biratnagar,300069406,diesel,60.93,123.46,7522.42,977.91,8500
+13,12/11/2082,8688,shree durga oils,birgunj,303927983,diesel,86.02,123.45,10619.17,1380.49,12000
+14,16/11/2082,10327,purwanchal oil supplayers,biratnagar,300069406,diesel,64.52,123.44,7964.35,1035.37,9000
+15,17/11/2082,1127,pashupati auto mobile center pvt ltd,birgunj,300661590,diesel,200,123.45,24690,3209.7,27900
+16,23/11/2082,9072,shree durga oils,birgunj,303927983,diesel,143.37,123.45,17699.03,2300.87,20000
+17,24/11/2082,1231,madhu oil store,dhanusa,602966975,hsd,21.51,123.45,2655.41,345.2,3001
+18,26/11/2082,9269,shree durga oils,birgunj,303927983,diesel,90,123.45,11110.5,1444.37,12555
+19,28/11/2082,12770,the bijaya auto service center,biratnagar,300070859,diesel,10.75,123.45,1327.09,172.52,1500
+20,28/11/2082,1173,pashupati auto mobile center pvt ltd,birgunj,300661590,diesel,200,123.45,24690,3209.7,27900
+21,28/11/2082,10966,purwanchal oil supplayers,birgunj,300069406,diesel,64.516,123.45,7964.5,1035.39,9000
+22,28/11/2082,9348,shree durga oils,birgunj,303927983,diesel,90,123.45,11110.5,1444.37,12555
+23,30/11/2082,9417,shree durga oils,birgunj,303927983,diesel,86.02,123.45,10619.17,1380.49,12000
+,,,,,,,,,0,0,0
+,,,,,,,,,303746.54,39487.05,343234

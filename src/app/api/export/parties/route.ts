@@ -21,6 +21,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const fiscalYearId = url.searchParams.get("fiscalYearId");
   const basisParam = url.searchParams.get("basis");
+  const format = url.searchParams.get("format") || "xlsx";
 
   if (!fiscalYearId) return badRequest("fiscalYearId query parameter is required");
   if (basisParam !== "taxable" && basisParam !== "total") {
@@ -31,6 +32,13 @@ export async function GET(request: Request) {
 
   try {
     const rows = await getPartyPurchaseReport(companyId, fiscalYearId, basis, THRESHOLD);
+
+    if (rows.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "No parties found matching the criteria" }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
+      );
+    }
 
     const data = rows.map((r, i) => ({
       "S.N.": i + 1,
@@ -76,12 +84,23 @@ export async function GET(request: Request) {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Party Purchases");
 
+    // CSV format
+    if (format === "csv") {
+      const csv = XLSX.utils.sheet_to_csv(ws);
+      return new Response(csv, {
+        headers: {
+          "Content-Type": "text/csv",
+          "Content-Disposition": `attachment; filename="party-report-${basis}.csv"`,
+        },
+      });
+    }
+
     const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
     return new Response(buf, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="party-purchase-report-${basis}.xlsx"`,
+        "Content-Disposition": `attachment; filename="party-report-${basis}.xlsx"`,
       },
     });
   } catch (err) {

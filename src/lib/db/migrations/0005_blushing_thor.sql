@@ -1,0 +1,1 @@
+CREATE INDEX "expenses_active_fy_idx" ON "expenses" USING btree ("company_id","fiscal_year_id") WHERE "expenses"."is_deleted" = false;

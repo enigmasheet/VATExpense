@@ -71,7 +71,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.sub as string;
+        const userId = token.sub as string;
+
+        // Skip check for superadmin (no DB row)
+        if (userId !== "superadmin") {
+          const user = (
+            await db
+              .select({ isActive: users.isActive })
+              .from(users)
+              .where(eq(users.id, userId))
+              .limit(1)
+          )[0];
+
+          if (!user || !user.isActive) {
+            return { user: null } as unknown as typeof session;
+          }
+        }
+
+        session.user.id = userId;
         session.user.companyId = token.companyId as string | undefined;
         session.user.role = token.role as string;
       }

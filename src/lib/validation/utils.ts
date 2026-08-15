@@ -10,16 +10,6 @@ export function zodErrors(input: ZodLike): string[] {
   });
 }
 
-export class ApiInputError extends Error {
-  constructor(
-    message: string,
-    public readonly errors: string[],
-  ) {
-    super(message);
-    this.name = "ApiInputError";
-  }
-}
-
 export function safeParse<T>(
   schema: z.ZodType<T>,
   data: unknown,

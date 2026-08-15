@@ -27,6 +27,10 @@ export const expenseInputSchema = z.object({
     (v) => (v === null || v === undefined || v === "" ? null : v),
     z.uuid("locationId must be a valid UUID").nullable().optional(),
   ),
+  truckId: z.preprocess(
+    (v) => (v === null || v === undefined || v === "" ? null : v),
+    z.uuid("truckId must be a valid UUID").nullable().optional(),
+  ),
   miti: z
     .string()
     .trim()

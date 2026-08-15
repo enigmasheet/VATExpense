@@ -158,6 +158,7 @@ export async function prepareValidatedExpense(
         partyId: data.partyId,
         categoryId: data.categoryId,
         locationId: data.locationId ?? null,
+        truckId: data.truckId ?? null,
         miti: data.miti,
         nepaliMonth: miti.monthName,
         invoiceNumber: data.invoiceNumber ?? null,

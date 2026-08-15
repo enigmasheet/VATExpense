@@ -68,8 +68,8 @@ export default function PartiesPage() {
     if (!companyId) return;
     api<{ data: LocationOption[] }>(`/api/locations?companyId=${companyId}`)
       .then(({ data }) => setLocations(data))
-      .catch(() => {});
-  }, [companyId]);
+      .catch(() => toast("Failed to load locations", "error"));
+  }, [companyId, toast]);
 
   function openCreate() {
     setModalMode("create");

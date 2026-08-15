@@ -8,10 +8,11 @@ import { round2 } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { PartyFormModal } from "@/components/party-form-modal";
+import { useToast } from "@/components/ui/toast";
 
 import { VAT_RATE, VAT_RATE_DEFAULT } from "@/lib/constants";
+import { VAT_FACTOR } from "@/lib/expenses/ledger-calculation";
 import { MessageList, type Message } from "@/components/ui/alert";
-const VAT_FACTOR = 1 + VAT_RATE / 100; // 1.13
 
 interface FormValues {
   miti: string;
@@ -19,6 +20,7 @@ interface FormValues {
   partyId: string;
   categoryId: string;
   locationId: string;
+  truckId: string;
   item: string;
   quantity: string;
   rate: string;
@@ -34,6 +36,7 @@ export interface ExpenseInitial {
   partyId: string;
   categoryId: string;
   locationId: string | null;
+  truckId: string | null;
   item: string;
   quantity: string | null;
   rate: string | null;
@@ -50,6 +53,7 @@ const emptyForm: FormValues = {
   partyId: "",
   categoryId: "",
   locationId: "",
+  truckId: "",
   item: "",
   quantity: "",
   rate: "",
@@ -80,6 +84,7 @@ export function ExpenseForm({
 }) {
   const router = useRouter();
   const { companyId, fiscalYearId, fiscalYears, companies } = useApp();
+  const { toast } = useToast();
   const defaultVatRate = companies[0]?.defaultVatRate ?? VAT_RATE_DEFAULT;
   const [values, setValues] = useState<FormValues>(() =>
     mode === "edit" && initial
@@ -89,6 +94,7 @@ export function ExpenseForm({
           partyId: initial.partyId,
           categoryId: initial.categoryId,
           locationId: initial.locationId ?? "",
+          truckId: initial.truckId ?? "",
           item: initial.item,
           quantity: initial.quantity ?? "",
           rate: initial.rate ?? "",
@@ -105,6 +111,7 @@ export function ExpenseForm({
   const [parties, setParties] = useState<{ id: string; name: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+  const [trucks, setTrucks] = useState<{ id: string; name: string; ownerName: string | null }[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [partyModalOpen, setPartyModalOpen] = useState(false);
 
@@ -112,7 +119,7 @@ export function ExpenseForm({
     if (!companyId) return;
     api<{ data: { id: string; name: string }[] }>(`/api/parties?companyId=${companyId}`)
       .then(({ data }) => setParties(data))
-      .catch(() => {});
+      .catch(() => toast("Failed to refresh parties", "error"));
   }
 
   useEffect(() => {
@@ -127,6 +134,9 @@ export function ExpenseForm({
       api<{ data: { id: string; name: string }[] }>(`/api/locations?companyId=${companyId}`)
         .then(({ data }) => setLocations(data))
         .catch((e) => console.error("Failed to load locations:", e)),
+      api<{ data: { id: string; name: string; ownerName: string | null }[] }>(`/api/trucks?companyId=${companyId}`)
+        .then(({ data }) => setTrucks(data))
+        .catch((e) => console.error("Failed to load trucks:", e)),
     ]).finally(() => setLoadingOptions(false));
   }, [companyId]);
 
@@ -199,6 +209,7 @@ export function ExpenseForm({
       partyId: values.partyId,
       categoryId: values.categoryId,
       locationId: values.locationId || null,
+      truckId: values.truckId || null,
       item: values.item,
       quantity: values.quantity || null,
       rate: values.rate || null,
@@ -321,6 +332,16 @@ export function ExpenseForm({
               {locations.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Truck" htmlFor="e-truck" hint="Optional — for fuel/maintenance tracking">
+            <Select id="e-truck" value={values.truckId} onChange={set("truckId")}>
+              <option value="">—</option>
+              {trucks.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}{t.ownerName ? ` — ${t.ownerName}` : ""}
                 </option>
               ))}
             </Select>

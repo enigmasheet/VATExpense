@@ -30,6 +30,7 @@ export default async function ExpenseDetailPage({ params }: Props) {
         partyId: expense.partyId,
         categoryId: expense.categoryId,
         locationId: expense.locationId,
+        truckId: expense.truckId,
         item: expense.item,
         quantity: expense.quantity,
         rate: expense.rate,

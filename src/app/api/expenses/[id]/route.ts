@@ -87,6 +87,7 @@ export async function PATCH(
       "partyId",
       "categoryId",
       "locationId",
+      "truckId",
       "invoiceNumber",
       "item",
       "quantity",
