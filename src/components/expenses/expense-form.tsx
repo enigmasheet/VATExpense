@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api-client";
 import { useApp } from "@/lib/useApp";
@@ -107,6 +107,43 @@ export function ExpenseForm({
   );
   const [messages, setMessages] = useState<Message[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const isDirty = useRef(false);
+
+  // Mark form as dirty when values change
+  useEffect(() => {
+    isDirty.current = true;
+  }, [values]);
+
+  // Clear dirty flag after successful submit
+  useEffect(() => {
+    if (messages.some((m) => m.kind === "success")) {
+      isDirty.current = false;
+    }
+  }, [messages]);
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (isDirty.current) {
+        e.preventDefault();
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
+  // Ctrl+Enter keyboard shortcut to submit
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        const form = document.querySelector("form");
+        if (form) form.requestSubmit();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const [parties, setParties] = useState<{ id: string; name: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -230,6 +267,7 @@ export function ExpenseForm({
           setMessages([{ kind: "success", text: "Expense recorded." }]);
         }
         setValues(emptyForm);
+        isDirty.current = false;
       } else {
         const res = await api<{ data: unknown; warnings?: string[] }>(`/api/expenses/${expenseId}`, {
           method: "PATCH",
@@ -241,6 +279,7 @@ export function ExpenseForm({
         }
         msgs.push({ kind: "success", text: "Expense updated." });
         setMessages(msgs);
+        isDirty.current = false;
         router.refresh();
       }
     } catch (err) {

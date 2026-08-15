@@ -137,9 +137,23 @@ export default function ImportPage() {
     URL.revokeObjectURL(url);
   }, []);
 
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const ALLOWED_EXTENSIONS = [".xlsx", ".xls", ".csv"];
+
   const handleUpload = async () => {
     const file = fileRef.current?.files?.[0];
     if (!file || !companyId || !fiscalYearId) return;
+
+    // Client-side file validation
+    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      setError(`Invalid file type. Please upload a ${ALLOWED_EXTENSIONS.join(", ")} file.`);
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setError(`File too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)}MB.`);
+      return;
+    }
 
     setUploading(true);
     setError(null);
@@ -397,7 +411,6 @@ export default function ImportPage() {
 
           {/* Preview table */}
           <DataTable
-            variant="desktop-only"
             compact
             rowClassName={(row) => {
               if (row.status === "error") return "bg-danger/5";
@@ -507,6 +520,36 @@ export default function ImportPage() {
             ]}
             rows={preview.rows}
             getKey={(row) => row.id}
+            mobileCard={(row) => (
+              <>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    {row.status === "error" ? (
+                      <Badge tone="danger">Error</Badge>
+                    ) : row.warnings.length > 0 ? (
+                      <Badge tone="warning">Warning</Badge>
+                    ) : (
+                      <Badge tone="success">Valid</Badge>
+                    )}
+                    <span className="text-sm font-medium">{row.raw.item}</span>
+                  </div>
+                  <span className="tabular-amount font-medium">{formatAmount(row.raw.totalAmount)}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted">
+                  {row.raw.miti} · {row.resolved.partyName ?? row.raw.partyName}
+                </p>
+                {row.errors.length > 0 && (
+                  <ul className="mt-1 list-disc text-xs text-danger">
+                    {row.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                )}
+                {row.warnings.length > 0 && (
+                  <ul className="mt-1 list-disc text-xs text-warning">
+                    {row.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                  </ul>
+                )}
+              </>
+            )}
           />
         </div>
       )}
