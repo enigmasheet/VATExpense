@@ -68,6 +68,11 @@ export async function GET(
     const createdCategories: typeof existingCategories = [];
     const createdLocations: typeof existingLocations = [];
 
+    // Deduplication maps: collapse concurrent creates for the same normalized name into one DB insert
+    const pendingPartyCreates = new Map<string, Promise<(typeof existingParties)[number]>>();
+    const pendingCategoryCreates = new Map<string, Promise<(typeof existingCategories)[number]>>();
+    const pendingLocationCreates = new Map<string, Promise<(typeof existingLocations)[number]>>();
+
     const resolvedRows = await Promise.all(
       rows.map(async (row) => {
         const errors: string[] = [];
@@ -78,54 +83,72 @@ export async function GET(
         const partySuggestions: string[] = [];
         if (!party && autoCreate && row.rawPartyName) {
           const partyNorm = normalizeName(row.rawPartyName);
-          const [newParty] = await db
-            .insert(parties)
-            .values({
-              companyId: batch.companyId,
-              name: row.rawPartyName!,
-              normalizedName: partyNorm,
-              vatNumber: normalizeVatNumber(row.rawVatNumber),
-            })
-            .returning();
-          party = newParty;
-          partyMap.set(partyNorm, newParty);
-          createdParties.push(newParty);
-          warnings.push(`Party "${row.rawPartyName}" will be created`);
+          if (!pendingPartyCreates.has(partyNorm)) {
+            pendingPartyCreates.set(
+              partyNorm,
+              db
+                .insert(parties)
+                .values({
+                  companyId: batch.companyId,
+                  name: row.rawPartyName!,
+                  normalizedName: partyNorm,
+                  vatNumber: normalizeVatNumber(row.rawVatNumber),
+                  normalizedVatNumber: normalizeVatNumber(row.rawVatNumber),
+                })
+                .returning()
+                .then((r) => r[0]),
+            );
+          }
+          party = await pendingPartyCreates.get(partyNorm)!;
+          if (!partyMap.has(partyNorm)) {
+            partyMap.set(partyNorm, party);
+            createdParties.push(party);
+            warnings.push(`Party "${row.rawPartyName}" will be created`);
+          }
         } else if (!party) {
           errors.push(`Party "${row.rawPartyName}" not found`);
-          // Find fuzzy suggestions
           if (row.rawPartyName) {
             const matches = findSimilarNames(row.rawPartyName, existingPartyNames);
             partySuggestions.push(...matches);
           }
         }
 
-        // Resolve category
-        let category = categoryMap.get(normalizeName(row.rawCategoryName ?? ""));
+        // Resolve category — always infer from item when category is empty
+        const rawCatName = row.rawCategoryName ?? "";
+        let category = categoryMap.get(normalizeName(rawCatName));
         const categorySuggestions: string[] = [];
-        if (!category && autoCreate) {
-          const inferredName = row.rawCategoryName || inferCategoryFromItem(row.rawItem ?? "");
-          const categoryNorm = normalizeName(inferredName);
+        const inferredName = rawCatName || inferCategoryFromItem(row.rawItem ?? "");
+        const categoryNorm = normalizeName(inferredName);
+
+        if (!category) {
           category = categoryMap.get(categoryNorm);
-          if (!category) {
-            const [newCategory] = await db
-              .insert(categories)
-              .values({
-                companyId: batch.companyId,
-                name: inferredName,
-                normalizedName: categoryNorm,
-              })
-              .returning();
-            category = newCategory;
-            categoryMap.set(categoryNorm, newCategory);
-            createdCategories.push(newCategory);
+        }
+
+        if (!category && autoCreate) {
+          if (!pendingCategoryCreates.has(categoryNorm)) {
+            pendingCategoryCreates.set(
+              categoryNorm,
+              db
+                .insert(categories)
+                .values({
+                  companyId: batch.companyId,
+                  name: inferredName,
+                  normalizedName: categoryNorm,
+                })
+                .returning()
+                .then((r) => r[0]),
+            );
+          }
+          category = await pendingCategoryCreates.get(categoryNorm)!;
+          if (!categoryMap.has(categoryNorm)) {
+            categoryMap.set(categoryNorm, category);
+            createdCategories.push(category);
             warnings.push(`Category "${inferredName}" will be created`);
           }
         } else if (!category) {
-          errors.push(`Category "${row.rawCategoryName}" not found`);
-          // Find fuzzy suggestions
-          if (row.rawCategoryName) {
-            const matches = findSimilarNames(row.rawCategoryName, existingCategoryNames);
+          errors.push(`Category "${inferredName}" not found`);
+          if (inferredName) {
+            const matches = findSimilarNames(inferredName, existingCategoryNames);
             categorySuggestions.push(...matches);
           }
         }
@@ -137,17 +160,25 @@ export async function GET(
           const locationNorm = normalizeName(row.rawLocationName);
           let location = locationMap.get(locationNorm);
           if (!location && autoCreate) {
-            const [newLocation] = await db
-              .insert(locations)
-              .values({
-                companyId: batch.companyId,
-                name: row.rawLocationName!,
-                normalizedName: locationNorm,
-              })
-              .returning();
-            location = newLocation;
-            locationMap.set(locationNorm, newLocation);
-            createdLocations.push(newLocation);
+            if (!pendingLocationCreates.has(locationNorm)) {
+              pendingLocationCreates.set(
+                locationNorm,
+                db
+                  .insert(locations)
+                  .values({
+                    companyId: batch.companyId,
+                    name: row.rawLocationName!,
+                    normalizedName: locationNorm,
+                  })
+                  .returning()
+                  .then((r) => r[0]),
+              );
+            }
+            location = await pendingLocationCreates.get(locationNorm)!;
+            if (!locationMap.has(locationNorm)) {
+              locationMap.set(locationNorm, location);
+              createdLocations.push(location);
+            }
           }
           if (location) {
             resolvedLocationId = location.id;
