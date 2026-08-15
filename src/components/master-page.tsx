@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
 import { useToast } from "@/components/ui/toast";
+import { Alert } from "@/components/ui/alert";
 
 export interface FieldSpec {
   name: string;
@@ -26,6 +27,7 @@ export interface ColumnSpec<T> {
 
 interface MasterPageProps<T> {
   title: string;
+  singularName?: string;
   description?: string;
   listUrl: string;
   fields: FieldSpec[];
@@ -52,6 +54,7 @@ interface Option {
  */
 export function MasterPage<T extends { id: string; name: string; isActive: boolean }>({
   title,
+  singularName,
   description,
   listUrl,
   fields,
@@ -69,6 +72,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [toggleTarget, setToggleTarget] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -112,7 +116,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
       });
       setValues({});
       refresh();
-      toast(`${title.slice(0, -1)} added.`);
+      toast(`${singularName ?? title.slice(0, -1)} added.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Failed to save");
     } finally {
@@ -162,15 +166,20 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
     }
   }
 
-  async function toggleActive(item: T) {
-    if (!companyId) return;
+  function toggleActive(item: T) {
+    setToggleTarget(item);
+  }
+
+  async function confirmToggleActive() {
+    if (!toggleTarget || !companyId) return;
     try {
-      await api(`${listUrl}/${item.id}`, {
+      await api(`${listUrl}/${toggleTarget.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ isActive: !item.isActive }),
+        body: JSON.stringify({ isActive: !toggleTarget.isActive }),
       });
+      setToggleTarget(null);
       refresh();
-      toast(`${item.name} ${item.isActive ? "deactivated" : "activated"}.`);
+      toast(`${toggleTarget.name} ${toggleTarget.isActive ? "deactivated" : "activated"}.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Failed to update status");
     }
@@ -375,7 +384,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
             {submitting ? "Saving..." : "Add"}
           </Button>
         </div>
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {error && <Alert kind="danger">{error}</Alert>}
       </form>
 
       <DataTable
@@ -436,6 +445,16 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
         danger
         onConfirm={deleteItem}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={toggleTarget !== null}
+        title={toggleTarget?.isActive ? `Deactivate "${toggleTarget?.name}"?` : `Activate "${toggleTarget?.name}"?`}
+        message={toggleTarget?.isActive ? "This will mark the item as inactive. You can reactivate it later." : "This will mark the item as active."}
+        confirmLabel={toggleTarget?.isActive ? "Deactivate" : "Activate"}
+        danger={!!toggleTarget?.isActive}
+        onConfirm={confirmToggleActive}
+        onCancel={() => setToggleTarget(null)}
       />
     </div>
   );
