@@ -7,11 +7,10 @@ import {
   BATCH_STATUS_CONFIRMED,
   BATCH_ROW_STATUS_VALID,
   BATCH_ROW_STATUS_CONFIRMED,
-  RUNTIME_NODEJS,
 } from "@/lib/status-constants";
 import { eq, inArray } from "drizzle-orm";
 
-export const runtime = RUNTIME_NODEJS;
+export const runtime = "nodejs";
 
 /**
  * Confirms a pending import batch and creates expense records for its valid rows.

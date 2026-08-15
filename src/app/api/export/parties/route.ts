@@ -7,11 +7,10 @@ import {
   CONTENT_TYPE_JSON,
   CONTENT_TYPE_CSV,
   CONTENT_TYPE_XLSX,
-  RUNTIME_NODEJS,
 } from "@/lib/status-constants";
 import * as XLSX from "xlsx";
 
-export const runtime = RUNTIME_NODEJS;
+export const runtime = "nodejs";
 
 const THRESHOLD = PARTY_PURCHASE_THRESHOLD;
 

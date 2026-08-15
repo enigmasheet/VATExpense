@@ -17,11 +17,10 @@ import {
   DEFAULT_CATEGORY_SPARE_PARTS,
   DEFAULT_CATEGORY_TYRES,
   DEFAULT_CATEGORY_GENERAL,
-  RUNTIME_NODEJS,
 } from "@/lib/status-constants";
 import { eq, and } from "drizzle-orm";
 
-export const runtime = RUNTIME_NODEJS;
+export const runtime = "nodejs";
 
 function inferCategoryFromItem(item: string): string {
   const normalized = item.toLowerCase().trim();

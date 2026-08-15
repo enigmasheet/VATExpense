@@ -10,12 +10,11 @@ import {
   IMPORT_BODY_SIZE_LIMIT,
   IMPORT_DATE_FORMAT,
   ALLOWED_IMPORT_EXTENSIONS,
-  RUNTIME_NODEJS,
 } from "@/lib/status-constants";
 import * as XLSX from "xlsx";
 import { eq, and } from "drizzle-orm";
 
-export const runtime = RUNTIME_NODEJS;
+export const runtime = "nodejs";
 export const maxBodySize = IMPORT_BODY_SIZE_LIMIT;
 
 interface ParsedRow {
