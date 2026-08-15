@@ -102,44 +102,51 @@ export function DashboardClient({
             </Link>
           </div>
         ) : (
-          <DataTable
-            rowClassName={() => "hover:bg-surface-subtle"}
-            columns={[
-              {
-                header: "Miti",
-                cell: (e) => (
-                  <Link href={`/expenses/${e.id}`} className="font-medium text-primary hover:underline">
+          <>
+            <DataTable
+              rowClassName={() => "hover:bg-surface-subtle"}
+              columns={[
+                {
+                  header: "Miti",
+                  cell: (e) => (
+                    <Link href={`/expenses/${e.id}`} className="font-medium text-primary hover:underline">
+                      {e.miti}
+                    </Link>
+                  ),
+                },
+                { header: "Invoice", cell: (e) => e.invoiceNumber ?? "—" },
+                { header: "Party", cell: (e) => e.partyName },
+                { header: "Item", cell: (e) => e.item },
+                {
+                  header: "Total",
+                  align: "right",
+                  cell: (e) => <span className="tabular-amount font-medium">{formatAmount(e.totalAmount)}</span>,
+                },
+              ]}
+              rows={recent}
+              getKey={(e) => e.id}
+              mobileCard={(e) => (
+                <>
+                  <div className="flex items-start justify-between">
+                    <Link href={`/expenses/${e.id}`} className="font-medium text-primary hover:underline">
+                      {e.partyName}
+                    </Link>
+                    <span className="tabular-amount font-medium">{formatAmount(e.totalAmount)}</span>
+                  </div>
+                  <p className="truncate text-sm text-muted">{e.item}</p>
+                  <p className="mt-1 text-xs text-muted">
                     {e.miti}
-                  </Link>
-                ),
-              },
-              { header: "Invoice", cell: (e) => e.invoiceNumber ?? "—" },
-              { header: "Party", cell: (e) => e.partyName },
-              { header: "Item", cell: (e) => e.item },
-              {
-                header: "Total",
-                align: "right",
-                cell: (e) => <span className="tabular-amount font-medium">{formatAmount(e.totalAmount)}</span>,
-              },
-            ]}
-            rows={recent}
-            getKey={(e) => e.id}
-            mobileCard={(e) => (
-              <>
-                <div className="flex items-start justify-between">
-                  <Link href={`/expenses/${e.id}`} className="font-medium text-primary hover:underline">
-                    {e.partyName}
-                  </Link>
-                  <span className="tabular-amount font-medium">{formatAmount(e.totalAmount)}</span>
-                </div>
-                <p className="truncate text-sm text-muted">{e.item}</p>
-                <p className="mt-1 text-xs text-muted">
-                  {e.miti}
-                  {e.invoiceNumber ? ` · Inv: ${e.invoiceNumber}` : ""}
-                </p>
-              </>
-            )}
-          />
+                    {e.invoiceNumber ? ` · Inv: ${e.invoiceNumber}` : ""}
+                  </p>
+                </>
+              )}
+            />
+            <div className="mt-3 text-center">
+              <Link href="/expenses" className="text-sm text-primary hover:underline">
+                View all expenses
+              </Link>
+            </div>
+          </>
         )}
       </section>
     </div>

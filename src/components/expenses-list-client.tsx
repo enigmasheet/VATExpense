@@ -316,7 +316,7 @@ export function ExpensesListClient({
       <ConfirmDialog
         open={deleteTarget !== null}
         title={`Delete "${deleteTarget?.item}"?`}
-        message="This action cannot be undone from the database only."
+        message="This will permanently delete this expense. This action cannot be undone."
         confirmLabel="Delete"
         danger
         onConfirm={confirmDeleteExpense}
