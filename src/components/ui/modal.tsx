@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+
+const CLOSE_MS = 200;
 
 interface ModalProps {
   open: boolean;
@@ -17,7 +19,9 @@ interface ModalProps {
 /**
  * Renders a modal dialog on a backdrop. Supports two positions: a centered
  * dialog and a right-side slide-over panel. Provides Escape-to-close and
- * moves focus to the first focusable element when opened.
+ * moves focus to the first focusable element when opened. Panels animate in
+ * and out; the panel stays mounted briefly while closing so the exit
+ * transition can play.
  *
  * @param open - Whether the modal is visible
  * @param title - The modal heading
@@ -41,6 +45,19 @@ export function Modal({
   closeLabel = "Close",
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(open);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      const raf = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(raf);
+    }
+    setVisible(false);
+    const timer = setTimeout(() => setMounted(false), CLOSE_MS);
+    return () => clearTimeout(timer);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -57,13 +74,16 @@ export function Modal({
     return () => document.removeEventListener("keydown", handleKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   const isRight = position === "right";
+  const shown = open && visible;
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex bg-black/40 ${isRight ? "justify-end" : "items-center justify-center p-4"}`}
+      className={`fixed inset-0 z-50 flex bg-black/40 transition-opacity duration-200 motion-reduce:transition-none ${
+        shown ? "opacity-100" : "opacity-0 pointer-events-none"
+      } ${isRight ? "justify-end" : "items-center justify-center p-4"}`}
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -73,7 +93,11 @@ export function Modal({
     >
       <div
         ref={panelRef}
-        className={`flex flex-col bg-surface shadow-xl ${isRight ? `h-full w-full ${width} border-l border-border` : `max-h-[85vh] w-full ${width} rounded-lg border border-border`}`}
+        className={`flex flex-col bg-surface shadow-xl transition-all duration-200 motion-reduce:transition-none ${
+          isRight
+            ? `h-full w-full ${width} border-l border-border ${shown ? "translate-x-0" : "translate-x-full"}`
+            : `max-h-[85vh] w-full ${width} rounded-lg border border-border ${shown ? "scale-100 opacity-100" : "scale-95 opacity-0"}`
+        }`}
       >
         <div className="flex items-start justify-between border-b border-border px-6 py-5">
           <div>

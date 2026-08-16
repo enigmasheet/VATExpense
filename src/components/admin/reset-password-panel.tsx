@@ -5,7 +5,7 @@ import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-import { SlideOver } from "@/components/admin/slide-over";
+import { SlideOver } from "@/components/ui/slide-over";
 import { UserAvatar } from "@/components/admin/user-avatar";
 
 interface UserData {

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { ROLE_ADMIN, ROLE_DATA_ENTRY } from "@/lib/constants";
-import { SlideOver } from "@/components/admin/slide-over";
+import { SlideOver } from "@/components/ui/slide-over";
 import { UserAvatar } from "@/components/admin/user-avatar";
 
 interface CompanyOption {
