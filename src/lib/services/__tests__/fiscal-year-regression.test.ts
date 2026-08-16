@@ -1,4 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+﻿import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  mockChainReturn,
+  mockUpdateReturn,
+  mockDeleteReturn,
+} from "@/lib/test-utils/mock-db";
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -11,36 +16,6 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import { db } from "@/lib/db";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
-function mockSelectChain(rows: any[]) {
-  const limit = vi.fn().mockResolvedValue(rows);
-  const where = vi.fn().mockReturnValue({ limit });
-  const from = vi.fn().mockReturnValue({ where });
-  return { from, where, limit };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
-function mockInsertChain(row: any) {
-  const returning = vi.fn().mockResolvedValue([row]);
-  const values = vi.fn().mockReturnValue({ returning });
-  return { values, returning };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
-function mockUpdateChain(row: any) {
-  const returning = vi.fn().mockResolvedValue([row]);
-  const where = vi.fn().mockReturnValue({ returning });
-  const set = vi.fn().mockReturnValue({ where });
-  return { set, where, returning };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
-function mockDeleteChain(rows: any[]) {
-  const returning = vi.fn().mockResolvedValue(rows);
-  const where = vi.fn().mockReturnValue({ returning });
-  return { where, returning };
-}
 
 describe("fiscal year regression protection", () => {
   let createFiscalYear: typeof import("@/lib/services/fiscal-years").createFiscalYear;
@@ -57,16 +32,16 @@ describe("fiscal year regression protection", () => {
 
   describe("createFiscalYear", () => {
     it("creates FY with activation", async () => {
-      const selectChain = mockSelectChain([]);
-      vi.mocked(db.select).mockReturnValue(selectChain as any);
+      const selectChain = mockChainReturn([]);
+      vi.mocked(db.select).mockReturnValue(selectChain as never);
 
       const newFY = { id: "fy1", name: "2080/81", companyId: "c1", isActive: true };
-      vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
+      vi.mocked(db.transaction).mockImplementation(async (fn) => {
         const insertReturning = vi.fn().mockResolvedValue([newFY]);
         const insertValues = vi.fn().mockReturnValue({ returning: insertReturning });
         const txInsert = vi.fn().mockReturnValue({ values: insertValues });
         const txUpdate = vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn() }) });
-        const tx = { insert: txInsert, update: txUpdate, select: db.select, delete: db.delete } as any;
+        const tx = { insert: txInsert, update: txUpdate, select: db.select, delete: db.delete } as never;
         return fn(tx);
       });
 
@@ -83,8 +58,8 @@ describe("fiscal year regression protection", () => {
 
     it("rejects duplicate name within company", async () => {
       const existingFY = { id: "existing", name: "2080/81" };
-      const selectChain = mockSelectChain([existingFY]);
-      vi.mocked(db.select).mockReturnValue(selectChain as any);
+      const selectChain = mockChainReturn([existingFY]);
+      vi.mocked(db.select).mockReturnValue(selectChain as never);
 
       const result = await createFiscalYear("c1", {
         name: "2080/81",
@@ -101,15 +76,15 @@ describe("fiscal year regression protection", () => {
 
   describe("updateFiscalYear", () => {
     it("updates FY with activation", async () => {
-      vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
+      vi.mocked(db.transaction).mockImplementation(async (fn) => {
         const txUpdate = vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn() }) });
-        const tx = { insert: db.insert, update: txUpdate, select: db.select, delete: db.delete } as any;
+        const tx = { insert: db.insert, update: txUpdate, select: db.select, delete: db.delete } as never;
         return fn(tx);
       });
 
       const updatedFY = { id: "fy1", name: "2080/81", isActive: true };
-      const selectChain = mockSelectChain([updatedFY]);
-      vi.mocked(db.select).mockReturnValue(selectChain as any);
+      const selectChain = mockChainReturn([updatedFY]);
+      vi.mocked(db.select).mockReturnValue(selectChain as never);
 
       const result = await updateFiscalYear("fy1", "c1", { isActive: true });
 
@@ -126,9 +101,9 @@ describe("fiscal year regression protection", () => {
     });
 
     it("returns not-found when FY doesn't exist", async () => {
-      const updateChain = mockUpdateChain(null);
+      const updateChain = mockUpdateReturn(null);
       updateChain.returning.mockResolvedValue([]);
-      vi.mocked(db.update).mockReturnValue(updateChain as any);
+      vi.mocked(db.update).mockReturnValue(updateChain as never);
 
       const result = await updateFiscalYear("nonexistent", "c1", { name: "New Name" });
 
@@ -141,8 +116,8 @@ describe("fiscal year regression protection", () => {
 
   describe("deleteFiscalYear", () => {
     it("deletes FY scoped to company", async () => {
-      const deleteChain = mockDeleteChain([{ id: "fy1" }]);
-      vi.mocked(db.delete).mockReturnValue(deleteChain as any);
+      const deleteChain = mockDeleteReturn([{ id: "fy1" }]);
+      vi.mocked(db.delete).mockReturnValue(deleteChain as never);
 
       const result = await deleteFiscalYear("fy1", "c1");
 
@@ -150,8 +125,8 @@ describe("fiscal year regression protection", () => {
     });
 
     it("returns not-found when FY doesn't exist", async () => {
-      const deleteChain = mockDeleteChain([]);
-      vi.mocked(db.delete).mockReturnValue(deleteChain as any);
+      const deleteChain = mockDeleteReturn([]);
+      vi.mocked(db.delete).mockReturnValue(deleteChain as never);
 
       const result = await deleteFiscalYear("nonexistent", "c1");
 

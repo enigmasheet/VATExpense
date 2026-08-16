@@ -1,5 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+﻿import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createFiscalYear, updateFiscalYear, deleteFiscalYear } from "../fiscal-years";
+import {
+  mockChainReturn,
+  mockInsertReturn,
+  mockUpdateReturn,
+  mockDeleteReturn,
+} from "@/lib/test-utils/mock-db";
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -13,42 +19,11 @@ vi.mock("@/lib/db", () => ({
 
 import { db } from "@/lib/db";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
-function mockChainReturn(rows: any[]) {
-  const limit = vi.fn().mockResolvedValue(rows);
-  const where = vi.fn().mockReturnValue({ limit });
-  const from = vi.fn().mockReturnValue({ where });
-  return { from, where, limit };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
-function mockInsertReturn(rows: any[]) {
-  const returning = vi.fn().mockResolvedValue(rows);
-  const values = vi.fn().mockReturnValue({ returning });
-  return { values, returning };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
-function mockUpdateReturn(rows: any[]) {
-  const returning = vi.fn().mockResolvedValue(rows);
-  const where = vi.fn().mockReturnValue({ returning });
-  const set = vi.fn().mockReturnValue({ where });
-  return { set, where, returning };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
-function mockDeleteReturn(rows: any[]) {
-  const returning = vi.fn().mockResolvedValue(rows);
-  const where = vi.fn().mockReturnValue({ returning });
-  return { where, returning };
-}
-
 describe("fiscal-years service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default transaction mock: execute the callback with a mock tx
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock transaction callback
-    vi.mocked(db.transaction).mockImplementation(async (fn: any) => {
+    vi.mocked(db.transaction).mockImplementation(async (fn) => {
       const tx = {
         update: vi.fn().mockReturnValue({
           set: vi.fn().mockReturnValue({
@@ -61,14 +36,13 @@ describe("fiscal-years service", () => {
           }),
         }),
       };
-      return fn(tx);
+      return fn(tx as never);
     });
   });
 
   describe("createFiscalYear", () => {
     it("returns duplicate when name matches existing", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
-      vi.mocked(db.select).mockReturnValue(mockChainReturn([{ id: "existing-1", name: "2080/81" }]) as any);
+      vi.mocked(db.select).mockReturnValue(mockChainReturn([{ id: "existing-1", name: "2080/81" }]) as never);
       const result = await createFiscalYear("comp-1", {
         name: "2080/81",
         startYear: 2080,
@@ -79,10 +53,8 @@ describe("fiscal-years service", () => {
     });
 
     it("returns ok on insert with unique name", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
-      vi.mocked(db.select).mockReturnValue(mockChainReturn([]) as any);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
-      vi.mocked(db.insert).mockReturnValue(mockInsertReturn([{ id: "fy-1", name: "2080/81" }]) as any);
+      vi.mocked(db.select).mockReturnValue(mockChainReturn([]) as never);
+      vi.mocked(db.insert).mockReturnValue(mockInsertReturn([{ id: "fy-1", name: "2080/81" }]) as never);
       const result = await createFiscalYear("comp-1", {
         name: "2080/81",
         startYear: 2080,
@@ -92,8 +64,7 @@ describe("fiscal-years service", () => {
     });
 
     it("deactivates existing active years when activating new one", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
-      vi.mocked(db.select).mockReturnValue(mockChainReturn([]) as any);
+      vi.mocked(db.select).mockReturnValue(mockChainReturn([]) as never);
       await createFiscalYear("comp-1", {
         name: "2080/81",
         startYear: 2080,
@@ -106,15 +77,13 @@ describe("fiscal-years service", () => {
 
   describe("updateFiscalYear", () => {
     it("returns not-found when no rows affected", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
-      vi.mocked(db.update).mockReturnValue(mockUpdateReturn([]) as any);
+      vi.mocked(db.update).mockReturnValue(mockUpdateReturn([]) as never);
       const result = await updateFiscalYear("fy-1", "comp-1", { name: "New" });
       expect(result.ok).toBe(false);
     });
 
     it("returns ok when updated", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
-      vi.mocked(db.update).mockReturnValue(mockUpdateReturn([{ id: "fy-1" }]) as any);
+      vi.mocked(db.update).mockReturnValue(mockUpdateReturn([{ id: "fy-1" }]) as never);
       const result = await updateFiscalYear("fy-1", "comp-1", { name: "New" });
       expect(result.ok).toBe(true);
     });
@@ -127,15 +96,13 @@ describe("fiscal-years service", () => {
 
   describe("deleteFiscalYear", () => {
     it("returns not-found when no rows deleted", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
-      vi.mocked(db.delete).mockReturnValue(mockDeleteReturn([]) as any);
+      vi.mocked(db.delete).mockReturnValue(mockDeleteReturn([]) as never);
       const result = await deleteFiscalYear("fy-1", "comp-1");
       expect(result.ok).toBe(false);
     });
 
     it("returns ok when deleted", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock return type is intentionally loose
-      vi.mocked(db.delete).mockReturnValue(mockDeleteReturn([{ id: "fy-1" }]) as any);
+      vi.mocked(db.delete).mockReturnValue(mockDeleteReturn([{ id: "fy-1" }]) as never);
       const result = await deleteFiscalYear("fy-1", "comp-1");
       expect(result.ok).toBe(true);
     });

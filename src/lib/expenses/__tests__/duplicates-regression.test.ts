@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+﻿import { describe, it, expect, vi, beforeEach } from "vitest";
+import { mockChainReturn } from "@/lib/test-utils/mock-db";
 
 // Mock DB at the top level before any imports that use it
 vi.mock("@/lib/db", () => ({
@@ -44,14 +45,6 @@ describe("amountsClose regression protection", () => {
   });
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock helper for DB chain
-function mockChainReturn(rows: any[]) {
-  const limit = vi.fn().mockResolvedValue(rows);
-  const where = vi.fn().mockReturnValue({ limit });
-  const from = vi.fn().mockReturnValue({ where });
-  return { from, where, limit };
-}
-
 describe("checkInvoiceDuplicate regression protection", () => {
   let checkInvoiceDuplicate: typeof import("@/lib/expenses/duplicates").checkInvoiceDuplicate;
 
@@ -77,7 +70,7 @@ describe("checkInvoiceDuplicate regression protection", () => {
 
   it("returns null when no duplicate found", async () => {
     const chain = mockChainReturn([]);
-    vi.mocked(db.select).mockReturnValue(chain as any);
+    vi.mocked(db.select).mockReturnValue(chain as never);
 
     const result = await checkInvoiceDuplicate({
       companyId: "c1",
@@ -101,7 +94,7 @@ describe("checkInvoiceDuplicate regression protection", () => {
       totalAmount: "1130",
     };
     const chain = mockChainReturn([existing]);
-    vi.mocked(db.select).mockReturnValue(chain as any);
+    vi.mocked(db.select).mockReturnValue(chain as never);
 
     const result = await checkInvoiceDuplicate({
       companyId: "c1",
@@ -126,7 +119,7 @@ describe("checkInvoiceDuplicate regression protection", () => {
       totalAmount: "2260",
     };
     const chain = mockChainReturn([existing]);
-    vi.mocked(db.select).mockReturnValue(chain as any);
+    vi.mocked(db.select).mockReturnValue(chain as never);
 
     const result = await checkInvoiceDuplicate({
       companyId: "c1",
@@ -174,7 +167,7 @@ describe("findSuspiciousDuplicates regression protection", () => {
       totalAmount: "1130",
     };
     const chain = mockChainReturn([candidate]);
-    vi.mocked(db.select).mockReturnValue(chain as any);
+    vi.mocked(db.select).mockReturnValue(chain as never);
 
     const result = await findSuspiciousDuplicates({
       companyId: "c1",
@@ -197,7 +190,7 @@ describe("findSuspiciousDuplicates regression protection", () => {
       totalAmount: "5650",
     };
     const chain = mockChainReturn([candidate]);
-    vi.mocked(db.select).mockReturnValue(chain as any);
+    vi.mocked(db.select).mockReturnValue(chain as never);
 
     const result = await findSuspiciousDuplicates({
       companyId: "c1",
