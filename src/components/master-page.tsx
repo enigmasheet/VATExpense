@@ -8,6 +8,8 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { Alert } from "@/components/ui/alert";
 
@@ -320,10 +322,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-2xl font-semibold text-foreground">{title}</h1>
-        {description && <p className="mt-1 text-sm text-muted">{description}</p>}
-      </div>
+      <PageHeader title={title} subtitle={description} />
 
       <form
         onSubmit={onSubmit}

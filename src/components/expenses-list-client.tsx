@@ -116,17 +116,15 @@ export function ExpensesListClient({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-foreground">Expenses</h1>
-          <p className="mt-1 text-sm text-muted">
-            Fiscal year {fiscalYearName} · {total} record{total === 1 ? "" : "s"}
-          </p>
-        </div>
-        <Link href="/expenses/new">
-          <Button>Add Expense</Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Expenses"
+        subtitle={`Fiscal year ${fiscalYearName} · ${total} record${total === 1 ? "" : "s"}`}
+        actions={
+          <Link href="/expenses/new">
+            <Button>Add Expense</Button>
+          </Link>
+        }
+      />
 
       <form
         className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-5"
@@ -183,15 +181,16 @@ export function ExpensesListClient({
 
       <div className="rounded-lg border border-border bg-surface">
         {rows.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 p-6 text-center">
-            <p className="text-sm text-muted">No expenses match. Record your first one.</p>
-            <Link
-              href="/expenses/new"
-              className="inline-flex items-center gap-1.5 rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              Add Expense
-            </Link>
-          </div>
+          <EmptyState
+            icon="expenses"
+            title="No expenses yet"
+            description="Record your first expense to get started."
+            action={
+              <Link href="/expenses/new">
+                <Button>Add Expense</Button>
+              </Link>
+            }
+          />
         ) : (
           <DataTable
             rowClassName={() => "hover:bg-surface-subtle"}

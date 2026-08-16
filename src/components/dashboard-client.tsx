@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { formatAmount, nepaliGroupedNumber } from "@/lib/format";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import { DataTable } from "@/components/ui/data-table";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface RecentExpense {
   id: string;
@@ -60,10 +63,7 @@ export function DashboardClient({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-baseline justify-between">
-        <h1 className="font-display text-2xl font-semibold text-foreground">{companyName}</h1>
-        <span className="text-sm text-muted">FY {fiscalYearName}</span>
-      </div>
+      <PageHeader title={companyName} subtitle={`FY ${fiscalYearName}`} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Taxable" value={formatAmount(taxable)} />
@@ -92,15 +92,16 @@ export function DashboardClient({
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-semibold text-foreground">Recent expenses</h2>
         {recent.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-surface p-8 text-center">
-            <p className="text-sm text-muted">No expenses recorded yet.</p>
-            <Link
-              href="/expenses/new"
-              className="inline-flex items-center gap-1.5 rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              Add your first expense
-            </Link>
-          </div>
+          <EmptyState
+            icon="dashboard"
+            title="No expenses recorded yet"
+            description="Record your first expense to see it here."
+            action={
+              <Link href="/expenses/new">
+                <Button>Add your first expense</Button>
+              </Link>
+            }
+          />
         ) : (
           <>
             <DataTable
