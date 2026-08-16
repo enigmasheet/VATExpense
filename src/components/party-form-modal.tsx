@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
+import { Modal } from "@/components/ui/modal";
 import { useApp } from "@/lib/useApp";
 import { useToast } from "@/components/ui/toast";
 import { LocationFormModal } from "@/components/location-form-modal";
@@ -228,33 +229,18 @@ export function PartyFormModal({
   onCancel,
   initialName = "",
 }: PartyFormModalProps) {
-  if (!open) return null;
-
   const formKey = `${mode}-${initial?.id ?? "new"}-${initialName}`;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="party-form-title"
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onCancel();
-      }}
-    >
-      <div className="mx-4 w-full max-w-lg rounded-lg border border-border bg-surface p-5 shadow-xl">
-        <h2 id="party-form-title" className="font-display text-lg font-semibold text-foreground">
-          {mode === "create" ? "Add Party" : "Edit Party"}
-        </h2>
-        <PartyFormInner
-          key={formKey}
-          mode={mode}
-          initial={initial}
-          initialName={initialName}
-          onSaved={onSaved}
-          onCancel={onCancel}
-        />
-      </div>
-    </div>
+    <Modal open={open} title={mode === "create" ? "Add Party" : "Edit Party"} onClose={onCancel} width="max-w-lg">
+      <PartyFormInner
+        key={formKey}
+        mode={mode}
+        initial={initial}
+        initialName={initialName}
+        onSaved={onSaved}
+        onCancel={onCancel}
+      />
+    </Modal>
   );
 }

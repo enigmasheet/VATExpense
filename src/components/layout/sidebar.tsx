@@ -7,6 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useApp } from "@/lib/useApp";
 import { PATH_LOGIN } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/admin/user-avatar";
 import { NavIcon } from "./icons";
 import { getNavGroups, type NavItem } from "./nav-config";
 
@@ -102,15 +103,6 @@ export function Sidebar({
 
   const displayName = activeCompany?.brandName || activeCompany?.name || "VAT Ledger";
 
-  const userInitials = session?.user?.name
-    ? session.user.name
-        .split(/\s+/)
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
-    : "?";
-
   return (
     <aside
       className={`relative flex h-full flex-col border-r border-border bg-surface transition-[width] duration-200 ease-in-out ${
@@ -173,12 +165,9 @@ export function Sidebar({
           <div className="flex flex-col items-center gap-4">
             {session?.user && (
               <>
-                <div
-                  className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-sm font-semibold text-primary"
-                  title={session.user.name ?? undefined}
-                >
-                  {userInitials}
-                </div>
+                <span title={session.user.name ?? undefined}>
+                  <UserAvatar name={session.user.name} email={session.user.email} shape="rounded" />
+                </span>
                 <button
                   onClick={() => signOut({ callbackUrl: PATH_LOGIN })}
                   className="rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-foreground"

@@ -11,6 +11,8 @@ import { PartyReportExport } from "@/components/party-report-export";
 import { FiscalYearSelector } from "@/components/fiscal-year-selector";
 import { StatCard } from "@/components/ui/stat-card";
 import { DataTable } from "@/components/ui/data-table";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PATH_LOGIN, PARTY_PURCHASE_THRESHOLD } from "@/lib/constants";
 
 interface Props {
@@ -36,10 +38,10 @@ export default async function PartyPurchaseReportPage({ searchParams }: Props) {
   if (!activeFiscalYear) {
     return (
       <div className="flex flex-col gap-6">
-        <h1 className="font-display text-2xl font-semibold text-foreground">
-          Party Purchase Report
-        </h1>
-        <p className="text-sm text-muted">No fiscal year configured — create one first.</p>
+        <PageHeader
+          title="Party Purchase Report"
+          subtitle="No fiscal year configured — create one first."
+        />
       </div>
     );
   }
@@ -69,22 +71,17 @@ export default async function PartyPurchaseReportPage({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-baseline justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-foreground">
-            Party Purchase Report
-          </h1>
-          <p className="mt-1 text-sm text-muted">
-            Parties with purchases over Rs. 1,00,000 ({basisLabel}) · FY{" "}
-            {selectedFiscalYear.name}
-          </p>
-        </div>
-        <PartyReportExport
-          companyId={companyId}
-          fiscalYearId={selectedFiscalYear.id}
-          basis={basis}
-        />
-      </div>
+      <PageHeader
+        title="Party Purchase Report"
+        subtitle={`Parties with purchases over Rs. 1,00,000 (${basisLabel}) · FY ${selectedFiscalYear.name}`}
+        actions={
+          <PartyReportExport
+            companyId={companyId}
+            fiscalYearId={selectedFiscalYear.id}
+            basis={basis}
+          />
+        }
+      />
 
       <FiscalYearSelector
         fiscalYears={fiscalYears}
@@ -125,11 +122,11 @@ export default async function PartyPurchaseReportPage({ searchParams }: Props) {
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-semibold text-foreground">By Party</h2>
         {report.length === 0 ? (
-          <div className="rounded-lg border border-border bg-surface p-8 text-center">
-            <p className="text-sm text-muted">
-              No parties exceed Rs. 1,00,000 in {basisLabel} purchases this fiscal year.
-            </p>
-          </div>
+          <EmptyState
+            icon="parties"
+            title="No parties over the threshold"
+            description={`No parties exceed Rs. 1,00,000 in ${basisLabel} purchases this fiscal year.`}
+          />
         ) : (
           <DataTable
               columns={[

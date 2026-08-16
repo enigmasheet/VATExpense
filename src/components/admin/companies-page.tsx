@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "@/lib/api-client";
+import { useApi } from "@/lib/use-api";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/components/ui/toast";
 import { NavIcon } from "@/components/layout/icons";
-import { EmptyState } from "@/components/admin/empty-state";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ProvisionPanel } from "@/components/admin/provision-panel";
 import { CompanyEditPanel } from "@/components/admin/company-edit-panel";
 
@@ -31,29 +33,17 @@ interface CompanyDetail extends CompanyRow {
 
 export function CompaniesPage() {
   const { toast } = useToast();
-  const [companies, setCompanies] = useState<CompanyRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const companiesApi = useApi<{ data: CompanyRow[] }>("/api/admin/companies", {
+    onError: (e) => toast(e instanceof Error ? e.message : "Failed to load companies", "error"),
+  });
+  const companies = companiesApi.data?.data ?? [];
+  const loading = companiesApi.loading;
+  const loadCompanies = companiesApi.reload;
+
   const [provisionOpen, setProvisionOpen] = useState(false);
   const [editCompany, setEditCompany] = useState<CompanyDetail | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  const loadCompanies = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await api<{ data: CompanyRow[] }>("/api/admin/companies");
-      setCompanies(data);
-    } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : "Failed to load companies", "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching on mount is intentional
-    loadCompanies();
-  }, [loadCompanies]);
 
   async function openEdit(company: CompanyRow) {
     try {
@@ -81,13 +71,11 @@ export function CompaniesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-foreground">Companies</h1>
-          <p className="mt-1 text-sm text-muted">{companies.length} companies provisioned</p>
-        </div>
-        <Button onClick={() => setProvisionOpen(true)}>New company</Button>
-      </div>
+      <PageHeader
+        title="Companies"
+        subtitle={`${companies.length} companies provisioned`}
+        actions={<Button onClick={() => setProvisionOpen(true)}>New company</Button>}
+      />
 
       {loading ? (
         <div className="rounded-lg border border-border bg-surface p-8 text-center text-sm text-muted">

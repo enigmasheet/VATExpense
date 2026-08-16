@@ -17,10 +17,20 @@ function hashString(value: string): number {
 }
 
 /**
- * Renders a circular avatar with the user's initials, colored
- * deterministically from their name or email.
+ * Renders an avatar with the user's initials, colored deterministically
+ * from their name or email.
  */
-export function UserAvatar({ name, email, size = "md" }: { name?: string | null; email?: string | null; size?: "sm" | "md" | "lg" }) {
+export function UserAvatar({
+  name,
+  email,
+  size = "md",
+  shape = "circle",
+}: {
+  name?: string | null;
+  email?: string | null;
+  size?: "sm" | "md" | "lg";
+  shape?: "circle" | "rounded";
+}) {
   const seed = name || email || "?";
   const initials = useMemo(
     () =>
@@ -40,7 +50,7 @@ export function UserAvatar({ name, email, size = "md" }: { name?: string | null;
   };
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-full font-semibold ${color} ${sizes[size]}`}
+      className={`inline-flex shrink-0 items-center justify-center font-semibold ${shape === "circle" ? "rounded-full" : "rounded-md"} ${color} ${sizes[size]}`}
       aria-hidden="true"
     >
       {initials}

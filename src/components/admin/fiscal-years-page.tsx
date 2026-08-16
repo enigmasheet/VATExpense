@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api-client";
+import { useState } from "react";
+import { useApi } from "@/lib/use-api";
 import { formatDate } from "@/lib/format";
 import { useToast } from "@/components/ui/toast";
 import { NavIcon } from "@/components/layout/icons";
+import { PageHeader } from "@/components/ui/page-header";
 import { FiscalYearsSection } from "@/components/admin/fiscal-years-section";
-import { EmptyState } from "@/components/admin/empty-state";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface CompanyRow {
   id: string;
@@ -19,32 +20,18 @@ interface CompanyRow {
 
 export function FiscalYearsPage() {
   const { toast } = useToast();
-  const [companies, setCompanies] = useState<CompanyRow[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const loadCompanies = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await api<{ data: CompanyRow[] }>("/api/admin/companies");
-      setCompanies(data);
-    } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : "Failed to load companies", "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching on mount is intentional
-    loadCompanies();
-  }, [loadCompanies]);
+  const companiesApi = useApi<{ data: CompanyRow[] }>("/api/admin/companies", {
+    onError: (e) => toast(e instanceof Error ? e.message : "Failed to load companies", "error"),
+  });
+  const companies = companiesApi.data?.data ?? [];
+  const loading = companiesApi.loading;
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-2xl font-semibold text-foreground">Fiscal Years</h1>
-        <p className="mt-1 text-sm text-muted">Manage fiscal years grouped by company</p>
-      </div>
+      <PageHeader
+        title="Fiscal Years"
+        subtitle="Manage fiscal years grouped by company"
+      />
 
       {loading ? (
         <div className="rounded-lg border border-border bg-surface p-8 text-center text-sm text-muted">

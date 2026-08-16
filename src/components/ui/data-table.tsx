@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 export interface DataColumn<T> {
   header: string;
@@ -14,6 +14,9 @@ interface DataTableProps<T> {
   rowClassName?: (row: T) => string | undefined;
   emptyState?: ReactNode;
   topContent?: ReactNode;
+  bottomContent?: ReactNode;
+  onRowClick?: (row: T) => void;
+  expandedRow?: (row: T) => ReactNode;
   className?: string;
   variant?: "responsive" | "desktop-only";
   compact?: boolean;
@@ -31,6 +34,9 @@ interface DataTableProps<T> {
  * @param rowClassName - Optional per-row classes applied to desktop rows
  * @param emptyState - Content rendered inside the surface when rows is empty
  * @param topContent - Optional content rendered above the table (e.g. a search box)
+ * @param bottomContent - Optional content rendered below the table (e.g. pagination)
+ * @param onRowClick - Optional handler invoked when a desktop row is clicked
+ * @param expandedRow - Optional renderer for an expandable detail row under a row
  * @param className - Additional classes for the outer surface
  * @param variant - responsive renders both layouts; desktop-only keeps one table
  * @param compact - Reduces cell padding for dense tables
@@ -44,6 +50,9 @@ export function DataTable<T>({
   rowClassName,
   emptyState,
   topContent,
+  bottomContent,
+  onRowClick,
+  expandedRow,
   className = "",
   variant = "responsive",
   compact = false,
@@ -66,18 +75,30 @@ export function DataTable<T>({
         </tr>
       </thead>
       <tbody>
-        {rows.map((row) => (
-          <tr
-            key={getKey(row)}
-            className={`border-b border-border last:border-b-0 ${rowClassName?.(row) ?? ""}`}
-          >
-            {columns.map((col) => (
-              <td key={col.header} className={`${cell} ${alignClass(col.align)}`}>
-                {col.cell(row)}
-              </td>
-            ))}
-          </tr>
-        ))}
+        {rows.map((row) => {
+          const expanded = expandedRow?.(row);
+          return (
+            <Fragment key={getKey(row)}>
+              <tr
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                className={`border-b border-border last:border-b-0 ${rowClassName?.(row) ?? ""} ${onRowClick ? "cursor-pointer" : ""}`}
+              >
+                {columns.map((col) => (
+                  <td key={col.header} className={`${cell} ${alignClass(col.align)}`}>
+                    {col.cell(row)}
+                  </td>
+                ))}
+              </tr>
+              {expanded && (
+                <tr className="border-b border-border last:border-b-0">
+                  <td colSpan={columns.length} className="bg-surface-muted/50 px-4 py-3">
+                    {expanded}
+                  </td>
+                </tr>
+              )}
+            </Fragment>
+          );
+        })}
       </tbody>
     </table>
   );
@@ -87,6 +108,7 @@ export function DataTable<T>({
       <div className={`overflow-x-auto rounded-lg border border-border bg-surface ${className}`}>
         {topContent}
         {rows.length === 0 && emptyState ? emptyState : table}
+        {bottomContent}
       </div>
     );
   }
@@ -110,6 +132,7 @@ export function DataTable<T>({
           )}
         </>
       )}
+      {bottomContent}
     </div>
   );
 }

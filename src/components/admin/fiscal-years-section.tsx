@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { api } from "@/lib/api-client";
+import { useApi } from "@/lib/use-api";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 
 interface FiscalYearData {
@@ -22,31 +24,20 @@ interface Props {
 
 export function FiscalYearsSection({ companyId }: Props) {
   const { toast } = useToast();
-  const [fiscalYears, setFiscalYears] = useState<FiscalYearData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const fiscalYearsApi = useApi<{ data: FiscalYearData[] }>(
+    `/api/admin/companies/${companyId}/fiscal-years`,
+    { onError: () => toast("Failed to load fiscal years", "error") },
+  );
+  const fiscalYears = fiscalYearsApi.data?.data ?? [];
+  const loading = fiscalYearsApi.loading;
+  const loadFiscalYears = fiscalYearsApi.reload;
+
   const [showForm, setShowForm] = useState(false);
   const [fyName, setFyName] = useState("");
   const [startYear, setStartYear] = useState("");
   const [endYear, setEndYear] = useState("");
   const [isActive, setIsActive] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  const loadFiscalYears = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await api<{ data: FiscalYearData[] }>(`/api/admin/companies/${companyId}/fiscal-years`);
-      setFiscalYears(data);
-    } catch {
-      toast("Failed to load fiscal years", "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [companyId, toast]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching on mount is intentional
-    loadFiscalYears();
-  }, [loadFiscalYears]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -141,7 +132,7 @@ export function FiscalYearsSection({ companyId }: Props) {
               <div className="flex items-center gap-3">
                 <span className="font-medium">{fy.name}</span>
                 <span className="text-muted text-xs">{fy.startYear}-{fy.endYear}</span>
-                {fy.isActive && <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">Active</span>}
+                {fy.isActive && <Badge tone="success">Active</Badge>}
               </div>
               <div className="flex items-center gap-1">
                 <Button variant="ghost" size="sm" onClick={() => handleToggleActive(fy)}>

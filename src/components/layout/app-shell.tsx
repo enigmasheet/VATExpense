@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { AppProvider } from "@/lib/useApp";
 import { AuthProvider } from "@/lib/auth-provider";
 import { ToastProvider } from "@/components/ui/toast";
-import { PATH_LOGIN } from "@/lib/constants";
+import { PATH_LOGIN, PATH_ADMIN } from "@/lib/constants";
 import { Sidebar } from "./sidebar";
 import { MobileHeader, ActiveFiscalYearIndicator } from "./mobile-nav";
 import { useSidebarCollapsed, toggleSidebarCollapsed } from "./useSidebarCollapsed";
@@ -20,6 +20,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const collapsed = useSidebarCollapsed();
   const pathname = usePathname();
   const isAuthPage = pathname.startsWith(PATH_LOGIN);
+  const isAdminRoute = pathname.startsWith(PATH_ADMIN);
 
   if (isAuthPage) {
     return <>{children}</>;
@@ -29,6 +30,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       <AuthProvider>
         <AppProvider>
           <ToastProvider>
+            {isAdminRoute ? (
+              <>{children}</>
+            ) : (
+            <>
             <div className="flex h-screen overflow-hidden">
               {/* Skip to content link for keyboard/screen-reader users */}
               <a
@@ -57,8 +62,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <footer className="border-t border-border py-3 text-center text-xs text-muted">
                   VAT Expense Ledger · Nepali fiscal-year purchase register
                 </footer>
-              </div>
+</div>
             </div>
+            </>
+            )}
           </ToastProvider>
         </AppProvider>
       </AuthProvider>

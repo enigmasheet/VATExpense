@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api-client";
+import { useApi } from "@/lib/use-api";
 import { formatDate } from "@/lib/format";
 import { StatCard } from "@/components/ui/stat-card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { NavIcon } from "@/components/layout/icons";
 import { ROLE_ADMIN, ROLE_DATA_ENTRY } from "@/lib/constants";
@@ -55,33 +55,14 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export function AdminOverview() {
-  const [companies, setCompanies] = useState<CompanyRow[]>([]);
-  const [users, setUsers] = useState<UserRow[]>([]);
-  const [recent, setRecent] = useState<AuditLogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const companiesApi = useApi<{ data: CompanyRow[] }>("/api/admin/companies");
+  const usersApi = useApi<{ data: UserRow[] }>("/api/admin/users");
+  const recentApi = useApi<{ data: AuditLogEntry[] }>("/api/admin/audit-log?page=1&pageSize=8");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [companyRes, userRes, auditRes] = await Promise.all([
-        api<{ data: CompanyRow[] }>("/api/admin/companies"),
-        api<{ data: UserRow[] }>("/api/admin/users"),
-        api<{ data: AuditLogEntry[] }>("/api/admin/audit-log?page=1&pageSize=8"),
-      ]);
-      setCompanies(companyRes.data);
-      setUsers(userRes.data);
-      setRecent(auditRes.data);
-    } catch {
-      // silent — individual pages surface errors
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching on mount is intentional
-    load();
-  }, [load]);
+  const companies = companiesApi.data?.data ?? [];
+  const users = usersApi.data?.data ?? [];
+  const recent = recentApi.data?.data ?? [];
+  const loading = companiesApi.loading || usersApi.loading || recentApi.loading;
 
   const admins = users.filter((u) => u.role === ROLE_ADMIN).length;
   const dataEntry = users.filter((u) => u.role === ROLE_DATA_ENTRY).length;
@@ -96,10 +77,7 @@ export function AdminOverview() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-2xl font-semibold text-foreground">Admin Overview</h1>
-        <p className="mt-1 text-sm text-muted">System-wide snapshot</p>
-      </div>
+      <PageHeader title="Admin Overview" subtitle="System-wide snapshot" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Companies" value={companies.length} />

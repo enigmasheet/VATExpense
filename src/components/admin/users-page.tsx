@@ -1,16 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { api } from "@/lib/api-client";
+import { useApi } from "@/lib/use-api";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DataTable, type DataColumn } from "@/components/ui/data-table";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusDot } from "@/components/ui/status-dot";
 import { useToast } from "@/components/ui/toast";
 import { UserAvatar } from "@/components/admin/user-avatar";
 import { RoleBadge } from "@/components/admin/role-badge";
 import { UserFormPanel } from "@/components/admin/user-form-panel";
 import { ResetPasswordPanel } from "@/components/admin/reset-password-panel";
-import { EmptyState } from "@/components/admin/empty-state";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface UserRow {
   id: string;
@@ -30,9 +34,15 @@ interface CompanyOption {
 
 export function UsersPage() {
   const { toast } = useToast();
-  const [users, setUsers] = useState<UserRow[]>([]);
-  const [companies, setCompanies] = useState<CompanyOption[]>([]);
-  const [loading, setLoading] = useState(true);
+  const usersApi = useApi<{ data: UserRow[] }>("/api/admin/users", {
+    onError: (e) => toast(e instanceof Error ? e.message : "Failed to load users", "error"),
+  });
+  const companiesApi = useApi<{ data: CompanyOption[] }>("/api/admin/companies");
+
+  const users = usersApi.data?.data ?? [];
+  const companies = companiesApi.data?.data ?? [];
+  const loading = usersApi.loading;
+  const loadUsers = usersApi.reload;
 
   // Filters
   const [query, setQuery] = useState("");
@@ -49,33 +59,6 @@ export function UsersPage() {
   // Delete
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await api<{ data: UserRow[] }>("/api/admin/users");
-      setUsers(data);
-    } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : "Failed to load users", "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  const loadCompanies = useCallback(async () => {
-    try {
-      const { data } = await api<{ data: CompanyOption[] }>("/api/admin/companies");
-      setCompanies(data);
-    } catch {
-      // silent — company dropdown is secondary
-    }
-  }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching on mount is intentional
-    loadUsers();
-    loadCompanies();
-  }, [loadUsers, loadCompanies]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -163,17 +146,68 @@ export function UsersPage() {
     </div>
   );
 
+  const columns: DataColumn<UserRow>[] = [
+    {
+      header: "User",
+      cell: (u) => (
+        <div className="flex items-center gap-3">
+          <UserAvatar name={u.name} email={u.email} />
+          <div className="min-w-0">
+            <p className="truncate font-medium text-foreground">{u.name}</p>
+            <p className="truncate text-xs text-muted">{u.email}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: "Company",
+      cell: (u) => <span className="text-muted">{u.companyName ?? "—"}</span>,
+    },
+    {
+      header: "Role",
+      cell: (u) => <RoleBadge role={u.role} />,
+    },
+    {
+      header: "Status",
+      cell: (u) => (
+        <StatusDot tone={u.isActive ? "success" : "danger"} label={u.isActive ? "Active" : "Inactive"} />
+      ),
+    },
+    {
+      header: "Created",
+      cell: (u) => <span className="text-xs text-muted">{formatDate(u.createdAt)}</span>,
+    },
+    {
+      header: "Actions",
+      align: "right",
+      cell: (u) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" size="sm" onClick={() => openEdit(u)}>
+            Edit
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setResetUser(u)}>
+            Reset PW
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-danger"
+            onClick={() => setDeleteTarget(u)}
+          >
+            Delete
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-foreground">Users</h1>
-          <p className="mt-1 text-sm text-muted">
-            {users.length} users · {activeCount} active · {adminCount} admins
-          </p>
-        </div>
-        <Button onClick={openCreate}>New user</Button>
-      </div>
+      <PageHeader
+        title="Users"
+        subtitle={`${users.length} users · ${activeCount} active · ${adminCount} admins`}
+        actions={<Button onClick={openCreate}>New user</Button>}
+      />
 
       {loading ? (
         <div className="rounded-lg border border-border bg-surface p-8 text-center text-sm text-muted">
@@ -187,82 +221,19 @@ export function UsersPage() {
           action={<Button onClick={openCreate}>Create user</Button>}
         />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
-          {toolbar}
-          {filtered.length === 0 ? (
-            <div className="p-8 text-center text-sm text-muted">
-              No users match your filters.
+        <DataTable
+          variant="desktop-only"
+          columns={columns}
+          rows={filtered}
+          getKey={(u) => u.id}
+          topContent={toolbar}
+          emptyState={<div className="p-8 text-center text-sm text-muted">No users match your filters.</div>}
+          bottomContent={
+            <div className="border-t border-border px-4 py-3 text-xs text-muted">
+              Showing {filtered.length} of {users.length} users
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                    <th scope="col" className="px-4 py-3">User</th>
-                    <th scope="col" className="px-4 py-3">Company</th>
-                    <th scope="col" className="px-4 py-3">Role</th>
-                    <th scope="col" className="px-4 py-3">Status</th>
-                    <th scope="col" className="px-4 py-3">Created</th>
-                    <th scope="col" className="px-4 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((u) => (
-                    <tr key={u.id} className="border-b border-border last:border-b-0 hover:bg-surface-muted/50">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <UserAvatar name={u.name} email={u.email} />
-                          <div className="min-w-0">
-                            <p className="truncate font-medium text-foreground">{u.name}</p>
-                            <p className="truncate text-xs text-muted">{u.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-muted">{u.companyName ?? "—"}</td>
-                      <td className="px-4 py-3">
-                        <RoleBadge role={u.role} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center gap-1.5 text-xs font-medium ${
-                            u.isActive ? "text-success" : "text-danger"
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${u.isActive ? "bg-success" : "bg-danger"}`}
-                          />
-                          {u.isActive ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted">{formatDate(u.createdAt)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(u)}>
-                            Edit
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setResetUser(u)}>
-                            Reset PW
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-danger"
-                            onClick={() => setDeleteTarget(u)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <div className="border-t border-border px-4 py-3 text-xs text-muted">
-            Showing {filtered.length} of {users.length} users
-          </div>
-        </div>
+          }
+        />
       )}
 
       <UserFormPanel

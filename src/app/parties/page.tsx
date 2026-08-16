@@ -9,6 +9,8 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable } from "@/components/ui/data-table";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { PartyFormModal } from "@/components/party-form-modal";
 
@@ -121,15 +123,11 @@ export default function PartiesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-foreground">Parties</h1>
-          <p className="mt-1 text-sm text-muted">
-            {parties.length} party{parties.length === 1 ? "" : "s"} · {activeCount} active
-          </p>
-        </div>
-        <Button onClick={openCreate}>Add Party</Button>
-      </div>
+      <PageHeader
+        title="Parties"
+        subtitle={`${parties.length} party${parties.length === 1 ? "" : "s"} · ${activeCount} active`}
+        actions={<Button onClick={openCreate}>Add Party</Button>}
+      />
 
       {/* Filters */}
       <form
@@ -243,12 +241,16 @@ export default function PartiesPage() {
             loading ? (
               <div className="p-6 text-center text-sm text-muted">Loading...</div>
             ) : parties.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 p-8 text-center">
-                <p className="text-sm text-muted">No parties yet. Add your first supplier above.</p>
-                <Button size="sm" onClick={openCreate}>
-                  Add Party
-                </Button>
-              </div>
+              <EmptyState
+                icon="parties"
+                title="No parties yet"
+                description="Add your first supplier above."
+                action={
+                  <Button size="sm" onClick={openCreate}>
+                    Add Party
+                  </Button>
+                }
+              />
             ) : (
               <div className="p-6 text-center text-sm text-muted">
                 No parties match your filters.

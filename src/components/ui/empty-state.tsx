@@ -1,8 +1,10 @@
+"use client";
+
 import type { ReactNode } from "react";
-import { NavIcon } from "@/components/layout/icons";
+import { NavIcon, type IconName } from "@/components/layout/icons";
 
 interface EmptyStateProps {
-  icon?: "management" | "dashboard" | "fiscalYears" | "parties" | "calendarDays";
+  icon?: IconName;
   title: string;
   description?: string;
   action?: ReactNode;
@@ -11,6 +13,11 @@ interface EmptyStateProps {
 /**
  * Renders a centered empty-state block with an optional icon, title,
  * description, and call-to-action.
+ *
+ * @param icon - Optional icon name to display above the title
+ * @param title - The empty-state heading
+ * @param description - Optional supporting text
+ * @param action - Optional call-to-action rendered below the description
  */
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (

@@ -51,7 +51,15 @@ function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate
       </nav>
 
       <div className="border-t border-border px-5 py-4">
-        <Button variant="ghost" size="sm" className="w-full justify-start text-muted" onClick={() => signOut({ callbackUrl: PATH_LOGIN })}>
+        <Link
+          href="/"
+          onClick={onNavigate}
+          className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+        >
+          <NavIcon name="chevronLeft" className="h-4 w-4 shrink-0" />
+          <span>Back to app</span>
+        </Link>
+        <Button variant="ghost" size="sm" className="mt-1 w-full justify-start text-muted" onClick={() => signOut({ callbackUrl: PATH_LOGIN })}>
           <NavIcon name="signOut" className="h-4 w-4" />
           Sign out
         </Button>

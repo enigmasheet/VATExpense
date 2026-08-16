@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 
-type Tone = "default" | "warning" | "danger" | "success";
+type Tone = "default" | "warning" | "danger" | "success" | "outline";
 
 const tones: Record<Tone, string> = {
   default: "bg-surface-hover text-muted",
   warning: "bg-warning-bg text-warning",
   danger: "bg-danger-bg text-danger",
   success: "bg-success-bg text-success",
+  outline: "bg-transparent text-muted ring-1 ring-inset ring-border",
 };
 
 /**

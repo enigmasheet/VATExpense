@@ -7,6 +7,7 @@ import { MonthlyReportExport } from "@/components/monthly-report-export";
 import { MonthSelector } from "@/components/month-selector";
 import { StatCard } from "@/components/ui/stat-card";
 import { DataTable } from "@/components/ui/data-table";
+import { PageHeader } from "@/components/ui/page-header";
 import { PATH_LOGIN } from "@/lib/constants";
 
 interface Props {
@@ -30,8 +31,7 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
   if (!activeFiscalYear) {
     return (
       <div className="flex flex-col gap-6">
-        <h1 className="font-display text-2xl font-semibold text-foreground">Monthly Report</h1>
-        <p className="text-sm text-muted">No fiscal year configured — create one first.</p>
+        <PageHeader title="Monthly Report" subtitle="No fiscal year configured — create one first." />
       </div>
     );
   }
@@ -44,38 +44,36 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-baseline justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-foreground">Monthly Report</h1>
-          <p className="mt-1 text-sm text-muted">
-            Category breakdown for {nepaliMonth} · FY {activeFiscalYear.name}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {prevMonth && (
-            <Link
-              href={`/reports/monthly?month=${prevMonth}`}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-muted hover:bg-surface-hover"
-            >
-              ← {prevMonth}
-            </Link>
-          )}
-          <MonthSelector currentMonth={nepaliMonth} />
-          {nextMonth && (
-            <Link
-              href={`/reports/monthly?month=${nextMonth}`}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-muted hover:bg-surface-hover"
-            >
-              {nextMonth} →
-            </Link>
-          )}
-          <MonthlyReportExport
-            companyId={companyId}
-            fiscalYearId={activeFiscalYear.id}
-            nepaliMonth={nepaliMonth}
-          />
-        </div>
-      </div>
+      <PageHeader
+        title="Monthly Report"
+        subtitle={`Category breakdown for ${nepaliMonth} · FY ${activeFiscalYear.name}`}
+        actions={
+          <div className="flex items-center gap-3">
+            {prevMonth && (
+              <Link
+                href={`/reports/monthly?month=${prevMonth}`}
+                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-muted hover:bg-surface-hover"
+              >
+                ← {prevMonth}
+              </Link>
+            )}
+            <MonthSelector currentMonth={nepaliMonth} />
+            {nextMonth && (
+              <Link
+                href={`/reports/monthly?month=${nextMonth}`}
+                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-muted hover:bg-surface-hover"
+              >
+                {nextMonth} →
+              </Link>
+            )}
+            <MonthlyReportExport
+              companyId={companyId}
+              fiscalYearId={activeFiscalYear.id}
+              nepaliMonth={nepaliMonth}
+            />
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Taxable" value={formatAmount(report.totals.totalTaxableAmount)} />
