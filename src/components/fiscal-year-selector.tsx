@@ -1,5 +1,7 @@
 "use client";
 
+import { NavSelect } from "@/components/ui/nav-select";
+
 /**
  * Provides a selector for navigating between a company's fiscal years.
  *
@@ -18,26 +20,14 @@ export function FiscalYearSelector({
   basis: string;
 }) {
   return (
-    <div className="flex items-center gap-4">
-      <label className="text-sm font-medium text-foreground" htmlFor="fy-nav">
-        Fiscal year
-      </label>
-      <form action="/reports/parties" method="get">
-        <input type="hidden" name="basis" value={basis} />
-        <select
-          id="fy-nav"
-          name="fiscalYearId"
-          value={currentFiscalYearId}
-          onChange={(e) => e.target.form?.requestSubmit()}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-        >
-          {fiscalYears.map((fy) => (
-            <option key={fy.id} value={fy.id}>
-              {fy.name}
-            </option>
-          ))}
-        </select>
-      </form>
-    </div>
+    <NavSelect
+      label="Fiscal year"
+      selectId="fy-nav"
+      value={currentFiscalYearId}
+      options={fiscalYears.map((fy) => ({ value: fy.id, label: fy.name }))}
+      selectName="fiscalYearId"
+      action="/reports/parties"
+      hiddenInputs={{ basis }}
+    />
   );
 }

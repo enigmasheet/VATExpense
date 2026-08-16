@@ -7,6 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useApp } from "@/lib/useApp";
 import { PATH_LOGIN } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import { NavSelect } from "@/components/ui/nav-select";
 import { NavIcon } from "./icons";
 import { getNavGroups, type NavItem } from "./nav-config";
 import { SidebarLink } from "./sidebar";
@@ -223,23 +224,18 @@ function MobileNavPanel({ onClose }: { onClose: () => void }) {
         <div className="border-t border-border px-4 py-4">
           {fiscalYears.length > 0 && (
             <div className="mb-3">
-              <label htmlFor="mobile-fiscal-year-select" className="mb-1 block text-xs text-muted">Fiscal Year</label>
-              <select
-                id="mobile-fiscal-year-select"
+              <NavSelect
+                label="Fiscal Year"
+                selectId="mobile-fiscal-year-select"
                 value={fiscalYearId ?? ""}
-                onChange={async (e) => {
-                  if (!e.target.value) return;
-                  await setActiveFiscalYear(e.target.value);
+                options={fiscalYears.map((fy) => ({ value: fy.id, label: fy.name }))}
+                layout="stacked"
+                onChange={async (value) => {
+                  if (!value) return;
+                  await setActiveFiscalYear(value);
                   router.refresh();
                 }}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground"
-              >
-                {fiscalYears.map((fy) => (
-                  <option key={fy.id} value={fy.id}>
-                    {fy.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           )}
           {session?.user && (

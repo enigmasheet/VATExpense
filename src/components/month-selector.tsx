@@ -1,5 +1,6 @@
 "use client";
 
+import { NavSelect } from "@/components/ui/nav-select";
 import { NEPALI_MONTHS } from "@/lib/nepali-date";
 
 /**
@@ -10,25 +11,13 @@ import { NEPALI_MONTHS } from "@/lib/nepali-date";
  */
 export function MonthSelector({ currentMonth }: { currentMonth: string }) {
   return (
-    <div className="flex items-center gap-4">
-      <label className="text-sm font-medium text-foreground" htmlFor="month-nav">
-        Switch month
-      </label>
-      <form action="/reports/monthly" method="get">
-        <select
-          id="month-nav"
-          name="month"
-          value={currentMonth}
-          onChange={(e) => e.target.form?.requestSubmit()}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-        >
-          {NEPALI_MONTHS.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-      </form>
-    </div>
+    <NavSelect
+      label="Switch month"
+      selectId="month-nav"
+      value={currentMonth}
+      options={NEPALI_MONTHS.map((m) => ({ value: m, label: m }))}
+      selectName="month"
+      action="/reports/monthly"
+    />
   );
 }
