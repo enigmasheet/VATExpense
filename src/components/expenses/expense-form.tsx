@@ -160,7 +160,6 @@ export function ExpenseForm({
   const [partyHighlightIdx, setPartyHighlightIdx] = useState(-1);
   const partyInputRef = useRef<HTMLInputElement>(null);
   const partyDropdownRef = useRef<HTMLDivElement>(null);
-  const partyPrevValueRef = useRef("");
   const [partyDropdownPos, setPartyDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   function updatePartyDropdownPos() {
@@ -215,17 +214,16 @@ export function ExpenseForm({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Initialize partySearch from initial values (edit mode)
-  useEffect(() => {
-    if (mode === "edit" && initial && initial.partyId && parties.length > 0) {
-      const found = parties.find((p) => p.id === initial.partyId);
-      if (found) {
-        setPartySearch(found.name);
-        setPartyResolved(true);
-        partyPrevValueRef.current = found.name;
-      }
+  // Initialize partySearch from initial values (edit mode) once parties load.
+  // Guarded conditional state update during render (React-recommended pattern)
+  // so it stops as soon as partyResolved flips.
+  if (mode === "edit" && initial?.partyId && !partyResolved && parties.length > 0) {
+    const found = parties.find((p) => p.id === initial.partyId);
+    if (found) {
+      setPartySearch(found.name);
+      setPartyResolved(true);
     }
-  }, [mode, initial, parties]);
+  }
 
   useEffect(() => {
     if (!companyId) return;
