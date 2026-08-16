@@ -6,6 +6,7 @@ import { useApi } from "@/lib/use-api";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
+import { SlideOver } from "@/components/ui/slide-over";
 import { useToast } from "@/components/ui/toast";
 
 interface FiscalYearData {
@@ -32,12 +33,24 @@ export function FiscalYearsSection({ companyId }: Props) {
   const loading = fiscalYearsApi.loading;
   const loadFiscalYears = fiscalYearsApi.reload;
 
-  const [showForm, setShowForm] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
   const [fyName, setFyName] = useState("");
   const [startYear, setStartYear] = useState("");
   const [endYear, setEndYear] = useState("");
   const [isActive, setIsActive] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  function openCreate() {
+    setFyName("");
+    setStartYear("");
+    setEndYear("");
+    setIsActive(false);
+    setFormOpen(true);
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -58,7 +71,6 @@ export function FiscalYearsSection({ companyId }: Props) {
       setStartYear("");
       setEndYear("");
       setIsActive(false);
-      setShowForm(false);
       loadFiscalYears();
     } catch (e: unknown) {
       toast(e instanceof Error ? e.message : "Failed to create fiscal year", "error");
@@ -95,17 +107,31 @@ export function FiscalYearsSection({ companyId }: Props) {
     <div className="mt-2">
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-sm font-medium text-muted">Fiscal Years</h4>
-        <Button variant="secondary" size="sm" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "Cancel" : "Add FY"}
+        <Button variant="secondary" size="sm" onClick={openCreate}>
+          Add FY
         </Button>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleCreate} className="flex flex-col gap-2 p-3 rounded border border-border/50 bg-background mb-3">
-          <div className="grid grid-cols-3 gap-2">
-            <Field label="Name" htmlFor="fy-name">
-              <Input id="fy-name" required value={fyName} onChange={(e) => setFyName(e.target.value)} placeholder="2084-2085" />
-            </Field>
+      <SlideOver
+        open={formOpen}
+        title="Add Fiscal Year"
+        onClose={closeForm}
+        footer={
+          <>
+            <Button type="button" variant="ghost" size="sm" onClick={closeForm} disabled={saving}>
+              Cancel
+            </Button>
+            <Button type="submit" form="fy-create-form" size="sm" disabled={saving}>
+              {saving ? "Creating..." : "Create"}
+            </Button>
+          </>
+        }
+      >
+        <form id="fy-create-form" onSubmit={handleCreate} className="flex flex-col gap-4">
+          <Field label="Name" htmlFor="fy-name">
+            <Input id="fy-name" required value={fyName} onChange={(e) => setFyName(e.target.value)} placeholder="2084-2085" />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Start Year" htmlFor="fy-start">
               <Input id="fy-start" type="number" required value={startYear} onChange={(e) => setStartYear(e.target.value)} />
             </Field>
@@ -117,9 +143,8 @@ export function FiscalYearsSection({ companyId }: Props) {
             <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-4 w-4 rounded border-border" />
             Set as active
           </label>
-          <Button type="submit" size="sm" disabled={saving}>{saving ? "Creating..." : "Create"}</Button>
         </form>
-      )}
+      </SlideOver>
 
       {loading ? (
         <p className="text-xs text-muted">Loading...</p>
