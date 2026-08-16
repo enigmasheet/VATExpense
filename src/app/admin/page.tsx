@@ -1,11 +1,9 @@
-import { AdminDashboard } from "@/components/admin-dashboard";
+import { AdminOverview } from "@/components/admin/admin-overview";
 
 /**
- * Admin dashboard page. Lists all companies and provides provisioning controls.
+ * Admin overview page. Shows system-wide statistics and recent activity.
  * Layout enforces superadmin access.
  */
-export default async function AdminPage() {
-  const resetEnabled = process.env.ALLOW_DB_RESET === "true";
-
-  return <AdminDashboard resetEnabled={resetEnabled} />;
+export default function AdminPage() {
+  return <AdminOverview />;
 }

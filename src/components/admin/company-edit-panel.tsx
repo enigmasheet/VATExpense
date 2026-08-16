@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { VAT_RATE_DEFAULT } from "@/lib/constants";
+import { SlideOver } from "@/components/admin/slide-over";
 
 interface CompanyData {
   id: string;
@@ -27,7 +28,10 @@ interface Props {
   onSaved: () => void;
 }
 
-export function CompanyEditModal({ open, company, onClose, onSaved }: Props) {
+/**
+ * Slide-over panel for editing company details.
+ */
+export function CompanyEditPanel({ open, company, onClose, onSaved }: Props) {
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [vatNumber, setVatNumber] = useState("");
@@ -39,6 +43,7 @@ export function CompanyEditModal({ open, company, onClose, onSaved }: Props) {
 
   useEffect(() => {
     if (company) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing form state from prop is intentional
       setName(company.name);
       setVatNumber(company.vatNumber ?? "");
       setAddress(company.address ?? "");
@@ -46,12 +51,9 @@ export function CompanyEditModal({ open, company, onClose, onSaved }: Props) {
       setEmail(company.email ?? "");
       setDefaultVatRate(company.defaultVatRate);
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing form state from prop is intentional
   }, [company]);
 
-  if (!open || !company) return null;
-
-  async function handleSave(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
@@ -68,6 +70,7 @@ export function CompanyEditModal({ open, company, onClose, onSaved }: Props) {
       });
       toast("Company updated", "success");
       onSaved();
+      onClose();
     } catch (e: unknown) {
       toast(e instanceof Error ? e.message : "Failed to update company", "error");
     } finally {
@@ -76,38 +79,46 @@ export function CompanyEditModal({ open, company, onClose, onSaved }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-lg border border-border bg-surface p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
-        <h2 className="font-display text-lg font-semibold mb-4">Edit Company</h2>
-        <form onSubmit={handleSave} className="flex flex-col gap-3">
-          <Field label="Company name" htmlFor="ce-name">
-            <Input id="ce-name" required value={name} onChange={(e) => setName(e.target.value)} />
-          </Field>
+    <SlideOver
+      open={open}
+      title="Edit Company"
+      description={company?.name}
+      onClose={onClose}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" form="company-edit-form" disabled={saving}>
+            {saving ? "Saving..." : "Save changes"}
+          </Button>
+        </>
+      }
+    >
+      <form id="company-edit-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field label="Company name" htmlFor="ce-name">
+          <Input id="ce-name" required value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
           <Field label="VAT number" htmlFor="ce-vat">
             <Input id="ce-vat" value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Address" htmlFor="ce-address">
-              <Input id="ce-address" value={address} onChange={(e) => setAddress(e.target.value)} />
-            </Field>
-            <Field label="Phone" htmlFor="ce-phone">
-              <Input id="ce-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Email" htmlFor="ce-email">
-              <Input id="ce-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </Field>
-            <Field label="Default VAT rate (%)" htmlFor="ce-vatrate">
-              <Input id="ce-vatrate" type="number" step="0.01" value={defaultVatRate} onChange={(e) => setDefaultVatRate(e.target.value)} />
-            </Field>
-          </div>
-          <div className="flex justify-end gap-2 mt-2">
-            <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          <Field label="Default VAT rate (%)" htmlFor="ce-vatrate">
+            <Input id="ce-vatrate" type="number" step="0.01" value={defaultVatRate} onChange={(e) => setDefaultVatRate(e.target.value)} />
+          </Field>
+        </div>
+        <Field label="Address" htmlFor="ce-address">
+          <Input id="ce-address" value={address} onChange={(e) => setAddress(e.target.value)} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Phone" htmlFor="ce-phone">
+            <Input id="ce-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </Field>
+          <Field label="Email" htmlFor="ce-email">
+            <Input id="ce-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </Field>
+        </div>
+      </form>
+    </SlideOver>
   );
 }

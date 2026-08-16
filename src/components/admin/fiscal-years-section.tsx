@@ -44,8 +44,8 @@ export function FiscalYearsSection({ companyId }: Props) {
   }, [companyId, toast]);
 
   useEffect(() => {
-    loadFiscalYears();
     // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching on mount is intentional
+    loadFiscalYears();
   }, [loadFiscalYears]);
 
   async function handleCreate(e: React.FormEvent) {
