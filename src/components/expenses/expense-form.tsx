@@ -161,6 +161,14 @@ export function ExpenseForm({
   const partyInputRef = useRef<HTMLInputElement>(null);
   const partyDropdownRef = useRef<HTMLDivElement>(null);
   const partyPrevValueRef = useRef("");
+  const [partyDropdownPos, setPartyDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  function updatePartyDropdownPos() {
+    const rect = partyInputRef.current?.getBoundingClientRect();
+    if (rect) {
+      setPartyDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    }
+  }
 
   function refreshParties() {
     if (!companyId) return;
@@ -415,6 +423,7 @@ export function ExpenseForm({
                     searchParties(val);
                   }}
                   onFocus={() => {
+                    updatePartyDropdownPos();
                     if (partyResults.length > 0) setPartyOpen(true);
                     else if (partySearch.length > 0) {
                       searchParties(partySearch);
@@ -457,11 +466,11 @@ export function ExpenseForm({
                   <div
                     role="listbox"
                     className="fixed max-h-48 overflow-y-auto rounded-lg border border-border/50 bg-surface py-1 shadow-lg z-50"
-                    style={{
-                      top: (partyInputRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
-                      left: partyInputRef.current?.getBoundingClientRect().left ?? 0,
-                      width: partyInputRef.current?.getBoundingClientRect().width ?? 0,
-                    }}
+                    style={partyDropdownPos ? {
+                      top: partyDropdownPos.top,
+                      left: partyDropdownPos.left,
+                      width: partyDropdownPos.width,
+                    } : { top: 0, left: 0, width: 0 }}
                   >
                     {partyResults.map((party, idx) => (
                       <button
