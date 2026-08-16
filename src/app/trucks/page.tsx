@@ -6,6 +6,7 @@ export default function TrucksPage() {
   return (
     <MasterPage
       title="Trucks"
+      singularName="Truck"
       description="Manage your fleet of trucks for fuel and maintenance tracking."
       listUrl="/api/trucks"
       fields={[
@@ -20,7 +21,7 @@ export default function TrucksPage() {
         ownerName: values.ownerName || null,
         truckType: values.truckType || null,
       })}
-      emptyHint="No trucks yet. Add your first truck above."
+      emptyHint="No trucks yet. Add your first one."
     />
   );
 }

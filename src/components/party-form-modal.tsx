@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
-import { Modal } from "@/components/ui/modal";
+import { SlideOver } from "@/components/ui/slide-over";
 import { useApp } from "@/lib/useApp";
 import { useToast } from "@/components/ui/toast";
 import { LocationFormModal } from "@/components/location-form-modal";
@@ -31,18 +31,18 @@ interface PartyFormModalProps {
   initialName?: string;
 }
 
-function PartyFormInner({
+function PartyFormFields({
   mode,
   initial,
   initialName,
+  setLoading,
   onSaved,
-  onCancel,
 }: {
   mode: "create" | "edit";
   initial?: PartyFormModalProps["initial"];
   initialName: string;
+  setLoading: (loading: boolean) => void;
   onSaved: () => void;
-  onCancel: () => void;
 }) {
   const { companyId } = useApp();
   const { toast } = useToast();
@@ -56,7 +56,6 @@ function PartyFormInner({
   const [comment, setComment] = useState(isEdit ? (initial.comment ?? "") : "");
 
   const [locations, setLocations] = useState<Location[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [locModalOpen, setLocModalOpen] = useState(false);
 
@@ -112,7 +111,7 @@ function PartyFormInner({
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
+      <form id="party-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Name */}
         <Field label="Party name" htmlFor="pf-name">
           <Input
@@ -198,15 +197,6 @@ function PartyFormInner({
         </Field>
 
         {error && <p className="text-sm text-danger">{error}</p>}
-
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit" size="sm" disabled={loading}>
-            {loading ? "Saving..." : mode === "create" ? "Add Party" : "Save Changes"}
-          </Button>
-        </div>
       </form>
 
       {companyId && (
@@ -230,17 +220,33 @@ export function PartyFormModal({
   initialName = "",
 }: PartyFormModalProps) {
   const formKey = `${mode}-${initial?.id ?? "new"}-${initialName}`;
+  const [loading, setLoading] = useState(false);
 
   return (
-    <Modal open={open} title={mode === "create" ? "Add Party" : "Edit Party"} onClose={onCancel} width="max-w-lg">
-      <PartyFormInner
+    <SlideOver
+      open={open}
+      title={mode === "create" ? "Add Party" : "Edit Party"}
+      onClose={onCancel}
+      width="max-w-lg"
+      footer={
+        <>
+          <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="submit" form="party-form" size="sm" disabled={loading}>
+            {loading ? "Saving..." : mode === "create" ? "Add Party" : "Save Changes"}
+          </Button>
+        </>
+      }
+    >
+      <PartyFormFields
         key={formKey}
         mode={mode}
         initial={initial}
         initialName={initialName}
+        setLoading={setLoading}
         onSaved={onSaved}
-        onCancel={onCancel}
       />
-    </Modal>
+    </SlideOver>
   );
 }

@@ -47,14 +47,24 @@ export function Modal({
   const panelRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
+  const [prevOpen, setPrevOpen] = useState(open);
+
+  // Store the previous `open` value in state and adjust during render
+  // (React-recommended pattern) so opening re-mounts the panel and resets
+  // the visible flag to replay the entrance animation.
+  if (prevOpen !== open) {
+    setPrevOpen(open);
+    if (open) {
+      setMounted(true);
+      setVisible(false);
+    }
+  }
 
   useEffect(() => {
     if (open) {
-      setMounted(true);
       const raf = requestAnimationFrame(() => setVisible(true));
       return () => cancelAnimationFrame(raf);
     }
-    setVisible(false);
     const timer = setTimeout(() => setMounted(false), CLOSE_MS);
     return () => clearTimeout(timer);
   }, [open]);

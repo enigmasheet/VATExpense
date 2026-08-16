@@ -38,6 +38,7 @@ export default function FiscalYearsPage() {
   return (
     <MasterPage<FiscalYearRow>
       title="Fiscal Years"
+      singularName="Fiscal Year"
       description="Nepali fiscal years (Shrawan to Ashadh). Marking one as current switches all records."
       listUrl="/api/fiscal-years"
       fields={fields}

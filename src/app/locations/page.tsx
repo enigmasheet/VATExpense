@@ -11,6 +11,7 @@ export default function LocationsPage() {
   return (
     <MasterPage
       title="Locations"
+      singularName="Location"
       description="Places where purchases happen — used to group expenses for reporting."
       listUrl="/api/locations"
       fields={[
@@ -24,7 +25,7 @@ export default function LocationsPage() {
       ]}
       columns={[]}
       buildPayload={(companyId, values) => ({ companyId, name: values.name })}
-      emptyHint="No locations yet. Add your first one above."
+      emptyHint="No locations yet. Add your first one."
     />
   );
 }

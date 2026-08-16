@@ -9,6 +9,7 @@ export default function CategoriesPage() {
   return (
     <MasterPage
       title="Categories"
+      singularName="Category"
       description="Expense categories such as rent, utilities and office supplies."
       listUrl="/api/categories"
       fields={[
@@ -22,7 +23,7 @@ export default function CategoriesPage() {
       ]}
       columns={[]}
       buildPayload={(companyId, values) => ({ companyId, name: values.name })}
-      emptyHint="No categories yet. Add your first one above."
+      emptyHint="No categories yet. Add your first one."
     />
   );
 }
