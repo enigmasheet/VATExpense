@@ -39,8 +39,8 @@ export function UsersPage() {
   });
   const companiesApi = useApi<{ data: CompanyOption[] }>("/api/admin/companies");
 
-  const users = usersApi.data?.data ?? [];
-  const companies = companiesApi.data?.data ?? [];
+  const users = useMemo(() => usersApi.data?.data ?? [], [usersApi.data]);
+  const companies = useMemo(() => companiesApi.data?.data ?? [], [companiesApi.data]);
   const loading = usersApi.loading;
   const loadUsers = usersApi.reload;
 

@@ -25,7 +25,10 @@ export function useApi<T>(url: string | null, options: UseApiOptions<T> = {}) {
   const [nonce, setNonce] = useState(0);
 
   const onErrorRef = useRef(options.onError);
-  onErrorRef.current = options.onError;
+
+  useEffect(() => {
+    onErrorRef.current = options.onError;
+  }, [options.onError]);
 
   useEffect(() => {
     if (!url) return;

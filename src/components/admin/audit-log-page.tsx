@@ -56,7 +56,7 @@ export function AuditLogPage() {
     },
   );
 
-  const entries = auditApi.data?.data ?? [];
+  const entries = useMemo(() => auditApi.data?.data ?? [], [auditApi.data]);
   const total = auditApi.data?.total ?? 0;
   const loading = auditApi.loading;
 
