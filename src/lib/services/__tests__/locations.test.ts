@@ -49,12 +49,22 @@ describe("locations service", () => {
 
   describe("deleteLocation", () => {
     it("returns not-found when no rows deleted", async () => {
+      vi.mocked(db.select).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 0 }]),
+        }),
+      } as never);
       vi.mocked(db.delete).mockReturnValue(mockDeleteReturn([]) as never);
       const result = await deleteLocation("loc-1", "comp-1");
       expect(result.ok).toBe(false);
     });
 
     it("returns ok when deleted", async () => {
+      vi.mocked(db.select).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 0 }]),
+        }),
+      } as never);
       vi.mocked(db.delete).mockReturnValue(mockDeleteReturn([{ id: "loc-1" }]) as never);
       const result = await deleteLocation("loc-1", "comp-1");
       expect(result.ok).toBe(true);

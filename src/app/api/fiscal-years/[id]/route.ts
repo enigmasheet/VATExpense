@@ -1,4 +1,4 @@
-import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
+import { apiOk, badRequest, conflict, notFound, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { updateFiscalYearSchema } from "@/lib/validation/masters";
 import * as fiscalYearService from "@/lib/services/fiscal-years";
@@ -62,7 +62,11 @@ export async function DELETE(
 
   try {
     const result = await fiscalYearService.deleteFiscalYear(id, companyId);
-    if (!result.ok) return notFound(result.error);
+    if (!result.ok) {
+      return result.error.includes("referenced by")
+        ? conflict(result.error)
+        : notFound(result.error);
+    }
     return apiOk({ data: result.data });
   } catch (err) {
     console.error("DELETE /api/fiscal-years/[id] failed", err);

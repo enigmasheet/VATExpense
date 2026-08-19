@@ -1,4 +1,4 @@
-import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
+import { apiOk, badRequest, conflict, notFound, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { updatePartySchema } from "@/lib/validation/masters";
 import * as partyService from "@/lib/services/parties";
@@ -61,7 +61,11 @@ export async function DELETE(
 
   try {
     const result = await partyService.deleteParty(id, companyId);
-    if (!result.ok) return notFound(result.error);
+    if (!result.ok) {
+      return result.error.includes("referenced by")
+        ? conflict(result.error)
+        : notFound(result.error);
+    }
     return apiOk({ data: result.data });
   } catch (err) {
     console.error("DELETE /api/parties/[id] failed", err);

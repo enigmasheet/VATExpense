@@ -1,4 +1,4 @@
-import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
+import { apiOk, badRequest, conflict, notFound, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { updateCategorySchema } from "@/lib/validation/masters";
 import * as categoryService from "@/lib/services/categories";
@@ -59,7 +59,11 @@ export async function DELETE(
 
   try {
     const result = await categoryService.deleteCategory(id, companyId);
-    if (!result.ok) return notFound(result.error);
+    if (!result.ok) {
+      return result.error.includes("referenced by")
+        ? conflict(result.error)
+        : notFound(result.error);
+    }
     return apiOk({ data: result.data });
   } catch (err) {
     console.error("DELETE /api/categories/[id] failed", err);

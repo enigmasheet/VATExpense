@@ -167,6 +167,23 @@ export async function PATCH(
     const effectiveInvoiceNumber = (values.invoiceNumber as string | null) ?? current.invoiceNumber;
     const effectiveMiti = (values.miti as string) ?? current.miti;
 
+    // Verify the miti falls inside the effective fiscal year
+    if (values.miti !== undefined || values.fiscalYearId !== undefined) {
+      const parsedMiti = parseMiti(effectiveMiti);
+      if (parsedMiti.ok) {
+        const [fy] = await db
+          .select({ startYear: fiscalYears.startYear })
+          .from(fiscalYears)
+          .where(eq(fiscalYears.id, effectiveFiscalYearId))
+          .limit(1);
+        if (fy && parsedMiti.fiscalYear !== fy.startYear) {
+          return badRequest(
+            `Date ${effectiveMiti} belongs to fiscal year ${parsedMiti.fiscalYearName}, not the selected fiscal year`,
+          );
+        }
+      }
+    }
+
     const fingerprint = {
       companyId,
       fiscalYearId: effectiveFiscalYearId,

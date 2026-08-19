@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { trucks } from "@/lib/db/schema";
+import { trucks, expenses } from "@/lib/db/schema";
 import { normalizeName } from "@/lib/normalize";
 import { and, eq, sql } from "drizzle-orm";
 import type { ServiceResult } from "./types";
@@ -77,6 +77,15 @@ export async function deleteTruck(
   id: string,
   companyId: string,
 ): Promise<ServiceResult<{ id: string }>> {
+  // Check for expenses referencing this truck
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(expenses)
+    .where(and(eq(expenses.truckId, id), eq(expenses.companyId, companyId), eq(expenses.isDeleted, false)));
+  if (count > 0) {
+    return { ok: false, error: "Cannot delete truck — it is referenced by existing expenses" };
+  }
+
   const [deleted] = await db
     .delete(trucks)
     .where(and(eq(trucks.id, id), eq(trucks.companyId, companyId)))
