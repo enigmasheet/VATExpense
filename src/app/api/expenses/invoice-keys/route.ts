@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { expenses } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 
 /**
  * Returns only the invoice keys (partyId + invoiceNumber) for a given
@@ -29,10 +29,12 @@ export async function GET(request: Request) {
           eq(expenses.companyId, companyId),
           eq(expenses.fiscalYearId, fiscalYearId),
           eq(expenses.isDeleted, false),
+          isNotNull(expenses.invoiceNumber),
         ),
-      );
+      )
+      .limit(10000);
 
-    const keys = rows.filter((r) => r.invoiceNumber !== null).map((r) => ({
+    const keys = rows.map((r) => ({
       partyId: r.partyId,
       invoiceNumber: r.invoiceNumber as string,
     }));

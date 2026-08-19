@@ -19,6 +19,7 @@ import {
   ERR_FAILED_TO_DELETE,
   ERR_FAILED_TO_UPDATE,
 } from "@/lib/status-constants";
+import { isUniqueViolation } from "@/lib/api-response";
 import {
   prepareValidatedExpense,
   type ExpenseInput,
@@ -238,6 +239,9 @@ export async function batchSaveExpenses(
     return { ok: true, data: results };
   } catch (err) {
     console.error("batchSaveExpenses failed", err);
+    if (isUniqueViolation(err)) {
+      return { ok: false, error: "One or more expenses conflict with existing records (duplicate invoice numbers)" };
+    }
     return { ok: false, error: ERR_UNEXPECTED };
   }
 }

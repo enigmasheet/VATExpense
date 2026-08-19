@@ -70,3 +70,14 @@ export function unauthorized(detail = "Authentication required"): NextResponse<A
 export function forbidden(detail = "Access denied"): NextResponse<ApiErrorBody> {
   return apiError({ title: "Forbidden", detail, status: HTTP_FORBIDDEN });
 }
+
+/**
+ * Checks if an error is a Postgres unique-violation (error code 23505).
+ * Drizzle wraps database errors but preserves the original error properties.
+ */
+export function isUniqueViolation(err: unknown): boolean {
+  if (err && typeof err === "object" && "code" in err) {
+    return (err as { code: string }).code === "23505";
+  }
+  return false;
+}

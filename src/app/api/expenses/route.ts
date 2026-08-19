@@ -17,7 +17,7 @@ import {
   notFound,
   internalError,
 } from "@/lib/api-response";
-import { requireCompanyIdFromSession, getSessionUser } from "@/lib/api-auth";
+import { requireCompanyIdFromSession, requireAdminRole } from "@/lib/api-auth";
 import { findFiscalYearByIdAndCompany, findPartyByIdAndCompany } from "@/lib/db-helpers/entities";
 import { resolveFiscalYear } from "@/lib/actions/expenses-helpers";
 import { parseMiti } from "@/lib/nepali-date";
@@ -27,6 +27,12 @@ import { and, eq, ilike, or, sql, aliasedTable, type SQL } from "drizzle-orm";
 
 const locationAlias = aliasedTable(locations, "location");
 const truckAlias = aliasedTable(trucks, "truck");
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(s: string): boolean {
+  return UUID_RE.test(s);
+}
 
 export async function GET(request: Request) {
   const companyId = await requireCompanyIdFromSession(request);
@@ -46,6 +52,10 @@ export async function GET(request: Request) {
     MAX_PAGE_SIZE,
     Number.isFinite(rawPageSize) && rawPageSize >= 1 ? Math.floor(rawPageSize) : DEFAULT_PAGE_SIZE,
   );
+
+  if (fiscalYearId && !isValidUUID(fiscalYearId)) return badRequest("Invalid fiscalYearId");
+  if (partyId && !isValidUUID(partyId)) return badRequest("Invalid partyId");
+  if (categoryId && !isValidUUID(categoryId)) return badRequest("Invalid categoryId");
 
   const conditions: (SQL | undefined)[] = [
     eq(expenses.companyId, companyId),
@@ -127,8 +137,9 @@ export async function POST(request: Request) {
   const companyId = await requireCompanyIdFromSession(request);
   if (typeof companyId !== "string") return companyId;
 
-  const user = await getSessionUser();
-  const userId = user?.id;
+  const userOrError = await requireAdminRole();
+  if (userOrError instanceof Response) return userOrError;
+  const userId = userOrError.id;
 
   let body: unknown;
   try {

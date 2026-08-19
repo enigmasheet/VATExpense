@@ -74,20 +74,24 @@ export async function POST(
     if (dup) return conflict("A fiscal year with this name already exists for this company");
 
     // If setting as active, deactivate others first
-    if (isActive) {
-      await db.update(fiscalYears).set({ isActive: false }).where(eq(fiscalYears.companyId, id));
-    }
+    const [created] = await db.transaction(async (tx) => {
+      if (isActive) {
+        await tx.update(fiscalYears).set({ isActive: false }).where(eq(fiscalYears.companyId, id));
+      }
 
-    const [created] = await db
-      .insert(fiscalYears)
-      .values({
-        companyId: id,
-        name: data.name,
-        startYear: data.startYear,
-        endYear: data.endYear,
-        isActive,
-      })
-      .returning();
+      const [row] = await tx
+        .insert(fiscalYears)
+        .values({
+          companyId: id,
+          name: data.name,
+          startYear: data.startYear,
+          endYear: data.endYear,
+          isActive,
+        })
+        .returning();
+
+      return [row];
+    });
 
     await db.insert(adminAuditLog).values({
       actorEmail: admin.email ?? "unknown",

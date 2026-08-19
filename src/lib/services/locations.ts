@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { locations } from "@/lib/db/schema";
 import { normalizeName } from "@/lib/normalize";
 import { and, eq, sql } from "drizzle-orm";
+import { isUniqueViolation } from "@/lib/api-response";
 import type { ServiceResult } from "./types";
 
 export type Location = typeof locations.$inferSelect;
@@ -24,17 +25,24 @@ export async function createLocation(
   )[0];
   if (existing) return { ok: false, error: `Location "${input.name}" already exists` };
 
-  const [created] = await db
-    .insert(locations)
-    .values({
-      companyId,
-      name: input.name,
-      normalizedName,
-      isActive: input.isActive,
-    })
-    .returning();
+  try {
+    const [created] = await db
+      .insert(locations)
+      .values({
+        companyId,
+        name: input.name,
+        normalizedName,
+        isActive: input.isActive,
+      })
+      .returning();
 
-  return { ok: true, data: created };
+    return { ok: true, data: created };
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return { ok: false, error: `A location with this name already exists` };
+    }
+    throw err;
+  }
 }
 
 /**
