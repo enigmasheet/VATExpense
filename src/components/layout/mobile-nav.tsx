@@ -95,8 +95,7 @@ export function ActiveFiscalYearIndicator() {
 export function MobileHeader() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const { activeCompany, activeFiscalYear } = useApp();
-  const { data: session } = useSession();
+  const { activeCompany } = useApp();
 
   const displayName = activeCompany?.brandName || activeCompany?.name || "VAT Ledger";
 
@@ -118,27 +117,20 @@ export function MobileHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface/95 px-3 py-2.5 backdrop-blur lg:hidden">
-        <button
-          onClick={() => setOpen(!open)}
-          className="rounded-md p-1.5 text-foreground hover:bg-surface-hover"
-          aria-label="Toggle menu"
-          aria-expanded={open}
-        >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        <Link href="/" className="min-w-0 flex-1 truncate font-display text-lg font-semibold text-foreground">
+      <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 lg:hidden">
+        <Link href="/" className="min-w-0 truncate font-display text-lg font-semibold text-foreground">
           {displayName}
         </Link>
-        {activeFiscalYear && (
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-surface-muted px-2.5 py-1 text-xs font-medium text-muted">
-            <NavIcon name="calendarDays" className="h-3.5 w-3.5" />
-            {activeFiscalYear.name}
-          </span>
-        )}
-        {session?.user && <UserAvatar name={session.user.name} email={session.user.email} size="sm" />}
+        <button
+          onClick={() => setOpen(!open)}
+          className="rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-foreground"
+          aria-label="Open menu"
+          aria-expanded={open}
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
       </header>
 
       {open && <MobileNavPanel onClose={() => setOpen(false)} />}
