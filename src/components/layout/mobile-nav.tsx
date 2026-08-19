@@ -8,6 +8,7 @@ import { useApp } from "@/lib/useApp";
 import { PATH_LOGIN } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { NavSelect } from "@/components/ui/nav-select";
+import { Modal } from "@/components/ui/modal";
 import { UserAvatar } from "@/components/admin/user-avatar";
 import { NavIcon } from "./icons";
 import { getNavGroups, type NavItem } from "./nav-config";
@@ -83,55 +84,106 @@ export function ActiveFiscalYearIndicator() {
   );
 }
 
-/**
- * Renders the responsive mobile header and slide-in navigation drawer.
- *
- * The drawer closes when the current route changes, Escape is pressed, the
- * close button is activated, or the backdrop is clicked.
- */
-export function MobileHeader() {
-  const [open, setOpen] = useState(false);
+const REPORT_ITEMS = [
+  { label: "Monthly Report", href: "/reports/monthly", icon: "monthlyReport" as const },
+  { label: "FY Report", href: "/reports/fiscal-year", icon: "fyReport" as const },
+  { label: "Party Purchases", href: "/reports/parties", icon: "parties" as const },
+];
+
+function ReportPickerSheet({ onClose }: { onClose: () => void }) {
   const pathname = usePathname();
-  const { activeCompany } = useApp();
 
-  const displayName = activeCompany?.brandName || activeCompany?.name || "VAT Ledger";
-
-  // Close menu on route change. Run asynchronously to avoid synchronous setState in effect.
   useEffect(() => {
-    const id = window.setTimeout(() => setOpen(false), 0);
-    return () => window.clearTimeout(id);
-  }, [pathname]);
-
-  // Lock body scroll when the mobile menu is open.
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
+    onClose();
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <>
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/60 bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
-        <Link href="/" className="min-w-0 truncate font-display text-lg font-semibold text-foreground">
-          {displayName}
-        </Link>
-        <button
-          onClick={() => setOpen(!open)}
-          className="rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-foreground"
-          aria-label="Open menu"
-          aria-expanded={open}
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-          </svg>
-        </button>
-      </header>
+    <Modal open title="Reports" onClose={onClose}>
+      <nav className="flex flex-col gap-1">
+        {REPORT_ITEMS.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(item.href + "/");
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={navItemClasses(active)}
+            >
+              {active && <span className={NAV_ACCENT_BAR} aria-hidden="true" />}
+              <NavIcon name={item.icon} className="h-5 w-5 shrink-0" />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </Modal>
+  );
+}
 
-      {open && <MobileDrawer onClose={() => setOpen(false)} />}
-    </>
+function BottomTabBar({ onReports, onMore }: { onReports: () => void; onMore: () => void }) {
+  const pathname = usePathname();
+
+  const tabs = [
+    { label: "Home", href: "/", icon: "dashboard" as const },
+    { label: "Expenses", href: "/expenses", icon: "expenses" as const },
+  ];
+
+  function isActive(href: string) {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(href + "/");
+  }
+
+  const reportsActive = pathname.startsWith("/reports");
+
+  return (
+    <div className="fixed bottom-0 inset-x-0 z-30 lg:hidden">
+      <div className="flex items-end justify-around border-t border-border/60 bg-surface/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+        {tabs.map((tab) => (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[0.65rem] font-medium transition-colors ${
+              isActive(tab.href)
+                ? "text-primary"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            <NavIcon name={tab.icon} className="h-5 w-5" />
+            {tab.label}
+          </Link>
+        ))}
+
+        {/* Quick Add FAB */}
+        <Link
+          href="/expenses/create"
+          className="-mt-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+          aria-label="Quick add expense"
+        >
+          <NavIcon name="plus" className="h-6 w-6" />
+        </Link>
+
+        {/* Reports */}
+        <button
+          type="button"
+          onClick={onReports}
+          className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[0.65rem] font-medium transition-colors ${
+            reportsActive ? "text-primary" : "text-muted hover:text-foreground"
+          }`}
+        >
+          <NavIcon name="monthlyReport" className="h-5 w-5" />
+          Reports
+        </button>
+
+        {/* More */}
+        <button
+          type="button"
+          onClick={onMore}
+          className="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[0.65rem] font-medium text-muted transition-colors hover:text-foreground"
+        >
+          <NavIcon name="ellipsis" className="h-5 w-5" />
+          More
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -204,7 +256,7 @@ function MobileDrawer({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-foreground"
+            className="rounded-lg p-1.5 text-muted hover:bg-surface-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             aria-label="Close menu"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -269,6 +321,61 @@ function MobileDrawer({ onClose }: { onClose: () => void }) {
           )}
         </div>
       </div>
+    </>
+  );
+}
+
+/**
+ * Renders the responsive mobile header (brand-only), bottom tab bar,
+ * report picker sheet, and slide-in drawer.
+ */
+export function MobileHeader() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reportsOpen, setReportsOpen] = useState(false);
+  const pathname = usePathname();
+  const { activeCompany } = useApp();
+
+  const displayName = activeCompany?.brandName || activeCompany?.name || "VAT Ledger";
+
+  // Close overlays on route change.
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      setMenuOpen(false);
+      setReportsOpen(false);
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [pathname]);
+
+  // Lock body scroll when the drawer is open.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [menuOpen]);
+
+  return (
+    <>
+      {/* Brand-only top bar */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/60 bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
+        <Link href="/" className="min-w-0 truncate font-display text-lg font-semibold text-foreground">
+          {displayName}
+        </Link>
+      </header>
+
+      {/* Bottom tab bar */}
+      <BottomTabBar
+        onReports={() => setReportsOpen(true)}
+        onMore={() => setMenuOpen(true)}
+      />
+
+      {/* Report picker sheet */}
+      {reportsOpen && <ReportPickerSheet onClose={() => setReportsOpen(false)} />}
+
+      {/* Drawer */}
+      {menuOpen && <MobileDrawer onClose={() => setMenuOpen(false)} />}
     </>
   );
 }

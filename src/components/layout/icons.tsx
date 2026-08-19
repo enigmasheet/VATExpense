@@ -17,7 +17,9 @@ type IconName =
   | "signOut"
   | "calendarDays"
   | "management"
-  | "truck";
+  | "truck"
+  | "plus"
+  | "ellipsis";
 
 const ICON_PATHS: Record<IconName, ReactNode> = {
   dashboard: (
@@ -124,6 +126,12 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
     <>
       <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 9V5.25A2.25 2.25 0 0011.25 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 005.25 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
     </>
+  ),
+  plus: (
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+  ),
+  ellipsis: (
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
   ),
 };
 

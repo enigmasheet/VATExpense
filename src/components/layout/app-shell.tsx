@@ -52,7 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <MobileHeader />
 
               {/* Main content */}
-              <div className="flex flex-1 flex-col overflow-hidden">
+              <div className="flex flex-1 flex-col overflow-hidden pb-[calc(env(safe-area-inset-bottom)+4.5rem)] lg:pb-0">
                 <main id="main-content" className="flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8">
                   <div className="mx-auto max-w-6xl">
                     {collapsed && <ActiveFiscalYearIndicator />}
