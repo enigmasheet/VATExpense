@@ -11,6 +11,7 @@ import { NavSelect } from "@/components/ui/nav-select";
 import { UserAvatar } from "@/components/admin/user-avatar";
 import { NavIcon } from "./icons";
 import { getNavGroups, type NavItem } from "./nav-config";
+import { navItemClasses, navItemCollapsedClasses, navGroupLabelClasses, NAV_ACCENT_BAR } from "./nav-styles";
 
 function isItemActive(href: string, pathname: string): boolean {
   if (href === "/") return pathname === "/";
@@ -28,18 +29,10 @@ export function SidebarLink({ href, label, icon, active, collapsed = false, onCl
       title={collapsed ? label : undefined}
       aria-label={collapsed ? label : undefined}
       onClick={onClose}
-      className={`relative flex items-center rounded-md transition-colors ${
-        collapsed
-          ? "justify-center py-2.5"
-          : "gap-3 px-3 py-2.5 text-sm font-medium"
-      } ${
-        active
-          ? "bg-primary/10 text-primary"
-          : "text-muted hover:bg-surface-hover hover:text-foreground"
-      }`}
+      className={collapsed ? navItemCollapsedClasses(active) : navItemClasses(active)}
     >
       {accent && active && (
-        <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary" aria-hidden="true" />
+        <span className={NAV_ACCENT_BAR} aria-hidden="true" />
       )}
       <NavIcon name={icon} className={collapsed ? "h-5 w-5" : "h-5 w-5 shrink-0"} />
       {!collapsed && <span>{label}</span>}
@@ -62,18 +55,14 @@ function SidebarSubmenu({ item, pathname, collapsed, onClose }: { item: NavItem;
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-          isActive
-            ? "bg-primary/10 text-primary"
-            : "text-muted hover:bg-surface-hover hover:text-foreground"
-        }`}
+        className={navItemClasses(isActive)}
       >
         <NavIcon name={item.icon} className="h-5 w-5 shrink-0" />
         <span className="flex-1 text-left">{item.label}</span>
         <NavIcon name={open ? "chevronDown" : "chevronRight"} className="h-4 w-4 shrink-0 opacity-50" />
       </button>
       {open && (
-        <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-border/50 pl-3">
+        <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-border/40 pl-3">
           {item.children!.map((child) => (
             <SidebarLink
               key={child.href}
@@ -109,12 +98,12 @@ export function Sidebar({
 
   return (
     <aside
-      className={`relative flex h-full flex-col border-r border-border bg-surface transition-[width] duration-200 ease-in-out ${
+      className={`relative flex h-full flex-col border-r border-border/70 bg-surface transition-[width] duration-200 ease-in-out ${
         collapsed ? "w-16" : "w-64"
       }`}
     >
       {/* Logo */}
-      <div className={`flex items-center justify-between border-b border-border ${collapsed ? "flex-col gap-3 px-2 py-4" : "px-4 py-5"}`}>
+      <div className={`flex items-center justify-between border-b border-border/70 ${collapsed ? "flex-col gap-3 px-2 py-4" : "px-5 py-5"}`}>
         <Link
           href="/"
           className={`font-display font-semibold text-foreground ${collapsed ? "text-lg" : "text-xl"}`}
@@ -123,7 +112,7 @@ export function Sidebar({
           {collapsed ? (displayName.length > 2 ? displayName.slice(0, 2).toUpperCase() : displayName) : displayName}
         </Link>
         {!collapsed && (
-          <p className="text-xs text-muted">Nepali fiscal-year purchase register</p>
+          <p className="text-xs text-muted/80">Nepali fiscal-year purchase register</p>
         )}
         <button
           type="button"
@@ -142,10 +131,10 @@ export function Sidebar({
         {getNavGroups(session?.user?.role).map((group, gi) => (
           <div key={group.title} className={collapsed ? "" : "mb-6"}>
             {!collapsed && gi > 0 && (
-              <div className="mb-4 border-t border-border/50" />
+              <div className="mb-4 border-t border-border/40" />
             )}
             {!collapsed && (
-              <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted">
+              <p className={navGroupLabelClasses()}>
                 {group.title}
               </p>
             )}
@@ -164,7 +153,7 @@ export function Sidebar({
       </nav>
 
       {/* Context */}
-      <div className="border-t border-border px-4 py-4">
+      <div className="border-t border-border/70 px-5 py-4">
         {collapsed ? (
           <div className="flex flex-col items-center gap-4">
             {session?.user && (

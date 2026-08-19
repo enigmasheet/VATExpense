@@ -7,6 +7,7 @@ import { signOut } from "next-auth/react";
 import { PATH_ADMIN, PATH_LOGIN } from "@/lib/constants";
 import { NavIcon, type IconName } from "@/components/layout/icons";
 import { Button } from "@/components/ui/button";
+import { navItemClasses, navGroupLabelClasses, NAV_ACCENT_BAR } from "@/components/layout/nav-styles";
 
 const NAV_ITEMS: { href: string; label: string; icon: IconName; match?: string }[] = [
   { href: PATH_ADMIN, label: "Overview", icon: "dashboard", match: "" },
@@ -26,10 +27,10 @@ function isActive(href: string, match: string | undefined, pathname: string): bo
 function SidebarContent({ pathname, onNavigate, onClose }: { pathname: string; onNavigate?: () => void; onClose?: () => void }) {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-5 py-5">
+      <div className="flex items-center justify-between border-b border-border/70 px-5 py-5">
         <div>
           <p className="font-display text-xl font-semibold text-foreground">Admin</p>
-          <p className="mt-0.5 text-xs text-muted">System management</p>
+          <p className="mt-0.5 text-xs text-muted/80">System management</p>
         </div>
         {onClose && (
           <button
@@ -45,33 +46,36 @@ function SidebarContent({ pathname, onNavigate, onClose }: { pathname: string; o
         )}
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {NAV_ITEMS.map((item) => {
-          const active = isActive(item.href, item.match, pathname);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={`relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-                active ? "bg-primary/10 text-primary" : "text-muted hover:bg-surface-hover hover:text-foreground"
-              }`}
-            >
-              {active && (
-                <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary" aria-hidden="true" />
-              )}
-              <NavIcon name={item.icon} className="h-5 w-5 shrink-0" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <div>
+          <p className={navGroupLabelClasses()}>Management</p>
+          <div className="flex flex-col gap-1">
+            {NAV_ITEMS.map((item) => {
+              const active = isActive(item.href, item.match, pathname);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  className={navItemClasses(active)}
+                >
+                  {active && (
+                    <span className={NAV_ACCENT_BAR} aria-hidden="true" />
+                  )}
+                  <NavIcon name={item.icon} className="h-5 w-5 shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </nav>
 
-      <div className="border-t border-border px-5 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+      <div className="border-t border-border/70 px-5 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
         <Link
           href="/"
           onClick={onNavigate}
-          className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted transition-colors duration-150 hover:bg-surface-hover hover:text-foreground"
         >
           <NavIcon name="chevronLeft" className="h-4 w-4 shrink-0" />
           <span>Back to app</span>
@@ -87,26 +91,26 @@ function SidebarContent({ pathname, onNavigate, onClose }: { pathname: string; o
 
 /**
  * Renders the admin sidebar. On desktop it is fixed on the left; on mobile
- * it becomes a full-screen sheet toggled by a hamburger button.
+ * it becomes a slide-in drawer toggled by a hamburger button.
  */
 export function AdminSidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const openButtonRef = useRef<HTMLButtonElement>(null);
-  const sheetRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
   const wasOpen = useRef(false);
 
-  // Close the sheet when the route changes.
+  // Close the drawer when the route changes.
   useEffect(() => {
     const id = window.setTimeout(() => setMobileOpen(false), 0);
     return () => window.clearTimeout(id);
   }, [pathname]);
 
-  // Lock body scroll and move focus into the sheet while open; restore on close.
+  // Lock body scroll and move focus into the drawer while open; restore on close.
   useEffect(() => {
     if (mobileOpen) {
       wasOpen.current = true;
-      const first = sheetRef.current?.querySelector<HTMLElement>("a, button");
+      const first = drawerRef.current?.querySelector<HTMLElement>("a, button");
       first?.focus();
       const prev = document.body.style.overflow;
       document.body.style.overflow = "hidden";
@@ -124,7 +128,7 @@ export function AdminSidebar() {
   return (
     <>
       {/* Mobile top bar */}
-      <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 lg:hidden">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/60 bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
         <Link href={PATH_ADMIN} className="font-display text-lg font-semibold text-foreground">
           Admin
         </Link>
@@ -143,28 +147,35 @@ export function AdminSidebar() {
       </header>
 
       {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 border-r border-border bg-surface lg:block">
+      <aside className="hidden w-60 shrink-0 border-r border-border/70 bg-surface lg:block">
         <SidebarContent pathname={pathname} />
       </aside>
 
-      {/* Mobile full-screen sheet */}
+      {/* Mobile slide-in drawer */}
       {mobileOpen && (
-        <div
-          ref={sheetRef}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Admin navigation menu"
-          className="fixed inset-0 z-50 flex flex-col bg-surface lg:hidden animate-[menu-panel-in_220ms_ease-out]"
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setMobileOpen(false);
-          }}
-        >
-          <SidebarContent
-            pathname={pathname}
-            onNavigate={() => setMobileOpen(false)}
-            onClose={() => setMobileOpen(false)}
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/40 animate-[backdrop-in_200ms_ease-out]"
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
           />
-        </div>
+          <div
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Admin navigation menu"
+            className="fixed inset-y-0 left-0 z-50 flex w-[85%] max-w-xs flex-col bg-surface shadow-2xl animate-[drawer-in_250ms_ease-out]"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setMobileOpen(false);
+            }}
+          >
+            <SidebarContent
+              pathname={pathname}
+              onNavigate={() => setMobileOpen(false)}
+              onClose={() => setMobileOpen(false)}
+            />
+          </div>
+        </>
       )}
     </>
   );
