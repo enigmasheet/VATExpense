@@ -179,7 +179,7 @@ function MobileNavPanel({ onClose }: { onClose: () => void }) {
       role="dialog"
       aria-modal="true"
       aria-label="Navigation menu"
-      className="fixed inset-0 z-40 flex flex-col bg-surface lg:hidden animate-[menu-panel-in_220ms_ease-out]"
+      className="fixed inset-0 z-50 flex flex-col bg-surface lg:hidden animate-[menu-panel-in_220ms_ease-out]"
       onKeyDown={(e) => {
         if (e.key === "Escape") {
           onClose();
@@ -188,23 +188,23 @@ function MobileNavPanel({ onClose }: { onClose: () => void }) {
         trapFocus(e);
       }}
     >
-      <div className="sticky top-0 z-10 border-b border-border bg-surface px-4 py-4">
-        <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-border px-5 py-5">
+        <div>
           <Link href="/" className="font-display text-xl font-semibold text-foreground" onClick={onClose}>
             {displayName}
           </Link>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-2 text-muted hover:bg-surface-hover hover:text-foreground"
-            aria-label="Close menu"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <p className="mt-0.5 text-xs text-muted">Nepali fiscal-year purchase register</p>
         </div>
-        <p className="mt-0.5 text-xs text-muted">Nepali fiscal-year purchase register</p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-md p-1.5 text-muted hover:bg-surface-hover hover:text-foreground"
+          aria-label="Close menu"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
@@ -227,7 +227,7 @@ function MobileNavPanel({ onClose }: { onClose: () => void }) {
         ))}
       </nav>
 
-      <div className="border-t border-border bg-surface px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+      <div className="border-t border-border px-5 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
         {fiscalYears.length > 0 && (
           <div className="mb-4">
             <NavSelect
