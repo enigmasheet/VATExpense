@@ -191,10 +191,8 @@ function MobileDrawer({ onClose }: { onClose: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
-  const { fiscalYears, fiscalYearId, setActiveFiscalYear, activeCompany } = useApp();
+  const { fiscalYears, fiscalYearId, setActiveFiscalYear } = useApp();
   const drawerRef = useRef<HTMLDivElement>(null);
-
-  const displayName = activeCompany?.brandName || activeCompany?.name || "VAT Ledger";
 
   useEffect(() => {
     const drawer = drawerRef.current;
@@ -246,13 +244,7 @@ function MobileDrawer({ onClose }: { onClose: () => void }) {
           trapFocus(e);
         }}
       >
-        <div className="flex items-center justify-between border-b border-border/70 px-5 py-5">
-          <div>
-            <Link href="/" className="font-display text-xl font-semibold text-foreground" onClick={onClose}>
-              {displayName}
-            </Link>
-            <p className="mt-0.5 text-xs text-muted/80">Nepali fiscal-year purchase register</p>
-          </div>
+        <div className="flex items-center justify-end border-b border-border/70 px-5 py-5">
           <button
             type="button"
             onClick={onClose}
