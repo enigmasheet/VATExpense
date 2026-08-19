@@ -15,12 +15,11 @@ export function genRowId(): string {
 let idCounter = 0;
 
 /**
- * Normalizes an invoice number to match server-side trimming semantics.
- * The server compares invoice numbers exactly after trim; this mirrors that
- * rule so client duplicate detection stays consistent with the database.
+ * Normalizes an invoice number to lowercase-trimmed form.
+ * Server comparisons are case-insensitive after trim+lowercase.
  */
 export function normalizeInvoiceNumber(raw: string): string {
-  return raw.trim();
+  return raw.trim().toLowerCase();
 }
 
 /**

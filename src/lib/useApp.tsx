@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useSession } from "next-auth/react";
 import { api } from "@/lib/api-client";
+import { VAT_RATE_DEFAULT } from "@/lib/constants";
 
 export interface Company {
   id: string;
@@ -34,6 +35,7 @@ interface AppContextValue {
   companies: Company[];
   companyId: string | null;
   activeCompany: Company | null;
+  defaultVatRate: string;
   fiscalYears: FiscalYear[];
   fiscalYearId: string | null;
   setFiscalYearId: (id: string) => void;
@@ -129,11 +131,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [companies, companyId],
   );
 
+  const defaultVatRate = activeCompany?.defaultVatRate ?? VAT_RATE_DEFAULT;
+
   const value = useMemo(
     () => ({
       companies,
       companyId,
       activeCompany,
+      defaultVatRate,
       fiscalYears,
       fiscalYearId,
       setFiscalYearId,
@@ -141,7 +146,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       activeFiscalYear,
       loading,
     }),
-    [companies, companyId, activeCompany, fiscalYears, fiscalYearId, setFiscalYearId, setActiveFiscalYear, activeFiscalYear, loading],
+    [companies, companyId, activeCompany, defaultVatRate, fiscalYears, fiscalYearId, setFiscalYearId, setActiveFiscalYear, activeFiscalYear, loading],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

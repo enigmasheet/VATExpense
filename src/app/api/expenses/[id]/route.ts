@@ -10,7 +10,7 @@ import {
   notFound,
   internalError,
 } from "@/lib/api-response";
-import { requireCompanyIdFromSession, getSessionUser } from "@/lib/api-auth";
+import { requireCompanyIdFromSession, getSessionUser, requireAdminRole } from "@/lib/api-auth";
 import { findExpenseById } from "@/lib/db-helpers/expenses";
 import { parseMiti } from "@/lib/nepali-date";
 import { checkInvoiceDuplicate, findSuspiciousDuplicates } from "@/lib/expenses/duplicates";
@@ -53,6 +53,9 @@ export async function PATCH(
   const { id } = await params;
   const companyId = await requireCompanyIdFromSession(request);
   if (typeof companyId !== "string") return companyId;
+
+  const adminOrError = await requireAdminRole();
+  if (adminOrError instanceof Response) return adminOrError;
 
   let body: unknown;
   try {
@@ -110,6 +113,10 @@ export async function PATCH(
       if ((changes as Record<string, unknown>)[key] !== undefined) {
         values[key] = (changes as Record<string, unknown>)[key] ?? null;
       }
+    }
+
+    if (values.fiscalYearId === null) {
+      return badRequest("Cannot set fiscalYearId to null");
     }
 
     const merged = {
@@ -206,6 +213,9 @@ export async function DELETE(
   const { id } = await params;
   const companyId = await requireCompanyIdFromSession(request);
   if (typeof companyId !== "string") return companyId;
+
+  const adminOrError = await requireAdminRole();
+  if (adminOrError instanceof Response) return adminOrError;
 
   let body: unknown = {};
   try {

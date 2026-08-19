@@ -16,21 +16,21 @@ describe("genRowId", () => {
 
 describe("normalizeInvoiceNumber", () => {
   it("trims whitespace", () => {
-    expect(normalizeInvoiceNumber("  INV-001  ")).toBe("INV-001");
+    expect(normalizeInvoiceNumber("  INV-001  ")).toBe("inv-001");
   });
 
   it("returns unchanged if no whitespace", () => {
-    expect(normalizeInvoiceNumber("INV001")).toBe("INV001");
+    expect(normalizeInvoiceNumber("INV001")).toBe("inv001");
   });
 });
 
 describe("getInvoiceKey", () => {
   it("combines partyId and normalized invoice", () => {
-    expect(getInvoiceKey("party-1", "INV-001")).toBe("party-1|INV-001");
+    expect(getInvoiceKey("party-1", "INV-001")).toBe("party-1|inv-001");
   });
 
   it("trims invoice number", () => {
-    expect(getInvoiceKey("party-1", "  INV-001  ")).toBe("party-1|INV-001");
+    expect(getInvoiceKey("party-1", "  INV-001  ")).toBe("party-1|inv-001");
   });
 });
 

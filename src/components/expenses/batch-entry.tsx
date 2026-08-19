@@ -17,7 +17,7 @@ interface BatchEntryProps {
  * @returns The expense ledger or a prompt to create or select a fiscal year
  */
 export function BatchEntry({ allParties, allCategories }: BatchEntryProps) {
-  const { companyId, fiscalYearId, fiscalYears } = useApp();
+  const { companyId, fiscalYearId, fiscalYears, defaultVatRate } = useApp();
 
   if (fiscalYears.length === 0) {
     return (
@@ -44,6 +44,7 @@ export function BatchEntry({ allParties, allCategories }: BatchEntryProps) {
       fiscalYearName={activeFY?.name ?? ""}
       allParties={allParties}
       allCategories={allCategories}
+      defaultVatRate={defaultVatRate}
     />
   );
 }

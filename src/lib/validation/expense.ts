@@ -8,6 +8,13 @@ export function optionalNumeric(scale: number) {
   return z.preprocess((v) => toFixedStr(v, scale), z.string().nullable().optional());
 }
 
+export function optionalPositiveNumeric(scale: number) {
+  return optionalNumeric(scale).refine(
+    (v) => v === null || v === undefined || Number(v) > 0,
+    "Must be a positive number",
+  );
+}
+
 export function requiredNumeric(scale: number) {
   return z.preprocess(
     (v) => {
@@ -44,12 +51,12 @@ export const expenseInputSchema = z.object({
       }
     }),
   invoiceNumber: z.preprocess(
-    (v) => (v === null || v === undefined || v === "" ? null : v),
-    z.string().trim().min(1, "Invoice number cannot be blank").max(MAX_NAME_LENGTH).nullable().optional(),
+    (v) => (v === null || v === undefined || v === "" ? null : String(v).trim().toLowerCase() || null),
+    z.string().min(1, "Invoice number cannot be blank").max(MAX_NAME_LENGTH).nullable().optional(),
   ),
   item: z.string().trim().min(1, "Item is required").max(MAX_ITEM_LENGTH),
-  quantity: optionalNumeric(3),
-  rate: optionalNumeric(4),
+  quantity: optionalPositiveNumeric(3),
+  rate: optionalPositiveNumeric(4),
   taxableAmount: requiredNumeric(2),
   vatAmount: requiredNumeric(2),
   totalAmount: requiredNumeric(2),

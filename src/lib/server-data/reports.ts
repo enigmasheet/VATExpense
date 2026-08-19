@@ -63,7 +63,7 @@ export async function getMonthlyReport(
 }
 
 /**
- * Nepali month names in fiscal-year order (Shrawan first).
+ * Nepali month names in calendar order (Baisakh first).
  */
 const NEPALI_MONTHS_ORDER = NEPALI_MONTHS;
 

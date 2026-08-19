@@ -86,6 +86,8 @@ export function ledgerReducer(
     case "UPDATE_FIELD": {
       return rows.map((r) => {
         if (r.id !== action.rowId) return r;
+        // Prevent edits while saving to avoid data-loss race
+        if (r.status === STATUS_SAVING) return r;
 
         let next = clearTerminalStatus(r);
         next = { ...next, [action.field]: action.value };
@@ -123,6 +125,7 @@ export function ledgerReducer(
     case "SELECT_PARTY": {
       return rows.map((r) => {
         if (r.id !== action.rowId) return r;
+        if (r.status === STATUS_SAVING) return r;
         return {
           ...clearTerminalStatus(r),
           partyId: action.partyId,
@@ -137,6 +140,7 @@ export function ledgerReducer(
     case "UPDATE_PARTY_SEARCH": {
       return rows.map((r) => {
         if (r.id !== action.rowId) return r;
+        if (r.status === STATUS_SAVING) return r;
         const base = clearTerminalStatus(r);
         if (action.partyId !== undefined) {
           return {

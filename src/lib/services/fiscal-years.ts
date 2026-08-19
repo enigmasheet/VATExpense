@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { fiscalYears } from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
+import { isUniqueViolation } from "@/lib/api-response";
 import type { ServiceResult } from "./types";
 
 export type FiscalYear = typeof fiscalYears.$inferSelect;
@@ -27,29 +28,36 @@ export async function createFiscalYear(
   )[0];
   if (existing) return { ok: false, error: `Fiscal year "${input.name}" already exists` };
 
-  const [created] = await db.transaction(async (tx) => {
-    if (input.isActive) {
-      await tx
-        .update(fiscalYears)
-        .set({ isActive: false, updatedAt: sql`now()` })
-        .where(eq(fiscalYears.companyId, companyId));
+  try {
+    const [created] = await db.transaction(async (tx) => {
+      if (input.isActive) {
+        await tx
+          .update(fiscalYears)
+          .set({ isActive: false, updatedAt: sql`now()` })
+          .where(eq(fiscalYears.companyId, companyId));
+      }
+
+      const [row] = await tx
+        .insert(fiscalYears)
+        .values({
+          companyId,
+          name: input.name,
+          startYear: input.startYear,
+          endYear: input.endYear,
+          isActive: input.isActive,
+        })
+        .returning();
+
+      return [row];
+    });
+
+    return { ok: true, data: created };
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return { ok: false, error: `A fiscal year with this name already exists` };
     }
-
-    const [row] = await tx
-      .insert(fiscalYears)
-      .values({
-        companyId,
-        name: input.name,
-        startYear: input.startYear,
-        endYear: input.endYear,
-        isActive: input.isActive,
-      })
-      .returning();
-
-    return [row];
-  });
-
-  return { ok: true, data: created };
+    throw err;
+  }
 }
 
 /**
