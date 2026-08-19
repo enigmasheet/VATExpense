@@ -144,13 +144,25 @@ export async function POST(request: Request) {
 
   try {
     // Parallel lookups for independent entities
-    const [company, party] = await Promise.all([
+    const [company, party, category, location, truck] = await Promise.all([
       db.select().from(companies).where(eq(companies.id, input.companyId)).limit(1).then((r) => r[0]),
       findPartyByIdAndCompany(input.partyId, input.companyId),
+      input.categoryId
+        ? db.select({ id: categories.id }).from(categories).where(and(eq(categories.id, input.categoryId), eq(categories.companyId, input.companyId))).limit(1).then((r) => r[0])
+        : Promise.resolve({ id: input.categoryId } as { id: string }),
+      input.locationId
+        ? db.select({ id: locations.id }).from(locations).where(and(eq(locations.id, input.locationId), eq(locations.companyId, input.companyId))).limit(1).then((r) => r[0])
+        : Promise.resolve(null),
+      input.truckId
+        ? db.select({ id: trucks.id }).from(trucks).where(and(eq(trucks.id, input.truckId), eq(trucks.companyId, input.companyId))).limit(1).then((r) => r[0])
+        : Promise.resolve(null),
     ]);
 
     if (!company) return notFound("Company not found");
     if (!party) return notFound("Party not found for this company");
+    if (!category) return notFound("Category not found for this company");
+    if (input.locationId && !location) return notFound("Location not found for this company");
+    if (input.truckId && !truck) return notFound("Truck not found for this company");
 
     // Resolve fiscal year — use provided ID or auto-resolve from miti
     let fiscalYearId: string;

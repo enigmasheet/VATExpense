@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { expenses } from "@/lib/db/schema";
+import { expenses, categories, locations, trucks, fiscalYears, parties } from "@/lib/db/schema";
 import { expenseInputSchema, validateAmounts } from "@/lib/validation/expense";
 import { safeParse } from "@/lib/validation/utils";
 import {
@@ -109,6 +109,40 @@ export async function PATCH(
     for (const key of patchKeys) {
       if ((changes as Record<string, unknown>)[key] !== undefined) {
         values[key] = (changes as Record<string, unknown>)[key] ?? null;
+      }
+    }
+
+    // Validate FK ownership for any referenced entities being changed
+    const fkChecks: Promise<{ id: string } | undefined>[] = [];
+    if (values.fiscalYearId !== undefined && values.fiscalYearId !== null) {
+      fkChecks.push(
+        db.select({ id: fiscalYears.id }).from(fiscalYears).where(and(eq(fiscalYears.id, values.fiscalYearId as string), eq(fiscalYears.companyId, companyId))).limit(1).then((r) => r[0])
+      );
+    }
+    if (values.partyId !== undefined && values.partyId !== null) {
+      fkChecks.push(
+        db.select({ id: parties.id }).from(parties).where(and(eq(parties.id, values.partyId as string), eq(parties.companyId, companyId))).limit(1).then((r) => r[0])
+      );
+    }
+    if (values.categoryId !== undefined && values.categoryId !== null) {
+      fkChecks.push(
+        db.select({ id: categories.id }).from(categories).where(and(eq(categories.id, values.categoryId as string), eq(categories.companyId, companyId))).limit(1).then((r) => r[0])
+      );
+    }
+    if (values.locationId !== undefined && values.locationId !== null) {
+      fkChecks.push(
+        db.select({ id: locations.id }).from(locations).where(and(eq(locations.id, values.locationId as string), eq(locations.companyId, companyId))).limit(1).then((r) => r[0])
+      );
+    }
+    if (values.truckId !== undefined && values.truckId !== null) {
+      fkChecks.push(
+        db.select({ id: trucks.id }).from(trucks).where(and(eq(trucks.id, values.truckId as string), eq(trucks.companyId, companyId))).limit(1).then((r) => r[0])
+      );
+    }
+    if (fkChecks.length > 0) {
+      const fkResults = await Promise.all(fkChecks);
+      if (fkResults.some((r) => !r)) {
+        return badRequest("One or more referenced entities (fiscal year, party, category, location, truck) not found for this company");
       }
     }
 
