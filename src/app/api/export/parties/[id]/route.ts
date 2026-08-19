@@ -1,6 +1,7 @@
 import { badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { getPartyStatement } from "@/lib/server-data/party-statement";
+import { sanitizeCsvValue } from "@/lib/format";
 import {
   HTTP_NOT_FOUND,
   CONTENT_TYPE_JSON,
@@ -45,17 +46,17 @@ export async function GET(
     const data = rows.map((r, i) => ({
       "S.N.": i + 1,
       Miti: r.miti,
-      "Invoice No.": r.invoiceNumber ?? "",
-      Item: r.itemName,
-      Category: r.categoryName ?? "",
-      Location: r.locationName ?? "",
+      "Invoice No.": sanitizeCsvValue(r.invoiceNumber),
+      Item: sanitizeCsvValue(r.itemName),
+      Category: sanitizeCsvValue(r.categoryName),
+      Location: sanitizeCsvValue(r.locationName),
       Qty: r.quantity ? Number(r.quantity) : 0,
       Rate: r.rate ? Number(r.rate) : 0,
       "Taxable Amount": Number(r.taxableAmount),
       "VAT Amount": Number(r.vatAmount),
       "Total Amount": Number(r.totalAmount),
       "VAT Rate %": Number(r.vatRate),
-      Remarks: r.remarks ?? "",
+      Remarks: sanitizeCsvValue(r.remarks),
     }));
 
     // Add totals row

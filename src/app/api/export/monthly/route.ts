@@ -3,6 +3,7 @@ import { expenses, parties, categories, locations, fiscalYears } from "@/lib/db/
 import { badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { NEPALI_MONTHS, type NepaliMonth } from "@/lib/nepali-date";
+import { sanitizeCsvValue } from "@/lib/format";
 import { and, eq, sql, type SQL } from "drizzle-orm";
 import {
   HTTP_NOT_FOUND,
@@ -89,12 +90,12 @@ export async function GET(request: Request) {
       const data = rows.map((r, i) => ({
         Sno: i + 1,
         Miti: r.miti,
-        "Invoice No": r.invoiceNumber ?? "",
-        Party: r.partyName ?? "",
-        Location: r.locationName ?? "",
-        "Vat No": r.partyVatNumber ?? "",
-        Category: r.categoryName ?? "",
-        Item: r.item,
+        "Invoice No": sanitizeCsvValue(r.invoiceNumber),
+        Party: sanitizeCsvValue(r.partyName),
+        Location: sanitizeCsvValue(r.locationName),
+        "Vat No": sanitizeCsvValue(r.partyVatNumber),
+        Category: sanitizeCsvValue(r.categoryName),
+        Item: sanitizeCsvValue(r.item),
         Quantity: r.quantity ? Number(r.quantity) : "",
         Rate: r.rate ? Number(r.rate) : "",
         "Taxable Amount": Number(r.taxableAmount),
@@ -120,19 +121,19 @@ export async function GET(request: Request) {
     const data = rows.map((r, i) => ({
       "S.N.": i + 1,
       Miti: r.miti,
-      "Invoice No.": r.invoiceNumber ?? "",
-      Party: r.partyName ?? "",
-      "VAT No.": r.partyVatNumber ?? "",
-      Location: r.locationName ?? "",
-      Category: r.categoryName ?? "",
-      Item: r.item,
+      "Invoice No.": sanitizeCsvValue(r.invoiceNumber),
+      Party: sanitizeCsvValue(r.partyName),
+      "VAT No.": sanitizeCsvValue(r.partyVatNumber),
+      Location: sanitizeCsvValue(r.locationName),
+      Category: sanitizeCsvValue(r.categoryName),
+      Item: sanitizeCsvValue(r.item),
       Qty: r.quantity ? Number(r.quantity) : 0,
       Rate: r.rate ? Number(r.rate) : 0,
       "Taxable Amount": Number(r.taxableAmount),
       "VAT Amount": Number(r.vatAmount),
       "Total Amount": Number(r.totalAmount),
       "VAT Rate %": Number(r.vatRate),
-      Remarks: r.remarks ?? "",
+      Remarks: sanitizeCsvValue(r.remarks),
     }));
 
     const totals = rows.reduce(

@@ -1,4 +1,4 @@
-import { apiOk, badRequest, notFound, unprocessableEntity, internalError } from "@/lib/api-response";
+import { apiOk, badRequest, conflict, notFound, unprocessableEntity, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { updateTruckSchema } from "@/lib/validation/masters";
 import { safeParse } from "@/lib/validation/utils";
@@ -52,7 +52,11 @@ export async function DELETE(
 
   try {
     const result = await truckService.deleteTruck(id, companyId);
-    if (!result.ok) return notFound(result.error);
+    if (!result.ok) {
+      return result.error.includes("referenced by")
+        ? conflict(result.error)
+        : notFound(result.error);
+    }
     return apiOk({ data: result.data });
   } catch (err) {
     console.error("DELETE /api/trucks/[id] failed", err);

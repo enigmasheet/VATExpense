@@ -3,27 +3,28 @@ import { companies } from "@/lib/db/schema";
 import { createCompanySchema } from "@/lib/validation/masters";
 import { safeParse } from "@/lib/validation/utils";
 import { apiOk, badRequest, conflict, unprocessableEntity, internalError, unauthorized } from "@/lib/api-response";
-import { getSessionUser } from "@/lib/api-auth";
+import { getSessionUser, requireCompanyIdFromSession } from "@/lib/api-auth";
 import { ROLE_SUPER_ADMIN } from "@/lib/constants";
 import { ilike, eq } from "drizzle-orm";
 
 /**
- * Retrieves companies, optionally filtered by ID and ordered by name.
- *
- * @param request - The request containing the optional `id` query parameter.
- * @returns A successful response containing the matching companies, or an internal-error response if the query fails.
+ * Retrieves a single company scoped to the caller's session.
+ * Superadmins may query any company via ?id=; regular users always get their own.
  */
 export async function GET(request: Request) {
   const user = await getSessionUser();
   if (!user) return unauthorized();
 
-  const url = new URL(request.url);
-  const id = url.searchParams.get("id");
+  const companyId = await requireCompanyIdFromSession(request);
+  if (typeof companyId !== "string") return companyId;
 
   try {
-    const where = id ? eq(companies.id, id) : undefined;
-    const rows = await db.select().from(companies).where(where).orderBy(companies.name);
-    return apiOk({ data: rows });
+    const [company] = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.id, companyId))
+      .limit(1);
+    return apiOk({ data: company ? [company] : [] });
   } catch {
     return internalError();
   }

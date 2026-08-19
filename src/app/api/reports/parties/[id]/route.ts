@@ -1,4 +1,4 @@
-import { apiOk, badRequest, internalError } from "@/lib/api-response";
+import { apiOk, badRequest, internalError, notFound } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { getPartyStatement } from "@/lib/server-data/party-statement";
 
@@ -20,6 +20,9 @@ export async function GET(
 
   try {
     const { summary, rows } = await getPartyStatement(companyId, partyId, fiscalYearId);
+
+    if (rows.length === 0) return notFound("Party or fiscal year not found");
+
     return apiOk({ data: { summary, rows } });
   } catch (err) {
     console.error("GET /api/reports/parties/[id] failed", err);
