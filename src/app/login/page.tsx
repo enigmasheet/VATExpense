@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 import { Field, Input } from "@/components/ui/field";
 
 /**
@@ -126,9 +127,7 @@ export default function LoginPage() {
               </Field>
 
               {error && (
-                <div className="rounded-lg border border-danger/30 bg-danger-bg p-3 text-sm text-danger">
-                  {error}
-                </div>
+                <Alert kind="danger">{error}</Alert>
               )}
 
               <Button type="submit" loading={loading} className="mt-2 w-full">

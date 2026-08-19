@@ -58,7 +58,7 @@ export function DataTable<T>({
   compact = false,
   caption,
 }: DataTableProps<T>) {
-  const cell = compact ? "px-3 py-2" : "px-4 py-3";
+  const cell = compact ? "px-3 py-2" : "px-5 py-3";
   const alignClass = (align: "left" | "right" | undefined) =>
     align === "right" ? "text-right" : "";
 
@@ -66,9 +66,9 @@ export function DataTable<T>({
     <table className="w-full text-left text-sm">
       {caption && <caption className="sr-only">{caption}</caption>}
       <thead>
-        <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
+        <tr className="border-b border-border/60 text-xs uppercase tracking-wide text-muted">
           {columns.map((col) => (
-            <th key={col.header} className={`${cell} ${alignClass(col.align)}`}>
+            <th key={col.header} scope="col" className={`${cell} ${alignClass(col.align)}`}>
               {col.header}
             </th>
           ))}
@@ -81,7 +81,10 @@ export function DataTable<T>({
             <Fragment key={getKey(row)}>
               <tr
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={`border-b border-border last:border-b-0 ${rowClassName?.(row) ?? ""} ${onRowClick ? "cursor-pointer" : ""}`}
+                onKeyDown={onRowClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRowClick(row); } } : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                role={onRowClick ? "button" : undefined}
+                className={`border-b border-border/60 last:border-b-0 ${rowClassName?.(row) ?? ""} ${onRowClick ? "cursor-pointer hover:bg-surface-hover" : ""}`}
               >
                 {columns.map((col) => (
                   <td key={col.header} className={`${cell} ${alignClass(col.align)}`}>
@@ -90,8 +93,8 @@ export function DataTable<T>({
                 ))}
               </tr>
               {expanded && (
-                <tr className="border-b border-border last:border-b-0">
-                  <td colSpan={columns.length} className="bg-surface-muted/50 px-4 py-3">
+                <tr className="border-b border-border/60 last:border-b-0">
+                  <td colSpan={columns.length} className="bg-surface-muted/50 px-5 py-3">
                     {expanded}
                   </td>
                 </tr>
@@ -105,7 +108,7 @@ export function DataTable<T>({
 
   if (variant === "desktop-only") {
     return (
-      <div className={`overflow-x-auto rounded-lg border border-border bg-surface ${className}`}>
+      <div className={`overflow-x-auto rounded-lg border border-border/60 bg-surface ${className}`}>
         {topContent}
         {rows.length === 0 && emptyState ? emptyState : table}
         {bottomContent}
@@ -114,7 +117,7 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={`rounded-lg border border-border bg-surface ${className}`}>
+    <div className={`rounded-lg border border-border/60 bg-surface ${className}`}>
       {topContent}
       {rows.length === 0 && emptyState ? (
         emptyState
@@ -124,7 +127,7 @@ export function DataTable<T>({
           {mobileCard && (
             <div className="sm:hidden">
               {rows.map((row) => (
-                <div key={getKey(row)} className="border-b border-border p-4 last:border-b-0">
+                <div key={getKey(row)} className="border-b border-border/60 p-5 last:border-b-0">
                   {mobileCard(row)}
                 </div>
               ))}

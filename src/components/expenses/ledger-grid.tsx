@@ -7,6 +7,7 @@ import { ledgerReducer } from "@/lib/expenses/ledger-reducer";
 import { createLedgerRow, getInvoiceKey } from "@/lib/expenses/ledger-utils";
 import { validateLedgerRow, buildDuplicateIndex } from "@/lib/expenses/ledger-validation";
 import { useToast } from "@/components/ui/toast";
+import { Alert } from "@/components/ui/alert";
 import {
   STATUS_PENDING,
   STATUS_SAVING,
@@ -219,9 +220,9 @@ export function LedgerGrid({
 
       {/* Invoice index load error */}
       {existingInvoicesError && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+        <Alert kind="warning">
           Unable to load existing invoices — duplicate detection may be incomplete. Please refresh to retry.
-        </div>
+        </Alert>
       )}
 
       {/* Table */}

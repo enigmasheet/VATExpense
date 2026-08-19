@@ -45,6 +45,7 @@ export function Modal({
   closeLabel = "Close",
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
   const [prevOpen, setPrevOpen] = useState(open);
@@ -71,6 +72,7 @@ export function Modal({
 
   useEffect(() => {
     if (!open) return;
+    triggerRef.current = document.activeElement as HTMLElement;
     const panel = panelRef.current;
     const firstFocusable = panel?.querySelector<HTMLElement>(
       "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [href]",
@@ -78,10 +80,29 @@ export function Modal({
     firstFocusable?.focus();
 
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key === "Tab" && panelRef.current) {
+        const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+          "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [href], [tabindex]:not([tabindex='-1'])",
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        } else {
+          if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      }
     }
     document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      triggerRef.current?.focus();
+    };
   }, [open, onClose]);
 
   useEffect(() => {
@@ -105,7 +126,7 @@ export function Modal({
       } ${isRight ? "justify-end" : "items-end justify-center p-0 sm:items-center sm:p-4"}`}
       role="dialog"
       aria-modal="true"
-      aria-label={title}
+      aria-labelledby="modal-title"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -114,21 +135,21 @@ export function Modal({
         ref={panelRef}
         className={`flex flex-col bg-surface shadow-xl transition-all duration-200 motion-reduce:transition-none ${
           isRight
-            ? `h-full w-full ${width} border-l border-border ${shown ? "translate-x-0" : "translate-x-full"}`
-            : `w-full ${width} max-h-[92vh] rounded-t-2xl border border-border sm:max-h-[85vh] sm:rounded-lg pb-[env(safe-area-inset-bottom)] animate-[sheet-in_220ms_ease-out] sm:animate-[fade-in_200ms_ease-out] ${
+            ? `h-full w-full ${width} border-l border-border/60 ${shown ? "translate-x-0" : "translate-x-full"}`
+            : `w-full ${width} max-h-[92vh] rounded-t-2xl border border-border/60 sm:max-h-[85vh] sm:rounded-lg overscroll-contain pb-[calc(env(safe-area-inset-bottom)+1rem)] animate-[sheet-in_220ms_ease-out] sm:animate-[fade-in_200ms_ease-out] ${
                 shown ? "translate-y-0 opacity-100 sm:scale-100" : "translate-y-full opacity-0 sm:translate-y-0 sm:scale-95"
               }`
         }`}
       >
-        <div className="flex items-start justify-between border-b border-border px-6 py-5">
+        <div className="flex items-start justify-between border-b border-border/60 px-5 py-5">
           <div>
-            <h2 className="font-display text-lg font-semibold text-foreground">{title}</h2>
+            <h2 id="modal-title" className="font-display text-lg font-semibold text-foreground">{title}</h2>
             {description && <p className="mt-1 text-sm text-muted">{description}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-muted hover:bg-surface-hover hover:text-foreground"
+            className="rounded-lg p-1.5 text-muted hover:bg-surface-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             aria-label={closeLabel}
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
@@ -137,10 +158,10 @@ export function Modal({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        <div className="flex-1 overflow-y-auto px-5 py-5">{children}</div>
 
         {footer && (
-          <div className="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+          <div className="flex items-center justify-end gap-2 border-t border-border/60 px-5 py-4">
             {footer}
           </div>
         )}

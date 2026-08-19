@@ -18,8 +18,8 @@ interface StatCardProps {
 export function StatCard({ label, value, size = "lg", accent = false }: StatCardProps) {
   if (size === "sm") {
     return (
-      <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
-        <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+      <div className="rounded-lg border border-border/60 bg-surface px-4 py-3">
+        <div className="text-xs font-medium uppercase tracking-wider text-muted">
           {label}
         </div>
         <div
@@ -31,7 +31,7 @@ export function StatCard({ label, value, size = "lg", accent = false }: StatCard
     );
   }
   return (
-    <div className="rounded-lg border border-border bg-surface p-5">
+    <div className="rounded-lg border border-border/60 bg-surface p-5">
       <p className="text-xs uppercase tracking-wide text-muted">{label}</p>
       <p
         className={`tabular-amount mt-2 text-2xl font-semibold ${

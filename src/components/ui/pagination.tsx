@@ -74,7 +74,8 @@ export function Pagination({
         <select
           value={pageSize}
           onChange={(e) => changePageSize(Number(e.target.value))}
-          className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
+          aria-label="Rows per page"
+          className="rounded-lg border border-border/60 bg-surface px-2.5 py-1.5 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
         >
           {pageSizes.map((size) => (
             <option key={size} value={size}>

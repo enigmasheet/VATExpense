@@ -335,7 +335,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
         }
         emptyState={
           loading ? (
-            <div className="p-6 text-center text-sm text-muted">Loading...</div>
+            <div className="p-6 text-center text-sm text-muted" role="status">Loading...</div>
           ) : items.length === 0 ? (
             <p className="p-6 text-sm text-muted">{emptyHint}</p>
           ) : (

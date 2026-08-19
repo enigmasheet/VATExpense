@@ -69,7 +69,7 @@ export function AdminOverview() {
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-border bg-surface p-8 text-center text-sm text-muted">
+      <div className="rounded-lg border border-border/60 bg-surface p-8 text-center text-sm text-muted" role="status">
         Loading overview...
       </div>
     );
@@ -88,14 +88,14 @@ export function AdminOverview() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Recent companies */}
-        <section className="rounded-lg border border-border bg-surface">
-          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <section className="rounded-lg border border-border/60 bg-surface">
+          <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
             <h2 className="font-display text-lg font-semibold text-foreground">Recent companies</h2>
             <Link href="/admin/companies">
               <Button variant="ghost" size="sm">View all</Button>
             </Link>
           </div>
-          <ul className="divide-y divide-border/50">
+          <ul className="divide-y divide-border/60">
             {companies.slice(0, 6).map((c) => (
               <li key={c.id} className="flex items-center justify-between px-5 py-3">
                 <div className="flex items-center gap-3">
@@ -117,14 +117,14 @@ export function AdminOverview() {
         </section>
 
         {/* Recent activity */}
-        <section className="rounded-lg border border-border bg-surface">
-          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <section className="rounded-lg border border-border/60 bg-surface">
+          <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
             <h2 className="font-display text-lg font-semibold text-foreground">Recent activity</h2>
             <Link href="/admin/audit-log">
               <Button variant="ghost" size="sm">View log</Button>
             </Link>
           </div>
-          <ul className="divide-y divide-border/50">
+          <ul className="divide-y divide-border/60">
             {recent.map((e) => (
               <li key={e.id} className="px-5 py-3">
                 <div className="flex items-center justify-between gap-3">

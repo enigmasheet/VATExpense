@@ -5,6 +5,7 @@ import { useApp } from "@/lib/useApp";
 import { api, ApiError } from "@/lib/api-client";
 import { formatAmount } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { LoadingState } from "@/components/ui/status-widgets";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -244,7 +245,7 @@ export default function ImportPage() {
     };
   }, [preview]);
 
-  if (loading) return <p className="text-sm text-muted">Loading...</p>;
+  if (loading) return <LoadingState message="Loading import data..." />;
   if (!companyId || !fiscalYearId) {
     return (
       <p className="text-sm text-muted">
@@ -310,23 +311,21 @@ export default function ImportPage() {
       {error && <Alert kind="danger">{error}</Alert>}
 
       {result && (
-        <div className="rounded-lg border border-success bg-success/10 p-4">
-          <p className="text-sm font-medium text-success">
-            Successfully imported {result.importedCount} expense(s)
-          </p>
-        </div>
+        <Alert kind="success">
+          Successfully imported {result.importedCount} expense(s)
+        </Alert>
       )}
 
       {preview && (
         <div className="flex flex-col gap-4">
           {/* Upload warnings (e.g., multi-sheet) */}
           {uploadWarnings.length > 0 && (
-            <div className="rounded-lg border border-warning/30 bg-warning-bg p-4">
-              <p className="text-sm font-medium text-warning">Upload Warnings</p>
-              <ul className="mt-1 list-disc text-sm text-warning">
+            <Alert kind="warning">
+              <p className="font-medium">Upload Warnings</p>
+              <ul className="mt-1 list-disc">
                 {uploadWarnings.map((w, i) => <li key={i}>{w}</li>)}
               </ul>
-            </div>
+            </Alert>
           )}
 
           {/* Summary card */}

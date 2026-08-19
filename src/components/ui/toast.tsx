@@ -108,17 +108,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 ? "border-success/30 bg-success/10 text-success"
                 : t.kind === TOAST_KIND_ERROR
                   ? "border-danger/30 bg-danger/10 text-danger"
-                  : "border-border bg-surface text-foreground"
+                  : "border-border/60 bg-surface text-foreground"
             }`}
-            role="status"
+            role={t.kind === TOAST_KIND_ERROR ? "alert" : "status"}
             onMouseEnter={() => pause(t.id)}
             onMouseLeave={() => resume(t.id, t.kind)}
+            onFocus={() => pause(t.id)}
+            onBlur={() => resume(t.id, t.kind)}
           >
             {icon(t.kind)}
-            <span className="flex-1 wrap-break-word">{t.message}</span>
+            <span className="flex-1 break-words">{t.message}</span>
             <button
               type="button"
-              className="ml-2 shrink-0 text-current opacity-60 hover:opacity-100"
+              className="ml-2 shrink-0 rounded-lg p-1 text-current opacity-60 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               onClick={() => remove(t.id)}
               aria-label="Dismiss"
             >

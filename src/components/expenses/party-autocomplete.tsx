@@ -53,7 +53,10 @@ export function PartyAutocomplete({
   const updatePosition = useCallback(() => {
     const rect = inputRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setPosition({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    const vw = window.innerWidth;
+    const width = Math.min(rect.width, vw - 16);
+    const left = Math.min(Math.max(rect.left, 8), vw - width - 8);
+    setPosition({ top: rect.bottom + 4, left, width });
   }, []);
 
   const search = useCallback(

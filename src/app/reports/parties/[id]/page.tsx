@@ -143,7 +143,7 @@ export default async function PartyStatementPage({ params, searchParams }: Props
           Transactions
         </h2>
         {rowsWithRunning.length === 0 ? (
-          <div className="rounded-lg border border-border bg-surface p-8 text-center">
+          <div className="rounded-lg border border-dashed border-border/60 bg-surface p-8 text-center">
             <p className="text-sm text-muted">
               No transactions found for this party in FY {summary.fiscalYearName}.
             </p>

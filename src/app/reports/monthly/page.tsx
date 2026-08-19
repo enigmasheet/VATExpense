@@ -89,7 +89,7 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-semibold text-foreground">By Category</h2>
         {report.categories.length === 0 ? (
-          <div className="rounded-lg border border-border bg-surface p-8 text-center">
+          <div className="rounded-lg border border-dashed border-border/60 bg-surface p-8 text-center">
             <p className="text-sm text-muted">No expenses for this month.</p>
           </div>
         ) : (

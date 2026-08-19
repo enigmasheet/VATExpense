@@ -147,13 +147,13 @@ export function FiscalYearsSection({ companyId }: Props) {
       </SlideOver>
 
       {loading ? (
-        <p className="text-xs text-muted">Loading...</p>
+        <p className="text-xs text-muted" role="status">Loading...</p>
       ) : fiscalYears.length === 0 ? (
         <p className="text-xs text-muted">No fiscal years</p>
       ) : (
         <div className="flex flex-col gap-1">
           {fiscalYears.map((fy) => (
-            <div key={fy.id} className="flex items-center justify-between rounded border border-border/50 px-3 py-2 text-sm">
+            <div key={fy.id} className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2 text-sm">
               <div className="flex items-center gap-3">
                 <span className="font-medium">{fy.name}</span>
                 <span className="text-muted text-xs">{fy.startYear}-{fy.endYear}</span>

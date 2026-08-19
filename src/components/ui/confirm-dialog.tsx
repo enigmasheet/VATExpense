@@ -93,7 +93,8 @@ export function ConfirmDialog({
     >
       <div
         id="confirm-dialog-content"
-        className="mx-4 w-full max-w-sm animate-[fade-in_200ms_ease-out] rounded-lg border border-border bg-surface p-5 shadow-xl"
+        className="mx-4 w-full max-w-sm animate-[fade-in_200ms_ease-out] rounded-lg border border-border/60 bg-surface p-5 shadow-xl"
+        aria-describedby="confirm-message"
       >
         <div className="flex items-start justify-between">
           <h2 id="confirm-title" className="font-display text-lg font-semibold text-foreground">
@@ -101,7 +102,7 @@ export function ConfirmDialog({
           </h2>
           <button
             type="button"
-            className="text-muted hover:text-foreground"
+            className="rounded-lg p-1.5 text-muted hover:bg-surface-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             onClick={onCancel}
             aria-label="Close"
           >
@@ -110,7 +111,7 @@ export function ConfirmDialog({
             </svg>
           </button>
         </div>
-        <p className="mt-2 text-sm text-muted">{message}</p>
+        <p id="confirm-message" className="mt-2 text-sm text-muted">{message}</p>
         <div className="mt-5 flex justify-end gap-2">
           <Button ref={cancelRef} variant="ghost" size="sm" onClick={onCancel} disabled={loading}>
             {cancelLabel}

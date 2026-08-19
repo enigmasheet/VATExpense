@@ -78,7 +78,7 @@ export function CompaniesPage() {
       />
 
       {loading ? (
-        <div className="rounded-lg border border-border bg-surface p-8 text-center text-sm text-muted">
+        <div className="rounded-lg border border-border/60 bg-surface p-8 text-center text-sm text-muted" role="status">
           Loading companies...
         </div>
       ) : companies.length === 0 ? (

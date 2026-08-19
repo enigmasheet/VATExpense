@@ -563,7 +563,7 @@ export function ExpenseForm({
         </p>
 
         {/* Qty & Rate row */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Quantity" htmlFor="e-qty">
             <Input id="e-qty" inputMode="decimal" value={values.quantity} onChange={set("quantity")} />
           </Field>

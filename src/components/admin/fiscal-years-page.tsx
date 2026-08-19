@@ -33,8 +33,8 @@ export function FiscalYearsPage() {
       />
 
       {loading ? (
-        <div className="rounded-lg border border-border bg-surface p-8 text-center text-sm text-muted">
-          Loading companies...
+        <div className="rounded-lg border border-border/60 bg-surface p-8 text-center text-sm text-muted" role="status">
+          Loading fiscal years...
         </div>
       ) : companies.length === 0 ? (
         <EmptyState

@@ -26,7 +26,7 @@ const layoutStyles = {
   },
   stacked: {
     label: "mb-1 block text-xs text-muted",
-    select: "w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground",
+    select: "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground",
     wrapper: "",
   },
 } as const;

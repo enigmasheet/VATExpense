@@ -99,7 +99,7 @@ export function CompanyEditPanel({ open, company, onClose, onSaved }: Props) {
         <Field label="Company name" htmlFor="ce-name">
           <Input id="ce-name" required value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="VAT number" htmlFor="ce-vat">
             <Input id="ce-vat" value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} />
           </Field>
