@@ -8,6 +8,7 @@ import { useApp } from "@/lib/useApp";
 import { PATH_LOGIN } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { NavSelect } from "@/components/ui/nav-select";
+import { UserAvatar } from "@/components/admin/user-avatar";
 import { NavIcon } from "./icons";
 import { getNavGroups, type NavItem } from "./nav-config";
 import { SidebarLink } from "./sidebar";
@@ -28,7 +29,7 @@ function MobileSubmenu({ item, pathname, onClose }: { item: NavItem; pathname: s
   const [open, setOpen] = useState(isExpanded);
 
   if (!hasChildren) {
-    return <SidebarLink {...item} active={isActive} onClose={onClose} />;
+    return <SidebarLink {...item} active={isActive} onClose={onClose} accent />;
   }
 
   return (
@@ -36,12 +37,15 @@ function MobileSubmenu({ item, pathname, onClose }: { item: NavItem; pathname: s
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+        className={`relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
           isActive
             ? "bg-primary/10 text-primary"
             : "text-muted hover:bg-surface-hover hover:text-foreground"
         }`}
       >
+        {isActive && (
+          <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary" aria-hidden="true" />
+        )}
         <NavIcon name={item.icon} className="h-5 w-5 shrink-0" />
         <span className="flex-1 text-left">{item.label}</span>
         <NavIcon name={open ? "chevronDown" : "chevronRight"} className="h-4 w-4 shrink-0 opacity-50" />
@@ -54,6 +58,7 @@ function MobileSubmenu({ item, pathname, onClose }: { item: NavItem; pathname: s
               {...child}
               active={isChildActive(child.href, pathname)}
               onClose={onClose}
+              accent
             />
           ))}
         </div>
@@ -82,14 +87,16 @@ export function ActiveFiscalYearIndicator() {
 }
 
 /**
- * Renders the responsive mobile header and navigation menu.
+ * Renders the responsive mobile header and full-screen navigation sheet.
  *
- * The menu closes when the current route changes or the overlay is clicked.
+ * The sheet closes when the current route changes, Escape is pressed, or the
+ * close button is activated.
  */
 export function MobileHeader() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const { activeCompany } = useApp();
+  const { activeCompany, activeFiscalYear } = useApp();
+  const { data: session } = useSession();
 
   const displayName = activeCompany?.brandName || activeCompany?.name || "VAT Ledger";
 
@@ -111,43 +118,30 @@ export function MobileHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:hidden">
+      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface/95 px-3 py-2.5 backdrop-blur md:hidden">
         <button
           onClick={() => setOpen(!open)}
-          className="rounded-md p-1 text-foreground hover:bg-surface-hover"
+          className="rounded-md p-1.5 text-foreground hover:bg-surface-hover"
           aria-label="Toggle menu"
           aria-expanded={open}
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            {open ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <Link href="/" className="font-display text-lg font-semibold text-foreground">
+        <Link href="/" className="min-w-0 flex-1 truncate font-display text-lg font-semibold text-foreground">
           {displayName}
         </Link>
+        {activeFiscalYear && (
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-surface-muted px-2.5 py-1 text-xs font-medium text-muted">
+            <NavIcon name="calendarDays" className="h-3.5 w-3.5" />
+            {activeFiscalYear.name}
+          </span>
+        )}
+        {session?.user && <UserAvatar name={session.user.name} email={session.user.email} size="sm" />}
       </header>
 
-      {/* Mobile overlay menu */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40 md:hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Navigation menu"
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              setOpen(false);
-            }
-          }}
-        >
-          <div className="fixed inset-0 bg-black/20" onClick={() => setOpen(false)} />
-          <MobileNavPanel onClose={() => setOpen(false)} />
-        </div>
-      )}
+      {open && <MobileNavPanel onClose={() => setOpen(false)} />}
     </>
   );
 }
@@ -190,71 +184,91 @@ function MobileNavPanel({ onClose }: { onClose: () => void }) {
   return (
     <div
       ref={panelRef}
-      className="fixed inset-y-0 left-0 w-72 bg-surface shadow-xl"
-      onKeyDown={trapFocus}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Navigation menu"
+      className="fixed inset-0 z-40 flex flex-col bg-surface md:hidden animate-[menu-panel-in_220ms_ease-out]"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          onClose();
+          return;
+        }
+        trapFocus(e);
+      }}
     >
-      <div className="flex h-full flex-col">
-        <div className="border-b border-border px-4 py-5">
+      <div className="sticky top-0 z-10 border-b border-border bg-surface px-4 py-4">
+        <div className="flex items-center justify-between">
           <Link href="/" className="font-display text-xl font-semibold text-foreground" onClick={onClose}>
             {displayName}
           </Link>
-          <p className="mt-0.5 text-xs text-muted">Nepali fiscal-year purchase register</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-2 text-muted hover:bg-surface-hover hover:text-foreground"
+            aria-label="Close menu"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
+        <p className="mt-0.5 text-xs text-muted">Nepali fiscal-year purchase register</p>
+      </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          {getNavGroups(session?.user?.role).map((group) => (
-            <div key={group.title} className="mb-6">
-              <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted">
-                {group.title}
-              </p>
-              <div className="flex flex-col gap-1">
-                {group.items.map((item) => (
-                  <MobileSubmenu
-                    key={item.href}
-                    item={item}
-                    pathname={pathname}
-                    onClose={onClose}
-                  />
-                ))}
-              </div>
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        {getNavGroups(session?.user?.role).map((group, gi) => (
+          <div key={group.title} className={gi > 0 ? "mt-4 border-t border-border/60 pt-5" : ""}>
+            <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted">
+              {group.title}
+            </p>
+            <div className="flex flex-col gap-1">
+              {group.items.map((item) => (
+                <MobileSubmenu
+                  key={item.href}
+                  item={item}
+                  pathname={pathname}
+                  onClose={onClose}
+                />
+              ))}
             </div>
-          ))}
-        </nav>
+          </div>
+        ))}
+      </nav>
 
-        <div className="border-t border-border px-4 py-4">
-          {fiscalYears.length > 0 && (
-            <div className="mb-3">
-              <NavSelect
-                label="Fiscal Year"
-                selectId="mobile-fiscal-year-select"
-                value={fiscalYearId ?? ""}
-                options={fiscalYears.map((fy) => ({ value: fy.id, label: fy.name }))}
-                layout="stacked"
-                onChange={async (value) => {
-                  if (!value) return;
-                  await setActiveFiscalYear(value);
-                  router.refresh();
-                }}
-              />
-            </div>
-          )}
-          {session?.user && (
-            <div className="flex items-center justify-between">
-              <p className="truncate text-sm font-medium text-foreground">
-                {session.user.name}
-              </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => signOut({ callbackUrl: PATH_LOGIN })}
-                aria-label="Sign out"
-                className="text-xs text-muted"
-              >
-                Sign out
-              </Button>
-            </div>
-          )}
-        </div>
+      <div className="border-t border-border bg-surface px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        {fiscalYears.length > 0 && (
+          <div className="mb-4">
+            <NavSelect
+              label="Fiscal Year"
+              selectId="mobile-fiscal-year-select"
+              value={fiscalYearId ?? ""}
+              options={fiscalYears.map((fy) => ({ value: fy.id, label: fy.name }))}
+              layout="stacked"
+              onChange={async (value) => {
+                if (!value) return;
+                await setActiveFiscalYear(value);
+                router.refresh();
+              }}
+            />
+          </div>
+        )}
+        {session?.user && (
+          <div className="flex items-center gap-3">
+            <UserAvatar name={session.user.name} email={session.user.email} size="sm" />
+            <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+              {session.user.name}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => signOut({ callbackUrl: PATH_LOGIN })}
+              aria-label="Sign out"
+              className="text-xs text-muted"
+            >
+              Sign out
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

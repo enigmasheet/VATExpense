@@ -21,14 +21,14 @@ function isChildActive(href: string, pathname: string): boolean {
   return pathname === href;
 }
 
-export function SidebarLink({ href, label, icon, active, collapsed = false, onClose }: NavItem & { active: boolean; collapsed?: boolean; onClose?: () => void }) {
+export function SidebarLink({ href, label, icon, active, collapsed = false, onClose, accent = false }: NavItem & { active: boolean; collapsed?: boolean; onClose?: () => void; accent?: boolean }) {
   return (
     <Link
       href={href}
       title={collapsed ? label : undefined}
       aria-label={collapsed ? label : undefined}
       onClick={onClose}
-      className={`flex items-center rounded-md transition-colors ${
+      className={`relative flex items-center rounded-md transition-colors ${
         collapsed
           ? "justify-center py-2.5"
           : "gap-3 px-3 py-2.5 text-sm font-medium"
@@ -38,6 +38,9 @@ export function SidebarLink({ href, label, icon, active, collapsed = false, onCl
           : "text-muted hover:bg-surface-hover hover:text-foreground"
       }`}
     >
+      {accent && active && (
+        <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary" aria-hidden="true" />
+      )}
       <NavIcon name={icon} className={collapsed ? "h-5 w-5" : "h-5 w-5 shrink-0"} />
       {!collapsed && <span>{label}</span>}
     </Link>
