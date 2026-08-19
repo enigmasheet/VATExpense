@@ -318,16 +318,12 @@ function MobileDrawer({ onClose }: { onClose: () => void }) {
 }
 
 /**
- * Renders the responsive mobile header (brand-only), bottom tab bar,
- * report picker sheet, and slide-in drawer.
+ * Renders the responsive mobile bottom tab bar, report picker sheet, and slide-in drawer.
  */
 export function MobileHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
   const pathname = usePathname();
-  const { activeCompany } = useApp();
-
-  const displayName = activeCompany?.brandName || activeCompany?.name || "VAT Ledger";
 
   // Close overlays on route change.
   useEffect(() => {
@@ -350,13 +346,6 @@ export function MobileHeader() {
 
   return (
     <>
-      {/* Brand-only top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/60 bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
-        <Link href="/" className="min-w-0 truncate font-display text-lg font-semibold text-foreground">
-          {displayName}
-        </Link>
-      </header>
-
       {/* Bottom tab bar */}
       <BottomTabBar
         onReports={() => setReportsOpen(true)}
