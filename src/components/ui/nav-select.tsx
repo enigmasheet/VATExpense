@@ -22,7 +22,7 @@ const layoutStyles = {
   inline: {
     label: "text-sm font-medium text-foreground",
     select: "rounded-lg border border-border bg-surface px-3 py-2 text-sm",
-    wrapper: "flex items-center gap-4",
+    wrapper: "flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4",
   },
   stacked: {
     label: "mb-1 block text-xs text-muted",

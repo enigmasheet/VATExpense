@@ -266,7 +266,7 @@ export default function ImportPage() {
 
       <div className="rounded-lg border border-border bg-surface p-6">
         <div className="flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div className="flex-1">
               <label className="text-sm font-medium text-foreground" htmlFor="file-upload">
                 Excel or CSV File (.xlsx, .xls, .csv)
@@ -280,7 +280,7 @@ export default function ImportPage() {
                 className="mt-2 block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
               />
             </div>
-            <Button variant="ghost" size="sm" onClick={downloadTemplate} type="button">
+            <Button variant="ghost" size="sm" onClick={downloadTemplate} type="button" className="w-full sm:w-auto">
               Download Template
             </Button>
           </div>
@@ -299,7 +299,8 @@ export default function ImportPage() {
 
           <Button
             onClick={handleUpload}
-            disabled={uploading || !hasFile}
+            loading={uploading}
+            disabled={!hasFile}
           >
             {uploading ? "Uploading..." : "Upload & Preview"}
           </Button>
@@ -330,7 +331,7 @@ export default function ImportPage() {
 
           {/* Summary card */}
           <div className="rounded-lg border border-border bg-surface p-5">
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h2 className="font-display text-lg font-semibold text-foreground">
                   Preview: {preview.filename}
@@ -352,17 +353,20 @@ export default function ImportPage() {
                   <span className="text-muted">of {preview.rowCount} rows</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
                 <Button
                   variant="ghost"
                   onClick={handleCancel}
                   disabled={confirming}
+                  className="w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={() => setShowConfirmDialog(true)}
-                  disabled={confirming || preview.errorCount === preview.rowCount}
+                  loading={confirming}
+                  disabled={preview.errorCount === preview.rowCount}
+                  className="w-full sm:w-auto"
                 >
                   {confirming ? "Confirming..." : `Confirm Import (${preview.rowCount - preview.errorCount} valid)`}
                 </Button>

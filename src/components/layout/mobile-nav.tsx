@@ -118,7 +118,7 @@ export function MobileHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface/95 px-3 py-2.5 backdrop-blur md:hidden">
+      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface/95 px-3 py-2.5 backdrop-blur lg:hidden">
         <button
           onClick={() => setOpen(!open)}
           className="rounded-md p-1.5 text-foreground hover:bg-surface-hover"
@@ -187,7 +187,7 @@ function MobileNavPanel({ onClose }: { onClose: () => void }) {
       role="dialog"
       aria-modal="true"
       aria-label="Navigation menu"
-      className="fixed inset-0 z-40 flex flex-col bg-surface md:hidden animate-[menu-panel-in_220ms_ease-out]"
+      className="fixed inset-0 z-40 flex flex-col bg-surface lg:hidden animate-[menu-panel-in_220ms_ease-out]"
       onKeyDown={(e) => {
         if (e.key === "Escape") {
           onClose();

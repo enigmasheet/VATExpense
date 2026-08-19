@@ -155,7 +155,7 @@ export function AuditLogPage() {
         />
       ) : (
         <DataTable
-          variant="desktop-only"
+          variant="responsive"
           columns={columns}
           rows={filtered}
           getKey={(e) => e.id}
@@ -168,6 +168,46 @@ export function AuditLogPage() {
               </pre>
             ) : null
           }
+          mobileCard={(e) => (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium text-foreground">
+                  {ACTION_LABELS[e.action] ?? e.action}
+                </span>
+                <span className="text-xs text-muted">{formatDate(new Date(e.createdAt))}</span>
+              </div>
+              <p className="mt-1 truncate text-xs text-muted">
+                {e.actorEmail}
+                {(e.targetName || e.targetId) && (
+                  <>
+                    {" · "}
+                    {e.targetName || e.targetId?.slice(0, 8)}
+                  </>
+                )}
+                {e.targetType && <span> ({e.targetType})</span>}
+              </p>
+              {e.details && (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedId(expandedId === e.id ? null : e.id)}
+                    className="flex items-center gap-1 text-xs font-medium text-primary"
+                  >
+                    <NavIcon
+                      name="chevronDown"
+                      className={`h-3 w-3 transition-transform ${expandedId === e.id ? "rotate-180" : ""}`}
+                    />
+                    {expandedId === e.id ? "Hide details" : "Show details"}
+                  </button>
+                  {expandedId === e.id && (
+                    <pre className="mt-2 overflow-x-auto rounded bg-surface-muted p-2 text-xs text-muted">
+                      {JSON.stringify(JSON.parse(e.details ?? "null"), null, 2)}
+                    </pre>
+                  )}
+                </div>
+              )}
+            </>
+          )}
           topContent={toolbar}
           emptyState={<div className="p-8 text-center text-sm text-muted">No entries match your filters.</div>}
           bottomContent={

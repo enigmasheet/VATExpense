@@ -103,7 +103,7 @@ export function UserFormPanel({ mode, open, user, companies, onClose, onSaved }:
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" form="user-form" disabled={saving}>
+          <Button type="submit" form="user-form" loading={saving}>
             {saving ? "Saving..." : editing ? "Save changes" : "Create user"}
           </Button>
         </>

@@ -94,23 +94,30 @@ export function Pagination({
           Previous
         </Button>
 
-        {pageNumbers.map((p, i) =>
-          p === "..." ? (
-            <span key={`ellipsis-${i}`} className="px-2 text-muted-foreground">
-              ...
-            </span>
-          ) : (
-            <Button
-              key={p}
-              variant={p === page ? "primary" : "secondary"}
-              size="sm"
-              onClick={() => goToPage(p)}
-              className="min-w-8"
-            >
-              {p}
-            </Button>
-          ),
-        )}
+        <span className="px-2 text-sm text-muted-foreground sm:hidden">
+          Page {page} of {totalPages}
+        </span>
+
+        <div className="hidden items-center gap-1 sm:flex">
+          {pageNumbers.map((p, i) =>
+            p === "..." ? (
+              <span key={`ellipsis-${i}`} className="px-2 text-muted-foreground">
+                ...
+              </span>
+            ) : (
+              <Button
+                key={p}
+                variant={p === page ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => goToPage(p)}
+                aria-current={p === page ? "page" : undefined}
+                className="min-w-8"
+              >
+                {p}
+              </Button>
+            ),
+          )}
+        </div>
 
         <Button
           variant="secondary"

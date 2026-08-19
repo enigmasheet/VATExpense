@@ -162,12 +162,14 @@ export function ExpenseForm({
   const partyDropdownRef = useRef<HTMLDivElement>(null);
   const [partyDropdownPos, setPartyDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
-  function updatePartyDropdownPos() {
+  const updatePartyDropdownPos = useCallback(() => {
     const rect = partyInputRef.current?.getBoundingClientRect();
-    if (rect) {
-      setPartyDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
-    }
-  }
+    if (!rect) return;
+    const vw = window.innerWidth;
+    const width = Math.min(rect.width, vw - 16);
+    const left = Math.min(Math.max(rect.left, 8), vw - width - 8);
+    setPartyDropdownPos({ top: rect.bottom + 4, left, width });
+  }, []);
 
   function refreshParties() {
     if (!companyId) return;
@@ -213,6 +215,18 @@ export function ExpenseForm({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Reposition the portal dropdown while open (form scrolls on mobile)
+  useEffect(() => {
+    if (!partyOpen) return;
+    updatePartyDropdownPos();
+    window.addEventListener("resize", updatePartyDropdownPos);
+    window.addEventListener("scroll", updatePartyDropdownPos, true);
+    return () => {
+      window.removeEventListener("resize", updatePartyDropdownPos);
+      window.removeEventListener("scroll", updatePartyDropdownPos, true);
+    };
+  }, [partyOpen, updatePartyDropdownPos]);
 
   // Initialize partySearch from initial values (edit mode) once parties load.
   // Guarded conditional state update during render (React-recommended pattern)
@@ -599,7 +613,7 @@ export function ExpenseForm({
       </section>
 
       <div className="flex gap-2">
-        <Button type="submit" disabled={submitting || !companyId}>
+        <Button type="submit" loading={submitting} disabled={!companyId}>
           {submitting ? "Saving…" : mode === "create" ? "Record expense" : "Save changes"}
         </Button>
         <Button type="button" variant="ghost" onClick={() => router.back()}>

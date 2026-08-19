@@ -84,6 +84,15 @@ export function Modal({
     return () => document.removeEventListener("keydown", handleKey);
   }, [open, onClose]);
 
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   if (!mounted) return null;
 
   const isRight = position === "right";
@@ -93,7 +102,7 @@ export function Modal({
     <div
       className={`fixed inset-0 z-50 flex bg-black/40 transition-opacity duration-200 motion-reduce:transition-none ${
         shown ? "opacity-100" : "opacity-0 pointer-events-none"
-      } ${isRight ? "justify-end" : "items-center justify-center p-4"}`}
+      } ${isRight ? "justify-end" : "items-end justify-center p-0 sm:items-center sm:p-4"}`}
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -106,7 +115,9 @@ export function Modal({
         className={`flex flex-col bg-surface shadow-xl transition-all duration-200 motion-reduce:transition-none ${
           isRight
             ? `h-full w-full ${width} border-l border-border ${shown ? "translate-x-0" : "translate-x-full"}`
-            : `max-h-[85vh] w-full ${width} rounded-lg border border-border ${shown ? "scale-100 opacity-100" : "scale-95 opacity-0"}`
+            : `w-full ${width} max-h-[92vh] rounded-t-2xl border border-border sm:max-h-[85vh] sm:rounded-lg pb-[env(safe-area-inset-bottom)] animate-[sheet-in_220ms_ease-out] sm:animate-[fade-in_200ms_ease-out] ${
+                shown ? "translate-y-0 opacity-100 sm:scale-100" : "translate-y-full opacity-0 sm:translate-y-0 sm:scale-95"
+              }`
         }`}
       >
         <div className="flex items-start justify-between border-b border-border px-6 py-5">

@@ -89,7 +89,7 @@ export function CompanyEditPanel({ open, company, onClose, onSaved }: Props) {
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" form="company-edit-form" disabled={saving}>
+          <Button type="submit" form="company-edit-form" loading={saving}>
             {saving ? "Saving..." : "Save changes"}
           </Button>
         </>

@@ -68,7 +68,7 @@ export function ProvisionPanel({ open, onClose, onSaved }: Props) {
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" form="provision-form" disabled={saving}>
+          <Button type="submit" form="provision-form" loading={saving}>
             {saving ? "Creating..." : "Create company"}
           </Button>
         </>

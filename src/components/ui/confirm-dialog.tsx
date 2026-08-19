@@ -70,7 +70,12 @@ export function ConfirmDialog({
     if (open) {
       cancelRef.current?.focus();
       document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.removeEventListener("keydown", handleKeyDown);
+        document.body.style.overflow = prev;
+      };
     }
   }, [open, handleKeyDown]);
 
@@ -78,7 +83,7 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-title"
@@ -88,7 +93,7 @@ export function ConfirmDialog({
     >
       <div
         id="confirm-dialog-content"
-        className="mx-4 w-full max-w-sm rounded-lg border border-border bg-surface p-5 shadow-xl"
+        className="mx-4 w-full max-w-sm animate-[fade-in_200ms_ease-out] rounded-lg border border-border bg-surface p-5 shadow-xl"
       >
         <div className="flex items-start justify-between">
           <h2 id="confirm-title" className="font-display text-lg font-semibold text-foreground">
@@ -115,7 +120,7 @@ export function ConfirmDialog({
             size="sm"
             variant={danger ? "danger" : "primary"}
             onClick={onConfirm}
-            disabled={loading}
+            loading={loading}
           >
             {loading ? "Saving..." : confirmLabel}
           </Button>

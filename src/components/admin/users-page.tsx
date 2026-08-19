@@ -222,11 +222,45 @@ export function UsersPage() {
         />
       ) : (
         <DataTable
-          variant="desktop-only"
+          variant="responsive"
           columns={columns}
           rows={filtered}
           getKey={(u) => u.id}
           topContent={toolbar}
+          mobileCard={(u) => (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <UserAvatar name={u.name} email={u.email} />
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-foreground">{u.name}</p>
+                    <p className="truncate text-xs text-muted">{u.email}</p>
+                  </div>
+                </div>
+                <RoleBadge role={u.role} />
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted">
+                <span className="truncate">{u.companyName ?? "—"}</span>
+                <StatusDot tone={u.isActive ? "success" : "danger"} label={u.isActive ? "Active" : "Inactive"} />
+              </div>
+              <div className="mt-3 flex gap-1">
+                <Button variant="ghost" size="sm" onClick={() => openEdit(u)}>
+                  Edit
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setResetUser(u)}>
+                  Reset PW
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-danger"
+                  onClick={() => setDeleteTarget(u)}
+                >
+                  Delete
+                </Button>
+              </div>
+            </>
+          )}
           emptyState={<div className="p-8 text-center text-sm text-muted">No users match your filters.</div>}
           bottomContent={
             <div className="border-t border-border px-4 py-3 text-xs text-muted">

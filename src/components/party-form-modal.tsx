@@ -233,7 +233,7 @@ export function PartyFormModal({
           <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={loading}>
             Cancel
           </Button>
-          <Button type="submit" form="party-form" size="sm" disabled={loading}>
+          <Button type="submit" form="party-form" size="sm" loading={loading}>
             {loading ? "Saving..." : mode === "create" ? "Add Party" : "Save Changes"}
           </Button>
         </>

@@ -121,7 +121,7 @@ export function FiscalYearsSection({ companyId }: Props) {
             <Button type="button" variant="ghost" size="sm" onClick={closeForm} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit" form="fy-create-form" size="sm" disabled={saving}>
+            <Button type="submit" form="fy-create-form" size="sm" loading={saving}>
               {saving ? "Creating..." : "Create"}
             </Button>
           </>

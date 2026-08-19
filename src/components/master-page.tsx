@@ -323,12 +323,12 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
         topContent={
           items.length > 0 ? (
             <div className="border-b border-border px-4 py-3">
-              <input
+              <Input
                 type="text"
                 placeholder={`Search ${title.toLowerCase()}...`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring focus:outline-none"
+                aria-label={`Search ${title.toLowerCase()}`}
               />
             </div>
           ) : null
@@ -382,7 +382,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
             <Button type="button" variant="ghost" size="sm" onClick={closeForm} disabled={submitting}>
               Cancel
             </Button>
-            <Button type="submit" form="master-crud-form" size="sm" disabled={submitting || !companyId}>
+            <Button type="submit" form="master-crud-form" size="sm" loading={submitting} disabled={!companyId}>
               {submitting ? "Saving..." : formMode === "create" ? "Add" : "Save changes"}
             </Button>
           </>

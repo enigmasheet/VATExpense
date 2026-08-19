@@ -48,7 +48,7 @@ export default async function MonthlyReportPage({ searchParams }: Props) {
         title="Monthly Report"
         subtitle={`Category breakdown for ${nepaliMonth} · FY ${activeFiscalYear.name}`}
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {prevMonth && (
               <Link
                 href={`/reports/monthly?month=${prevMonth}`}

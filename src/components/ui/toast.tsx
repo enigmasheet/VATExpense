@@ -71,14 +71,39 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => ({ toast }), [toast]);
 
+  const icon = (kind: Toast["kind"]) => {
+    if (kind === TOAST_KIND_SUCCESS) {
+      return (
+        <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+    }
+    if (kind === TOAST_KIND_ERROR) {
+      return (
+        <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+      </svg>
+    );
+  };
+
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed top-4 right-4 z-50 flex flex-col gap-2" aria-live="polite">
+      <div
+        className="pointer-events-none fixed left-4 right-4 top-[max(env(safe-area-inset-top),1rem)] z-50 flex flex-col items-stretch gap-2 sm:left-auto sm:w-96"
+        aria-live="polite"
+      >
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto flex items-start gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg transition-all ${
+            className={`pointer-events-auto flex animate-[toast-in_200ms_ease-out] items-start gap-2.5 rounded-lg border px-4 py-3 text-sm shadow-lg ${
               t.kind === TOAST_KIND_SUCCESS
                 ? "border-success/30 bg-success/10 text-success"
                 : t.kind === TOAST_KIND_ERROR
@@ -89,7 +114,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             onMouseEnter={() => pause(t.id)}
             onMouseLeave={() => resume(t.id, t.kind)}
           >
-            <span className="flex-1">{t.message}</span>
+            {icon(t.kind)}
+            <span className="flex-1 wrap-break-word">{t.message}</span>
             <button
               type="button"
               className="ml-2 shrink-0 text-current opacity-60 hover:opacity-100"

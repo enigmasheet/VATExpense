@@ -44,7 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </a>
 
               {/* Desktop sidebar */}
-              <div className="hidden md:flex">
+              <div className="hidden lg:flex">
                 <Sidebar collapsed={collapsed} onToggleCollapsed={toggleSidebarCollapsed} />
               </div>
 
