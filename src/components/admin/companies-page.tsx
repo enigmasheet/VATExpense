@@ -74,7 +74,7 @@ export function CompaniesPage() {
       <PageHeader
         title="Companies"
         subtitle={`${companies.length} companies provisioned`}
-        actions={<Button onClick={() => setProvisionOpen(true)}>New company</Button>}
+        actions={<Button onClick={() => { console.log("[Admin] New company button clicked, provisionOpen -> true"); setProvisionOpen(true); }}>New company</Button>}
       />
 
       {loading ? (
@@ -86,7 +86,7 @@ export function CompaniesPage() {
           icon="parties"
           title="No companies yet"
           description="Provision your first company to get started."
-          action={<Button onClick={() => setProvisionOpen(true)}>Provision company</Button>}
+          action={<Button onClick={() => { console.log("[Admin] Provision company button clicked, provisionOpen -> true"); setProvisionOpen(true); }}>Provision company</Button>}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

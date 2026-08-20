@@ -63,6 +63,7 @@ export function Modal({
   }, [onClose]);
 
   if (prevOpen !== open) {
+    console.log("[Modal] open changed:", prevOpen, "->", open, "mounted:", mounted);
     setPrevOpen(open);
     if (open) {
       setMounted(true);
@@ -72,9 +73,11 @@ export function Modal({
 
   useEffect(() => {
     if (open) {
-      const raf = requestAnimationFrame(() => setVisible(true));
+      console.log("[Modal] opening, scheduling visible=true via RAF");
+      const raf = requestAnimationFrame(() => { console.log("[Modal] RAF fired, setting visible=true"); setVisible(true); });
       return () => cancelAnimationFrame(raf);
     }
+    console.log("[Modal] closing, scheduling unmount in", CLOSE_MS, "ms");
     const timer = setTimeout(() => setMounted(false), CLOSE_MS);
     return () => clearTimeout(timer);
   }, [open]);
