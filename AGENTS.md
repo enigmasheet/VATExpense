@@ -450,3 +450,17 @@ This is Next.js 16.3.0 — APIs may differ from training data. Always check `nod
 - TypeScript strict — `pnpm typecheck` must be clean.
 - Prefer editing existing files. Only create new files when required.
 - Follow existing patterns for component structure, API routes, and service layer.
+
+---
+
+## Maintenance Files
+
+### CHANGELOG.md
+After completing any meaningful change (bug fix, feature, refactor), update `CHANGELOG.md`:
+- Add a new entry under `## [Unreleased]` with the appropriate section (`Fixed`, `Added`, `Changed`, `Removed`).
+- Use concise, user-facing descriptions.
+- Reference affected files/features in parentheses when helpful.
+- When a version is released, move entries from `[Unreleased]` to a dated version section.
+
+### TODO.md
+Tracks pending work. Format: checkbox list with optional priority and file references. Both the user and agents append tasks here. Mark items `- [x]` when done.
