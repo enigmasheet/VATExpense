@@ -44,9 +44,8 @@ export function Modal({
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const mouseDownOnOverlayRef = useRef(false);
-  const [mounted, setMounted] = useState(open);
+  const [closing, setClosing] = useState(false);
   const [visible, setVisible] = useState(false);
-  const [prevOpen, setPrevOpen] = useState(open);
 
   // Stable id per instance instead of a hardcoded "modal-title", which broke
   // aria-labelledby whenever two Modals existed in the DOM at once.
@@ -62,23 +61,16 @@ export function Modal({
     onCloseRef.current = onClose;
   }, [onClose]);
 
-  if (prevOpen !== open) {
-    console.log("[Modal] open changed:", prevOpen, "->", open, "mounted:", mounted);
-    setPrevOpen(open);
-    if (open) {
-      setMounted(true);
-      setVisible(false);
-    }
-  }
-
   useEffect(() => {
     if (open) {
-      console.log("[Modal] opening, scheduling visible=true via RAF");
-      const raf = requestAnimationFrame(() => { console.log("[Modal] RAF fired, setting visible=true"); setVisible(true); });
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- cancel close animation when reopening
+      setClosing(false);
+      const raf = requestAnimationFrame(() => setVisible(true));
       return () => cancelAnimationFrame(raf);
     }
-    console.log("[Modal] closing, scheduling unmount in", CLOSE_MS, "ms");
-    const timer = setTimeout(() => setMounted(false), CLOSE_MS);
+    setClosing(true);
+    setVisible(false);
+    const timer = setTimeout(() => setClosing(false), CLOSE_MS);
     return () => clearTimeout(timer);
   }, [open]);
 
@@ -153,7 +145,7 @@ export function Modal({
     };
   }, [open]);
 
-  if (!mounted) return null;
+  if (!open && !closing) return null;
 
   const isRight = position === "right";
   const shown = open && visible;

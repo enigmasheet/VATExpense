@@ -19,7 +19,7 @@ export const MAX_PAGE_SIZE = 200;
 export const RECENT_EXPENSES_LIMIT = 5;
 
 // Batch
-export const BATCH_SIZE_LIMIT = 200;
+export const BATCH_SIZE_LIMIT = 450;
 export const SUSPICIOUS_DUPLICATE_FETCH_LIMIT = 20;
 
 // Thresholds

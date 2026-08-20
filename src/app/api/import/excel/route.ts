@@ -119,7 +119,11 @@ export async function POST(request: Request) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const workbook = XLSX.read(buffer, { type: "buffer", dateNF: IMPORT_DATE_FORMAT });
+    const isExcel = ext === "xlsx" || ext === "xls";
+    const workbook = XLSX.read(buffer, {
+      type: "buffer",
+      ...(isExcel ? { dateNF: IMPORT_DATE_FORMAT } : {}),
+    });
     const sheetName = workbook.SheetNames[0];
     if (!sheetName) return badRequest("File has no sheets");
 

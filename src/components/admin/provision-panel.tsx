@@ -36,7 +36,6 @@ export function ProvisionPanel({ open, onClose, onSaved }: Props) {
   }
 
   function handleClose() {
-    console.log("[ProvisionPanel] handleClose called, saving:", saving);
     if (saving) return;
     reset();
     onClose();
@@ -44,7 +43,6 @@ export function ProvisionPanel({ open, onClose, onSaved }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    console.log("[ProvisionPanel] handleSubmit called");
     setSaving(true);
     try {
       const result = await api<{ data: { companyId: string; fiscalYearName: string } }>("/api/admin/companies", {

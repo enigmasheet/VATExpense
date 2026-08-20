@@ -72,6 +72,11 @@ export async function GET(
     } = await loadActiveMasterData(batch.companyId);
 
     const partyMap = new Map(existingParties.map((p) => [p.normalizedName, p]));
+    const partyByVat = new Map(
+      existingParties
+        .filter((p) => p.normalizedVatNumber)
+        .map((p) => [p.normalizedVatNumber!, p]),
+    );
     const categoryMap = new Map(existingCategories.map((c) => [c.normalizedName, c]));
     const locationMap = new Map(existingLocations.map((l) => [l.normalizedName, l]));
 
@@ -85,6 +90,7 @@ export async function GET(
 
     // Deduplication maps: collapse concurrent creates for the same normalized name into one DB insert
     const pendingPartyCreates = new Map<string, Promise<(typeof existingParties)[number]>>();
+    const pendingPartyCreatesByVat = new Map<string, Promise<(typeof existingParties)[number]>>();
     const pendingCategoryCreates = new Map<string, Promise<(typeof existingCategories)[number]>>();
     const pendingLocationCreates = new Map<string, Promise<(typeof existingLocations)[number]>>();
 
@@ -96,34 +102,57 @@ export async function GET(
         // Resolve party
         let party = partyMap.get(normalizeName(row.rawPartyName ?? ""));
         const partySuggestions: string[] = [];
-        if (!party && autoCreate && row.rawPartyName) {
-          const partyNorm = normalizeName(row.rawPartyName);
-          if (!pendingPartyCreates.has(partyNorm)) {
-            pendingPartyCreates.set(
-              partyNorm,
-              db
-                .insert(parties)
-                .values({
-                  companyId: batch.companyId,
-                  name: normalizePartyName(row.rawPartyName!),
-                  normalizedName: partyNorm,
-                  vatNumber: normalizeVatNumber(row.rawVatNumber),
-                  normalizedVatNumber: normalizeVatNumber(row.rawVatNumber),
-                })
-                .returning()
-                .then((r) => r[0]),
-            );
+        const rawPartyName = row.rawPartyName ?? "";
+        const partyNorm = normalizeName(rawPartyName);
+        const vatNorm = normalizeVatNumber(row.rawVatNumber);
+
+        // Fallback: alias-normalized name (e.g. "shree duga oils" → "Shree Durga Oils")
+        if (!party && rawPartyName) {
+          const aliasNorm = normalizeName(normalizePartyName(rawPartyName));
+          if (aliasNorm !== partyNorm) {
+            party = partyMap.get(aliasNorm);
           }
-          party = await pendingPartyCreates.get(partyNorm)!;
-          if (!partyMap.has(partyNorm)) {
-            partyMap.set(partyNorm, party);
-            createdParties.push(party);
-            warnings.push(`Party "${row.rawPartyName}" will be created`);
+        }
+
+        // Fallback: VAT number (business key — unique per company)
+        if (!party && vatNorm && partyByVat.has(vatNorm)) {
+          party = partyByVat.get(vatNorm)!;
+          if (!partyMap.has(party.normalizedName)) partyMap.set(party.normalizedName, party);
+        }
+
+        if (!party && autoCreate && rawPartyName) {
+          // Dedup concurrent creates by name AND by VAT to avoid unique-constraint collisions
+          let pending = pendingPartyCreates.get(partyNorm) ?? (vatNorm ? pendingPartyCreatesByVat.get(vatNorm) : undefined);
+          if (!pending) {
+            pending = db
+              .insert(parties)
+              .values({
+                companyId: batch.companyId,
+                name: normalizePartyName(rawPartyName),
+                normalizedName: partyNorm,
+                vatNumber: vatNorm,
+                normalizedVatNumber: vatNorm,
+              })
+              .returning()
+              .then((r) => r[0]);
+            pendingPartyCreates.set(partyNorm, pending);
+            if (vatNorm) pendingPartyCreatesByVat.set(vatNorm, pending);
+          }
+          try {
+            party = await pending;
+            if (!partyMap.has(party.normalizedName)) {
+              partyMap.set(party.normalizedName, party);
+              createdParties.push(party);
+            }
+            if (vatNorm && !partyByVat.has(vatNorm)) partyByVat.set(vatNorm, party);
+            warnings.push(`Party "${rawPartyName}" will be created`);
+          } catch {
+            errors.push(`Failed to create party "${rawPartyName}" — a party with the same VAT number may already exist`);
           }
         } else if (!party) {
-          errors.push(`Party "${row.rawPartyName}" not found`);
-          if (row.rawPartyName) {
-            const matches = findSimilarNames(row.rawPartyName, existingPartyNames);
+          errors.push(`Party "${rawPartyName}" not found`);
+          if (rawPartyName) {
+            const matches = findSimilarNames(rawPartyName, existingPartyNames);
             partySuggestions.push(...matches);
           }
         }
@@ -319,21 +348,24 @@ export async function GET(
       }),
     );
 
-    // Duplicate invoice detection
-    const invoiceMap = new Map<string, number[]>();
+    // Duplicate invoice detection (per party — same invoice for different parties is allowed)
+    const invoicePartyMap = new Map<string, number[]>();
     for (const row of resolvedRows) {
       const inv = row.raw.invoiceNumber?.trim();
       if (inv) {
-        const rowIndices = invoiceMap.get(inv) || [];
+        const partyKey = row.resolved.partyId ?? normalizeName(row.raw.partyName ?? "");
+        const key = `${inv}||${partyKey}`;
+        const rowIndices = invoicePartyMap.get(key) || [];
         rowIndices.push(row.rowIndex);
-        invoiceMap.set(inv, rowIndices);
+        invoicePartyMap.set(key, rowIndices);
       }
     }
-    for (const [inv, rowIndices] of invoiceMap) {
+    for (const rowIndices of invoicePartyMap.values()) {
       if (rowIndices.length > 1) {
         for (const row of resolvedRows) {
-          if (row.raw.invoiceNumber?.trim() === inv) {
+          if (rowIndices.includes(row.rowIndex)) {
             const others = rowIndices.filter((i) => i !== row.rowIndex);
+            const inv = row.raw.invoiceNumber!.trim();
             row.warnings.push(
               `Duplicate invoice "${inv}" also in row${others.length > 1 ? "s" : ""} ${others.join(", ")}`,
             );

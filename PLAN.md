@@ -1,5 +1,22 @@
 # VATExpense Enhancement Plan
 
+## Completed: Modal Visibility Bug Fix
+
+**Problem:** Admin slide-over panels (New company, New user, Edit user) appeared "not rendering" — the modal opened (`open=true`) but was invisible (`opacity-0 pointer-events-none`). Clicks passed through to the trigger button, creating a loop where the modal never appeared to the user.
+
+**Root cause:** The shared `Modal` component used a render-phase `if (prevOpen !== open) { setVisible(false) }` block that raced the one-shot RAF effect (`setVisible(true)` keyed only on `open`). Under StrictMode double-rendering and rapid re-clicking, `visible` got stuck `false` while `open` was `true`, leaving the modal permanently invisible.
+
+**Fix:** Removed the `prevOpen` state and render-phase reset. Replaced the fragile RAF pattern with a deterministic effect keyed on `open`:
+- On open: `setClosing(false)` + RAF → `visible=true`.
+- On close: `setVisible(false)` immediately + `setClosing(true)` with 200ms unmount delay.
+- Removed all debug console.logs added in `c07316d`.
+
+**Files changed:** `src/components/ui/modal.tsx`, `src/components/admin/provision-panel.tsx`, `src/components/admin/companies-page.tsx`
+
+**Verification:** `pnpm lint` (clean), `pnpm typecheck` (clean), `pnpm test` (402/402 passed).
+
+---
+
 ## Completed: Magic String Constants Audit
 
 All magic strings/numbers/error messages have been centralized in `src/lib/status-constants.ts` and applied across:
