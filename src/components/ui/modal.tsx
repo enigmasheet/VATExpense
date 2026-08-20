@@ -74,10 +74,19 @@ export function Modal({
     if (!open) return;
     triggerRef.current = document.activeElement as HTMLElement;
     const panel = panelRef.current;
-    const firstFocusable = panel?.querySelector<HTMLElement>(
-      "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [href]",
+    // Prioritize form fields (input/select/textarea) over buttons to avoid
+    // focusing the close button in the header when the panel contains a form.
+    const firstInput = panel?.querySelector<HTMLElement>(
+      "input:not([disabled]), select:not([disabled]), textarea:not([disabled])",
     );
-    firstFocusable?.focus();
+    if (firstInput) {
+      firstInput.focus();
+    } else {
+      const firstButton = panel?.querySelector<HTMLElement>(
+        "button:not([disabled]), [href]",
+      );
+      firstButton?.focus();
+    }
 
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") {

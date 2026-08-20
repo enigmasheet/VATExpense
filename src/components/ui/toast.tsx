@@ -117,7 +117,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             onBlur={() => resume(t.id, t.kind)}
           >
             {icon(t.kind)}
-            <span className="flex-1 break-words">{t.message}</span>
+            <span className="flex-1 wrap-break-word">{t.message}</span>
             <button
               type="button"
               className="ml-2 shrink-0 rounded-lg p-1 text-current opacity-60 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
