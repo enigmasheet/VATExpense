@@ -40,15 +40,21 @@ export function FiscalYearsSection({ companyId }: Props) {
   const [isActive, setIsActive] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  function openCreate() {
+  function resetForm() {
     setFyName("");
     setStartYear("");
     setEndYear("");
     setIsActive(false);
+  }
+
+  function openCreate() {
+    resetForm();
     setFormOpen(true);
   }
 
   function closeForm() {
+    if (saving) return;
+    resetForm();
     setFormOpen(false);
   }
 
@@ -59,7 +65,7 @@ export function FiscalYearsSection({ companyId }: Props) {
       await api(`/api/admin/companies/${companyId}/fiscal-years`, {
         method: "POST",
         body: JSON.stringify({
-          name: fyName,
+          name: fyName.trim(),
           startYear: Number(startYear),
           endYear: Number(endYear),
           companyId,
@@ -116,6 +122,8 @@ export function FiscalYearsSection({ companyId }: Props) {
         open={formOpen}
         title="Add Fiscal Year"
         onClose={closeForm}
+        closeOnEscape={!saving}
+        closeOnOverlayClick={!saving}
         footer={
           <>
             <Button type="button" variant="ghost" size="sm" onClick={closeForm} disabled={saving}>

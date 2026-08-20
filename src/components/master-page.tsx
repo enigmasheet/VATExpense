@@ -134,9 +134,11 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
   }
 
   function closeForm() {
+    if (submitting) return;
     setFormOpen(false);
     setEditingItem(null);
     setError(null);
+    setFormValues({});
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -144,11 +146,19 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
     if (!companyId) return;
     setSubmitting(true);
     setError(null);
+
+    const trimmedValues: Record<string, string> = {};
+    for (const key of Object.keys(formValues)) {
+      const field = fields.find((f) => f.name === key);
+      const val = formValues[key];
+      trimmedValues[key] = field?.type === "text" ? val.trim() : val;
+    }
+
     try {
       if (formMode === "create") {
         await api(listUrl, {
           method: "POST",
-          body: JSON.stringify(buildPayload(companyId, formValues)),
+          body: JSON.stringify(buildPayload(companyId, trimmedValues)),
         });
         setFormValues({});
         refresh();
@@ -156,8 +166,8 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
       } else {
         const body: Record<string, unknown> = {};
         for (const f of fields) {
-          if (f.name in formValues) {
-            const val = formValues[f.name];
+          if (f.name in trimmedValues) {
+            const val = trimmedValues[f.name];
             body[f.name] = val === "" ? null : val;
           }
         }
@@ -377,6 +387,8 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
             : `Edit ${singularName ?? title}`
         }
         onClose={closeForm}
+        closeOnEscape={!submitting}
+        closeOnOverlayClick={!submitting}
         footer={
           <>
             <Button type="button" variant="ghost" size="sm" onClick={closeForm} disabled={submitting}>

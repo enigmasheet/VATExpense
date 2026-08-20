@@ -53,6 +53,17 @@ export function CompanyEditPanel({ open, company, onClose, onSaved }: Props) {
     }
   }, [company]);
 
+  function handleClose() {
+    if (saving) return;
+    setName("");
+    setVatNumber("");
+    setAddress("");
+    setPhone("");
+    setEmail("");
+    setDefaultVatRate(VAT_RATE_DEFAULT);
+    onClose();
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -60,11 +71,11 @@ export function CompanyEditPanel({ open, company, onClose, onSaved }: Props) {
       await api(`/api/admin/companies/${company!.id}`, {
         method: "PATCH",
         body: JSON.stringify({
-          name,
-          vatNumber: vatNumber || null,
-          address: address || null,
-          phone: phone || null,
-          email: email || null,
+          name: name.trim(),
+          vatNumber: vatNumber.trim() || null,
+          address: address.trim() || null,
+          phone: phone.trim() || null,
+          email: email.trim() || null,
           defaultVatRate,
         }),
       });
@@ -83,10 +94,12 @@ export function CompanyEditPanel({ open, company, onClose, onSaved }: Props) {
       open={open}
       title="Edit Company"
       description={company?.name}
-      onClose={onClose}
+      onClose={handleClose}
+      closeOnEscape={!saving}
+      closeOnOverlayClick={!saving}
       footer={
         <>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>
             Cancel
           </Button>
           <Button type="submit" form="company-edit-form" loading={saving}>

@@ -79,12 +79,12 @@ function PartyFormFields({
     setError(null);
     try {
       const body = {
-        name,
-        vatNumber: vatNumber || null,
+        name: name.trim(),
+        vatNumber: vatNumber.trim() || null,
         locationId: locationId || null,
-        phone: phone || null,
-        whatsapp: whatsapp || null,
-        comment: comment || null,
+        phone: phone.trim() || null,
+        whatsapp: whatsapp.trim() || null,
+        comment: comment.trim() || null,
       };
       if (mode === "create") {
         await api("/api/parties", {
@@ -222,15 +222,22 @@ export function PartyFormModal({
   const formKey = `${mode}-${initial?.id ?? "new"}-${initialName}`;
   const [loading, setLoading] = useState(false);
 
+  function handleClose() {
+    if (loading) return;
+    onCancel();
+  }
+
   return (
     <SlideOver
       open={open}
       title={mode === "create" ? "Add Party" : "Edit Party"}
-      onClose={onCancel}
+      onClose={handleClose}
       width="max-w-lg"
+      closeOnEscape={!loading}
+      closeOnOverlayClick={!loading}
       footer={
         <>
-          <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={loading}>
+          <Button type="button" variant="ghost" size="sm" onClick={handleClose} disabled={loading}>
             Cancel
           </Button>
           <Button type="submit" form="party-form" size="sm" loading={loading}>
