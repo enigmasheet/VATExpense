@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 const CLOSE_MS = 200;
 
@@ -46,6 +47,12 @@ export function Modal({
   const mouseDownOnOverlayRef = useRef(false);
   const [closing, setClosing] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client mount signal, not a cascading render
+    setMounted(true);
+  }, []);
 
   // Stable id per instance instead of a hardcoded "modal-title", which broke
   // aria-labelledby whenever two Modals existed in the DOM at once.
@@ -146,11 +153,12 @@ export function Modal({
   }, [open]);
 
   if (!open && !closing) return null;
+  if (!mounted) return null;
 
   const isRight = position === "right";
   const shown = open && visible;
 
-  return (
+  return createPortal(
     <div
       className={`fixed inset-0 z-50 flex bg-black/40 transition-opacity duration-200 motion-reduce:transition-none ${
         shown ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -218,6 +226,7 @@ export function Modal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
