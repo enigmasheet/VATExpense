@@ -1,134 +1,86 @@
-# VATExpense Enhancement Plan
+# VATExpense — Enhancement Plan & TODO
 
-## Completed: Modal Visibility Bug Fix
-
-**Problem:** Admin slide-over panels (New company, New user, Edit user) appeared "not rendering" — the modal opened (`open=true`) but was invisible (`opacity-0 pointer-events-none`). Clicks passed through to the trigger button, creating a loop where the modal never appeared to the user.
-
-**Root cause:** The shared `Modal` component used a render-phase `if (prevOpen !== open) { setVisible(false) }` block that raced the one-shot RAF effect (`setVisible(true)` keyed only on `open`). Under StrictMode double-rendering and rapid re-clicking, `visible` got stuck `false` while `open` was `true`, leaving the modal permanently invisible.
-
-**Fix:** Removed the `prevOpen` state and render-phase reset. Replaced the fragile RAF pattern with a deterministic effect keyed on `open`:
-- On open: `setClosing(false)` + RAF → `visible=true`.
-- On close: `setVisible(false)` immediately + `setClosing(true)` with 200ms unmount delay.
-- Removed all debug console.logs added in `c07316d`.
-
-**Files changed:** `src/components/ui/modal.tsx`, `src/components/admin/provision-panel.tsx`, `src/components/admin/companies-page.tsx`
-
-**Verification:** `pnpm lint` (clean), `pnpm typecheck` (clean), `pnpm test` (402/402 passed).
+Single tracking document for planned work, open PRs, and completed changes. Both user and agents append items here. Mark items `- [x]` when done.
 
 ---
 
-## Completed: Magic String Constants Audit
+## Open PRs (Review)
 
-All magic strings/numbers/error messages have been centralized in `src/lib/status-constants.ts` and applied across:
+### PR #12 — `feature/backend-audit` (2 commits, Phase 1+2)
+- **Phase 1 (security):** gate companies API, scope party-statement, enforce import size limits, sanitize CSV exports, validate FK ownership.
+- **Phase 2 (data integrity):** FY membership check, atomic import confirm, delete 409, transactional expense-create, amount validation.
+- **Files changed:** 31 (API routes, services, tests, validation, exports, format, party-statement).
+- **Review status:** No review yet.
+- **Action needed:** Review changes, confirm no conflicts with recent main, decide merge.
 
-- **Ledger statuses**: `STATUS_PENDING`, `STATUS_SAVING`, `STATUS_SAVED`, `STATUS_ERROR`, `STATUS_DUPLICATE`, `STATUS_INCOMPLETE`
-- **Batch statuses**: `BATCH_STATUS_PENDING`, `BATCH_STATUS_CONFIRMED`, `BATCH_STATUS_CANCELLED`, `BATCH_ROW_STATUS_*`
-- **HTTP codes**: `HTTP_OK`, `HTTP_BAD_REQUEST`, `HTTP_NOT_FOUND`, etc.
-- **Content types**: `CONTENT_TYPE_JSON`, `CONTENT_TYPE_CSV`, `CONTENT_TYPE_XLSX`
-- **Toast constants**: `TOAST_KIND_*`, `TOAST_*_MS`
-- **Error messages**: `ERR_NOT_AUTHENTICATED`, `ERR_COMPANY_NOT_FOUND`, `ERR_EXPENSE_NOT_FOUND`, etc.
-- **Import constants**: `IMPORT_BODY_SIZE_LIMIT`, `IMPORT_DATE_FORMAT`, `ALLOWED_IMPORT_EXTENSIONS`
-- **Category inference**: `FUEL_KEYWORDS`, `SPARE_PARTS_KEYWORDS`, `TYRE_KEYWORDS`, `DEFAULT_CATEGORY_*`
+### PR #11 — `feature/phase3-audit-hardening` (1 commit, Phase 3)
+- **Scope:** Auth hardening (rate-limiter on login attempts, reject default superadmin creds, session sync), invoice normalization (trim+lowercase), duplicate-conflict handling via `isUniqueViolation`, ledger validation (invalid taxable amounts rejected, saving-row edit lock), VAT-rate propagation, fiscal-year creation transactional.
+- **Files changed:** 26 (auth, actions, reducers, validation, migrations, tests, ledger, useApp).
+- **Review status:** CodeRabbit — **Merge Risk: CRITICAL**, 12 actionable comments.
+- **Key findings to address before merge:**
+  - 🔴 `src/auth.ts` — unbounded `loginAttempts` `Map` can exhaust memory (unique emails accumulate). Replace with TTL-backed limiter + max key count.
+  - 🔴 `src/lib/actions/common.ts` — `inputCompanyId` accepted when unauthenticated (`user` is `undefined`). Require `ROLE_SUPER_ADMIN` for this path.
+  - 🟠 `src/app/api/expenses/invoice-keys/route.ts` — 10k-row limit silently truncates invoice keys. Add pagination or use server-side duplicate detection as authority.
+  - 🟠 `src/app/api/admin/companies/[id]/fiscal-years/route.ts` — concurrent FY inserts hit DB unique violation but catch returns `internalError()`. Map `23505` to `conflict()`.
+  - 🟠 `src/lib/expenses/ledger-reducer.ts` — `AUTO_FIX` still modifies rows with `STATUS_SAVING`. Guard it.
+  - 🟠 VAT-rate consistency — `defaultVatRate` not propagated to `ledger-calculation.ts` (uses hardcoded `VAT_RATE`), displayed amounts may differ from persisted `vatRate`.
+  - 🟡 Migration `0007_normalize_invoice_lowercase.sql` — `CREATE UNIQUE INDEX` blocks writes; consider `CONCURRENTLY`. Also schema not updated to match `lower(invoiceNumber)`.
+- **Action needed:** Fix critical + major findings, re-review, then merge.
 
-**Files updated**: `api-response.ts`, `ledger-types.ts`, `ledger-reducer.ts`, `ledger-validation.ts`, `status-badge.tsx`, `toast.tsx`, `ledger-table.tsx`, `ledger-grid.tsx`, `common.ts`, `expenses.ts`, `companies.ts`, `fiscal-years.ts`, `categories.ts`, `parties.ts`, `trucks.ts`, `locations.ts`, `excel/route.ts`, `preview/route.ts`, `confirm/route.ts`, all export routes
-
----
-
-## Completed: Import Pipeline Enhancements
-
-### VAT-Based Party Resolution (`preview/route.ts`)
-Added VAT number as a first-class business key for party resolution during import:
-- **`partyByVat` map** built from parties with `normalizedVatNumber`.
-- **VAT fallback** (always on): if alias/normalized name match fails, falls back to VAT number match. VAT is unique per company, so this is a strong key.
-- Parties like "woldlink communication ltd" now match by VAT even if the name is misspelled.
-
-### Party-Aware Duplicate Invoice Detection (`preview/route.ts`)
-Changed in-batch and cross-DB duplicate detection from invoice-only to invoice+party keys:
-- **In-batch**: keys by `invoice + partyId` (or normalized raw party name if no party resolved). Cross-party invoice numbers no longer flagged as duplicates.
-- **Cross-DB**: queries existing expenses per row's resolved party. Same invoice for different parties is now correctly allowed.
-
-### PATCH Endpoint for Suggestion Apply (`rows/[rowId]/route.ts`)
-New `PATCH /api/import/[batchId]/rows/[rowId]` endpoint:
-- Accepts `rawPartyName`, `rawCategoryName`, `rawMiti`, `rawLocationName`, `rawVatNumber`, `rawItem`, `rawInvoiceNumber`.
-- Validates batch status is "pending" and owned by the user's company.
-- Client calls this endpoint when the user clicks "Use this" on a suggestion, then re-fetches preview.
-
-### "Use This" Suggestion Button (`import/page.tsx`)
-Clickable button next to "Did you mean X?" suggestions:
-- Calls `PATCH` endpoint to apply the suggestion to the row's raw field.
-- Re-fetches preview to re-resolve all rows.
-- Shows loading state during the apply.
-
-### CSV Date Preservation (`excel/route.ts`)
-Fixed XLSX library auto-converting date-like strings to serial numbers:
-- **Root cause**: `XLSX.read(buffer)` without `raw: true` auto-detects date strings and converts to serial numbers.
-- **Fix**: `XLSX.read(buffer, { type: "buffer", raw: true })` for CSV files. `dateNF` retained for Excel files.
-- Dates like `01/03/2083`, `11-03-2083` now preserved verbatim.
-
-### Category Inference Enhancements (`preview/route.ts`, `status-constants.ts`)
-Expanded fuel detection and added token-based inference:
-- **`FUEL_KEYWORDS`**: added `"disel"` (common misspelling of diesel).
-- **`FUEL_TOKEN_KEYWORDS`**: new set `["per", "hsd", "pms"]` — exact token match (splits item on non-alphanumeric). Prevents `"paper"` from matching token `"per"`.
-- **Token-based matching**: long keywords use substring match on tokens, short keywords use exact token match.
-
-### Item Aliases (`normalize-master-data.ts`)
-Added common misspelling aliases:
-- `"disel"` → `"Diesel"`, `"pms"` → `"Petrol"`, `"per"` → `"Petrol"`, `"hsd"` → `"Diesel"`
-
-### Party Auto-Resolve on High-Confidence Fuzzy (`preview/route.ts`)
-When `autoCreate` is ON, and `findSimilarNames` returns exactly 1 candidate within distance 2:
-- Auto-resolves to the existing party (instead of creating a new one).
-- Emits a warning: `Party "X" auto-matched to existing party "Y"`.
-- Falls through to create new only when no confident match exists.
-
-### Duplicate Invoice Toast (`expense-form.tsx`)
-Added `toast(err.detail, "error")` in the 409 catch block. Duplicate invoice conflicts now show both an inline danger message AND a toast notification.
-
-### Modal Portal Fix (`modal.tsx`)
-Portaled all modal content to `document.body` via `createPortal` with a `mounted` guard:
-- Fixes `<form> cannot contain a nested <form>` hydration error from `PartyFormFields` and `LocationFormModal` inside `ExpenseForm`.
-- `mounted` state + `useEffect` ensures `document.body` exists before portaling (SSR-safe).
-- All modals (admin slide-overs, confirm dialogs, mobile-nav Reports sheet) are now portaled.
+### Recommended Order
+1. Merge #12 (backend-audit, cleaner diff, no critical review findings).
+2. Address #11 CodeRabbit findings.
+3. Merge #11.
 
 ---
 
-## Still Open
+## TODO
 
-### Issue 1: Import Per-Row Fiscal Year Resolution
-**Status**: Deferred — user chose to skip for now.
+- [ ] **Review & merge open PRs #11 and #12** — see Open PRs section above for details and recommended order. | Priority: high | Files: `src/auth.ts`, `src/lib/actions/common.ts`, `src/app/api/expenses/invoice-keys/route.ts`, `src/app/api/admin/companies/[id]/fiscal-years/route.ts`, `src/lib/expenses/ledger-reducer.ts`, `src/lib/db/schema.ts`, `src/lib/db/migrations/0007_normalize_invoice_lowercase.sql`
 
-All imported rows currently use `batch.fiscalYearId` regardless of their miti date. Rows whose dates fall in a different fiscal year are filed under the wrong FY.
+- [ ] **Per-row fiscal year resolution in import** — resolve each row's FY from its miti, auto-create if missing. Deferred by user. | Priority: high | Files: `src/app/api/import/[batchId]/confirm/route.ts`, `preview/route.ts`
 
-**Planned fix** (`confirm/route.ts`):
-- Resolve each row's FY from `resolvedMiti` via `resolveFiscalYear(companyId, miti)`.
-- Group by FY, insert in batches.
-- Preview shows target FY per row + "will create N fiscal year(s)" count.
+- [ ] **Smart Fix button** — hide when error is not auto-fixable (only show for: missing miti, invalid date, missing category, FY not found). | Priority: medium | Files: `src/lib/expenses/ledger-validation.ts`, `src/lib/expenses/ledger-reducer.ts`, `src/components/expenses/ledger-table.tsx`
 
-### Issue 2: Batch Entry Form Redesign
-**Status**: Partially complete.
+- [ ] **Batch entry form redesign** — sticky mobile action bar, empty state icon + button, alternating row backgrounds. | Priority: low | Files: `src/components/expenses/ledger-grid.tsx`, `src/components/expenses/ledger-table.tsx`
 
-- Better row spacing and column width proportions
-- Sticky action bar at bottom on mobile (Save + Add Row fixed at bottom)
-- Visible keyboard shortcut hints panel (toggle-able)
-- Improved empty state (icon + text + "Add First Row" button when no data)
-- Better visual separation between rows with alternating backgrounds
+- [ ] **Navigation active state** — ensure child items use exact match for active detection. | Priority: low | Files: `src/components/layout/sidebar.tsx`, `src/components/layout/mobile-nav.tsx`
 
-### Issue 3: Smart Fix Button (Hide When No Fix Available)
-**Status**: Not started.
+---
 
-Smart fix behavior:
-| Error | Fix Action |
-|---|---|
-| `"Miti required"` | Pre-fill with today's BS date via `fromEnglishDate(new Date())` |
-| `"Invalid date"` | Replace with today's BS date |
-| `"Category required"` | Pre-select "General" category |
-| `"Fiscal year not found"` | Auto-create FY from row's miti date |
-| All other errors | Hide the Fix button (not auto-fixable) |
+## Completed
 
-Implementation:
-- Add `getFixableAction(error: string): ((rowId: string) => void) | null` helper
-- Only render Fix button when a fix action exists
-- New `AUTO_FIX` reducer action with sub-types for each fix kind
+### Modal Visibility Bug Fix
+**Problem:** Admin slide-over panels appeared "not rendering" — `open=true` but invisible (`opacity-0 pointer-events-none`).
+**Root cause:** Render-phase `prevOpen` reset raced the RAF effect; `visible` stuck `false` while `open` true.
+**Fix:** Removed render-phase reset. Deterministic effect: open → `setClosing(false)` + RAF → `visible=true`; close → `visible=false` + `closing=true` 200ms delay. Removed debug `console.log`s from `c07316d`.
+**Files:** `modal.tsx`, `provision-panel.tsx`, `companies-page.tsx`
+
+### Magic String Constants Audit
+All magic strings/numbers/error messages centralized in `src/lib/status-constants.ts` and applied across 20+ files.
+
+### Import Pipeline Enhancements
+- **VAT-based party resolution** — `partyByVat` map, VAT fallback always on.
+- **Party-aware duplicate detection** — keys by `invoice + partyId` instead of invoice alone.
+- **PATCH endpoint** (`/rows/[rowId]`) — update raw fields on suggestion apply.
+- **"Use this" suggestion button** — clickable, calls PATCH, re-fetches preview.
+- **CSV date preservation** — `XLSX.read(buffer, { raw: true })` for CSV files.
+- **Category inference** — added `disel` to `FUEL_KEYWORDS`, new `FUEL_TOKEN_KEYWORDS` (`per`, `hsd`, `pms`) with token matching.
+- **Item aliases** — `disel → Diesel`, `pms → Petrol`, `per → Petrol`, `hsd → Diesel`.
+- **Party auto-resolve** — 1 candidate within distance 2 when `autoCreate` ON.
+- **Duplicate invoice toast** — `toast(err.detail, "error")` for 409 in `expense-form.tsx`.
+- **Modal portal fix** — `createPortal` to `document.body` with `mounted` guard. Fixes nested `<form>` hydration errors.
+
+### Still Open (details)
+
+#### Import Per-Row Fiscal Year Resolution
+**Status:** Deferred. All rows use `batch.fiscalYearId`. Planned: resolve from `resolvedMiti` via `resolveFiscalYear`, group by FY, insert in batches.
+
+#### Batch Entry Form Redesign
+**Status:** Partially complete. Still needed: sticky mobile action bar, empty state, alternating rows.
+
+#### Smart Fix Button
+**Status:** Not started. Only show Fix for: missing miti (→ today's BS date), invalid date (→ today), missing category (→ General), FY not found (→ auto-create).
 
 ---
 
@@ -141,3 +93,4 @@ Implementation:
 6. Issue 1 (pagination) — Done
 7. Issue 5 (batch entry redesign) — partially done
 8. Import FY resolution — Deferred
+9. **Review & merge PRs #11 + #12** — NEW, high priority

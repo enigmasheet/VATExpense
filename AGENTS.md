@@ -462,5 +462,10 @@ After completing any meaningful change (bug fix, feature, refactor), update `CHA
 - Reference affected files/features in parentheses when helpful.
 - When a version is released, move entries from `[Unreleased]` to a dated version section.
 
-### TODO.md
-Tracks pending work. Format: checkbox list with optional priority and file references. Both the user and agents append tasks here. Mark items `- [x]` when done.
+### PLAN.md
+Single tracking document for planned work, open PRs, and completed changes. Contains:
+- `## Open PRs (Review)` — current PRs awaiting review/merge.
+- `## TODO` — checkbox list with priority and file references. Both user and agents append tasks here. Mark `- [x]` when done.
+- `## Completed` — record of finished work.
+
+When a change is completed: mark the checkbox `- [x]` in `## TODO`, move details to `## Completed`, and add a CHANGELOG entry.

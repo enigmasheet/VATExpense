@@ -83,3 +83,19 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Project Structure
 
 See [AGENTS.md](AGENTS.md) for full architecture documentation.
+
+## Maintenance & Docs
+
+| File | Purpose |
+|---|---|
+| [AGENTS.md](AGENTS.md) | Full architecture, conventions, pitfalls — primary agent reference |
+| [PLAN.md](PLAN.md) | Enhancement plan + TODO checklist + open PR review status |
+| [CHANGELOG.md](CHANGELOG.md) | Release notes and unreleased changes |
+
+### Audit & Review
+
+Two open PRs await review and merge:
+- **#12 `feature/backend-audit`** — Phase 1 (security) + Phase 2 (data integrity). 2 commits, no review yet.
+- **#11 `feature/phase3-audit-hardening`** — Phase 3 (auth hardening, expense validation, API robustness). CodeRabbit: critical merge risk, findings to address.
+
+See [PLAN.md](PLAN.md#open-prs-review) for details and recommended merge order.
