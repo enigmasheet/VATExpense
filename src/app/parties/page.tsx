@@ -126,7 +126,7 @@ export default function PartiesPage() {
       <PageHeader
         title="Parties"
         subtitle={`${parties.length} party${parties.length === 1 ? "" : "s"} · ${activeCount} active`}
-        actions={<Button onClick={openCreate}>Add Party</Button>}
+        actions={<Button onClick={openCreate} disabled={modalOpen}>Add Party</Button>}
       />
 
       {/* Filters */}
@@ -220,7 +220,7 @@ export default function PartiesPage() {
               align: "right",
               cell: (p) => (
                 <div className="flex items-center justify-end gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>
+                  <Button variant="ghost" size="sm" onClick={() => openEdit(p)} disabled={modalOpen}>
                     Edit
                   </Button>
                   <Button
@@ -275,7 +275,7 @@ export default function PartiesPage() {
                 <p className="text-sm text-muted">{p.locationName}</p>
               )}
               <div className="mt-2 flex gap-3">
-                <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>
+                <Button variant="ghost" size="sm" onClick={() => openEdit(p)} disabled={modalOpen}>
                   Edit
                 </Button>
                 <Button

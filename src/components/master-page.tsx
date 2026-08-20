@@ -267,14 +267,14 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
   }
 
   const actions = (item: T) => (
-    <div className="flex items-center justify-end gap-2">
-      <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
-        Edit
-      </Button>
-      <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={() => confirmDelete(item.id, item.name)}>
-        Delete
-      </Button>
-    </div>
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="ghost" size="sm" onClick={() => openEdit(item)} disabled={formOpen}>
+          Edit
+        </Button>
+        <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={() => confirmDelete(item.id, item.name)}>
+          Delete
+        </Button>
+      </div>
   );
 
   const mobileCard = (item: T) => (
@@ -297,7 +297,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
         </div>
       ))}
       <div className="mt-3 flex gap-3">
-        <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
+        <Button variant="ghost" size="sm" onClick={() => openEdit(item)} disabled={formOpen}>
           Edit
         </Button>
         <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={() => confirmDelete(item.id, item.name)}>
@@ -313,7 +313,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
         title={title}
         subtitle={description}
         actions={
-          <Button onClick={openCreate} disabled={!companyId}>
+          <Button onClick={openCreate} disabled={!companyId || formOpen}>
             Add {singularName ?? title}
           </Button>
         }
