@@ -4,7 +4,7 @@ import { apiOk, badRequest, internalError, notFound, forbidden } from "@/lib/api
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { loadActiveMasterData } from "@/lib/db-helpers/masters";
 import { parseMiti } from "@/lib/nepali-date";
-import { normalizeName, normalizeVatNumber, findSimilarNames } from "@/lib/normalize";
+import { normalizeName, normalizeVatNumber, findSimilarNames, levenshteinDistance } from "@/lib/normalize";
 import { normalizePartyName, normalizeLocationName, normalizeItemName } from "@/lib/normalize-master-data";
 import { VAT_RATE, MIN_AMOUNT_TOLERANCE, AMOUNT_TOLERANCE_RATIO } from "@/lib/constants";
 import {
@@ -12,6 +12,7 @@ import {
   BATCH_ROW_STATUS_VALID,
   BATCH_ROW_STATUS_ERROR,
   FUEL_KEYWORDS,
+  FUEL_TOKEN_KEYWORDS,
   SPARE_PARTS_KEYWORDS,
   TYRE_KEYWORDS,
   DEFAULT_CATEGORY_FUEL,
@@ -24,14 +25,20 @@ import { eq, and } from "drizzle-orm";
 export const runtime = "nodejs";
 
 function inferCategoryFromItem(item: string): string {
-  const normalized = item.toLowerCase().trim();
-  if (FUEL_KEYWORDS.some((k) => normalized.includes(k))) {
-    return DEFAULT_CATEGORY_FUEL;
-  }
-  if (SPARE_PARTS_KEYWORDS.some((k) => normalized.includes(k))) {
+  const tokens = item
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+
+  const isFuel = tokens.some(
+    (t) => FUEL_KEYWORDS.some((k) => t.includes(k)) || FUEL_TOKEN_KEYWORDS.includes(t),
+  );
+  if (isFuel) return DEFAULT_CATEGORY_FUEL;
+
+  if (tokens.some((t) => SPARE_PARTS_KEYWORDS.some((k) => t.includes(k)))) {
     return DEFAULT_CATEGORY_SPARE_PARTS;
   }
-  if (TYRE_KEYWORDS.some((k) => normalized.includes(k))) {
+  if (tokens.some((t) => TYRE_KEYWORDS.some((k) => t.includes(k)))) {
     return DEFAULT_CATEGORY_TYRES;
   }
   return DEFAULT_CATEGORY_GENERAL;
@@ -120,7 +127,32 @@ export async function GET(
           if (!partyMap.has(party.normalizedName)) partyMap.set(party.normalizedName, party);
         }
 
+        // Fallback: high-confidence fuzzy match (autoCreate only — resolve to existing party
+        // rather than creating a near-duplicate)
+        let autoMatchUsed = false;
         if (!party && autoCreate && rawPartyName) {
+          const matches = findSimilarNames(rawPartyName, existingPartyNames, 2);
+          if (matches.length === 1) {
+            party = partyMap.get(normalizeName(matches[0]));
+            if (party) {
+              warnings.push(`Party "${rawPartyName}" auto-matched to existing party "${party.name}"`);
+              autoMatchUsed = true;
+            }
+          } else if (matches.length > 1) {
+            const norm = normalizeName(rawPartyName);
+            const d1 = levenshteinDistance(norm, normalizeName(matches[0]));
+            const d2 = levenshteinDistance(norm, normalizeName(matches[1]));
+            if (d1 < d2) {
+              party = partyMap.get(normalizeName(matches[0]));
+              if (party) {
+                warnings.push(`Party "${rawPartyName}" auto-matched to existing party "${party.name}"`);
+                autoMatchUsed = true;
+              }
+            }
+          }
+        }
+
+        if (!party && autoCreate && rawPartyName && !autoMatchUsed) {
           // Dedup concurrent creates by name AND by VAT to avoid unique-constraint collisions
           let pending = pendingPartyCreates.get(partyNorm) ?? (vatNorm ? pendingPartyCreatesByVat.get(vatNorm) : undefined);
           if (!pending) {

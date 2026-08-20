@@ -159,9 +159,11 @@ const PARTY_ALIASES: Record<string, string> = {
 
 const ITEM_ALIASES: Record<string, string> = {
   diesel: "Diesel",
+  disel: "Diesel",
   hsd: "Diesel",
   petrol: "Petrol",
   per: "Petrol",
+  pms: "Petrol",
   mobil: "Mobil",
   internet: "Internet",
   parts: "Parts",
