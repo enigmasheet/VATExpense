@@ -5,6 +5,7 @@ import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { loadActiveMasterData } from "@/lib/db-helpers/masters";
 import { parseMiti } from "@/lib/nepali-date";
 import { normalizeName, normalizeVatNumber, findSimilarNames } from "@/lib/normalize";
+import { normalizePartyName, normalizeLocationName, normalizeItemName } from "@/lib/normalize-master-data";
 import { VAT_RATE, MIN_AMOUNT_TOLERANCE, AMOUNT_TOLERANCE_RATIO } from "@/lib/constants";
 import {
   BATCH_STATUS_PENDING,
@@ -104,7 +105,7 @@ export async function GET(
                 .insert(parties)
                 .values({
                   companyId: batch.companyId,
-                  name: row.rawPartyName!,
+                  name: normalizePartyName(row.rawPartyName!),
                   normalizedName: partyNorm,
                   vatNumber: normalizeVatNumber(row.rawVatNumber),
                   normalizedVatNumber: normalizeVatNumber(row.rawVatNumber),
@@ -175,18 +176,18 @@ export async function GET(
           let location = locationMap.get(locationNorm);
           if (!location && autoCreate) {
             if (!pendingLocationCreates.has(locationNorm)) {
-              pendingLocationCreates.set(
-                locationNorm,
-                db
-                  .insert(locations)
-                  .values({
-                    companyId: batch.companyId,
-                    name: row.rawLocationName!,
-                    normalizedName: locationNorm,
-                  })
-                  .returning()
-                  .then((r) => r[0]),
-              );
+            pendingLocationCreates.set(
+              locationNorm,
+              db
+                .insert(locations)
+                .values({
+                  companyId: batch.companyId,
+                  name: normalizeLocationName(row.rawLocationName!),
+                  normalizedName: locationNorm,
+                })
+                .returning()
+                .then((r) => r[0]),
+            );
             }
             location = await pendingLocationCreates.get(locationNorm)!;
             if (!locationMap.has(locationNorm)) {
@@ -289,6 +290,7 @@ export async function GET(
             locationName: resolvedLocationName,
             miti: mitiResult.ok ? row.rawMiti : null,
             nepaliMonth: mitiResult.ok ? mitiResult.monthName : null,
+            item: normalizeItemName(row.rawItem ?? ""),
             taxableAmount: String(taxableVal),
             vatAmount: String(vatVal),
             totalAmount: String(totalVal),
