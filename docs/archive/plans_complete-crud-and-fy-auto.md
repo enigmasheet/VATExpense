@@ -1,3 +1,5 @@
+> **Archived** — Historical reference. See [PLAN.md](../../PLAN.md) for current status.
+
 # Plan: Complete CRUD + FY Auto-Creation
 
 **Branch**: `feature/complete-crud-and-fy-auto`

@@ -1,3 +1,5 @@
+> **Archived** — Historical reference. See [PLAN.md](../../PLAN.md) for current status.
+
 # NEXT.JS FULL-STACK — LARGE CODEBASE REFACTORING MASTER PROMPT
 
 You are a senior Next.js, React, TypeScript, PostgreSQL/ORM, and Vercel architect.
