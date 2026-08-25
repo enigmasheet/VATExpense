@@ -97,7 +97,21 @@ export function ledgerReducer(
           next.categoryName = action.categoryName;
         }
 
-        if (action.field === "taxableAmount") {
+        if (action.field === "quantity" || action.field === "rate") {
+          const qty = Number(next.quantity) || 0;
+          const rate = Number(next.rate) || 0;
+          if (qty > 0 && rate > 0) {
+            const taxable = Math.round(qty * rate * 100) / 100;
+            const calc = calcFromTaxable(taxable, action.vatRate);
+            next.taxableAmount = String(taxable);
+            next.vatAmount = String(calc.vat);
+            next.totalAmount = String(calc.total);
+          } else {
+            next.taxableAmount = "";
+            next.vatAmount = "";
+            next.totalAmount = "";
+          }
+        } else if (action.field === "taxableAmount") {
           const taxable = Number(action.value) || 0;
           if (taxable > 0) {
             const calc = calcFromTaxable(taxable, action.vatRate);

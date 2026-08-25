@@ -22,6 +22,7 @@ import {
 import { isUniqueViolation } from "@/lib/api-response";
 import {
   prepareValidatedExpense,
+  preloadBatchContext,
   type ExpenseInput,
 } from "./expenses-helpers";
 
@@ -175,15 +176,15 @@ export async function batchSaveExpenses(
     // Track seen duplicates within the batch
     const seenInvoiceKeys = new Set<string>();
 
+    // Pre-load all reference data in bulk (4 queries vs 3-4 per row)
+    const parsedRows: { index: number; data: ExpenseInput }[] = [];
     for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      const payload = { ...row, companyId };
+      const payload = { ...rows[i], companyId };
       const parsed = safeParse(expenseInputSchema, payload);
       if (!parsed.ok) {
         results.push({ index: i, ok: false, error: parsed.errors.join("; ") });
         continue;
       }
-
       // Check within-batch duplicates
       if (parsed.data.invoiceNumber) {
         const key = `${parsed.data.partyId}:${parsed.data.invoiceNumber}`;
@@ -197,16 +198,26 @@ export async function batchSaveExpenses(
         }
         seenInvoiceKeys.add(key);
       }
+      parsedRows.push({ index: i, data: parsed.data });
+    }
 
+    const preloaded = await preloadBatchContext(
+      companyId,
+      parsedRows.map((r) => r.data),
+      company.defaultVatRate,
+    );
+
+    for (const { index: i, data: validatedData } of parsedRows) {
       const prepared = await prepareValidatedExpense(
         companyId,
-        parsed.data,
+        validatedData,
         company.defaultVatRate,
         {
           duplicateExact: "Exact duplicate already recorded",
           duplicateInvoice: "Invoice number already exists for this party — review",
           suspicious: (count) => `${count} similar expense(s) may be duplicates`,
         },
+        preloaded,
       );
       if (!prepared.ok) {
         results.push({ index: i, ok: false, error: prepared.error });

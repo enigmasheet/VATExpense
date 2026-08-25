@@ -7,7 +7,7 @@ import {
   findSuspiciousDuplicates,
   type ExpenseFingerprint,
 } from "@/lib/expenses/duplicates";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 /**
  * Resolves a fiscal year from a BS miti date. Looks up by companyId + FY name.
@@ -62,6 +62,86 @@ export interface DuplicateMessages {
 }
 
 /**
+ * Pre-loaded reference data for batch expense processing.
+ * Eliminates N+1 queries by loading all parties, FYs, and existing invoices upfront.
+ */
+export interface PreloadedContext {
+  parties: Map<string, typeof parties.$inferSelect>;
+  fiscalYearsById: Map<string, typeof fiscalYears.$inferSelect>;
+  existingInvoiceKeys: Set<string>;
+  defaultVatRate: string;
+}
+
+/**
+ * Preloads party, fiscal-year, and existing invoice reference data for expense rows in a company.
+ *
+ * @param companyId - The company whose reference data is loaded
+ * @param rows - Expense rows whose party, fiscal-year, and invoice references are collected
+ * @param defaultVatRate - VAT rate stored in the preloaded context for rows without an explicit rate
+ * @returns Maps of parties and fiscal years, normalized existing invoice keys, and the default VAT rate
+ */
+export async function preloadBatchContext(
+  companyId: string,
+  rows: ExpenseInput[],
+  defaultVatRate: string,
+): Promise<PreloadedContext> {
+  const uniquePartyIds = [...new Set(rows.map((r) => r.partyId))];
+  const uniqueFyIds = [...new Set(rows.map((r) => r.fiscalYearId).filter(Boolean) as string[])];
+
+  const [loadedParties, loadedFys] = await Promise.all([
+    uniquePartyIds.length > 0
+      ? db
+          .select()
+          .from(parties)
+          .where(and(inArray(parties.id, uniquePartyIds), eq(parties.companyId, companyId)))
+      : Promise.resolve([]),
+    uniqueFyIds.length > 0
+      ? db
+          .select()
+          .from(fiscalYears)
+          .where(and(inArray(fiscalYears.id, uniqueFyIds), eq(fiscalYears.companyId, companyId)))
+      : Promise.resolve([]),
+  ]);
+
+  const partiesMap = new Map(loadedParties.map((p) => [p.id, p]));
+  const fysById = new Map(loadedFys.map((fy) => [fy.id, fy]));
+
+  // Pre-fetch existing invoices for duplicate detection
+  const invoicePairs = rows
+    .filter((r) => r.invoiceNumber)
+    .map((r) => ({
+      partyId: r.partyId,
+      invoiceNumber: String(r.invoiceNumber).trim().toLowerCase(),
+    }));
+
+  const existingInvoiceKeys = new Set<string>();
+  if (invoicePairs.length > 0) {
+    const uniquePartyIdsForInv = [...new Set(invoicePairs.map((p) => p.partyId))];
+    const uniqueInvoices = [...new Set(invoicePairs.map((p) => p.invoiceNumber))];
+
+    const existingExpenses = await db
+      .select({ partyId: expenses.partyId, invoiceNumber: expenses.invoiceNumber, fiscalYearId: expenses.fiscalYearId })
+      .from(expenses)
+      .where(
+        and(
+          eq(expenses.companyId, companyId),
+          eq(expenses.isDeleted, false),
+          inArray(expenses.partyId, uniquePartyIdsForInv),
+          inArray(expenses.invoiceNumber, uniqueInvoices),
+        ),
+      );
+
+    for (const e of existingExpenses) {
+      if (e.invoiceNumber) {
+        existingInvoiceKeys.add(`${companyId}:${e.fiscalYearId}:${e.partyId}:${e.invoiceNumber}`);
+      }
+    }
+  }
+
+  return { parties: partiesMap, fiscalYearsById: fysById, existingInvoiceKeys, defaultVatRate };
+}
+
+/**
  * Builds the duplicate-check fingerprint for an expense input.
  */
 export function buildExpenseFingerprint(
@@ -82,43 +162,54 @@ export function buildExpenseFingerprint(
 }
 
 /**
- * Loads the fiscal year and party references for an expense input.
+ * Resolves the fiscal year and party associated with an expense.
  *
  * @param companyId - The company that must own the referenced records
- * @param data - The validated expense input
- * @param defaultVatRate - Fallback VAT rate when the input does not specify one
- * @returns The resolved references, or an error message string if any are missing
+ * @param data - The expense input containing fiscal year, date, party, and VAT details
+ * @param defaultVatRate - VAT rate used when the input does not specify one
+ * @param preloaded - Optional preloaded references for batch processing
+ * @returns The resolved expense context, or an error message when a fiscal year or party cannot be found
  */
 export async function loadExpenseReferences(
   companyId: string,
   data: ExpenseInput,
   defaultVatRate: string,
+  preloaded?: PreloadedContext,
 ): Promise<{ context: ExpenseContext } | { error: string }> {
   // Resolve fiscal year — use provided ID or auto-resolve from miti
   let fiscalYear: typeof fiscalYears.$inferSelect;
   if (data.fiscalYearId) {
-    const [fy] = await db
-      .select()
-      .from(fiscalYears)
-      .where(
+    if (preloaded) {
+      fiscalYear = preloaded.fiscalYearsById.get(data.fiscalYearId)
+        ?? (await db.select().from(fiscalYears).where(
+            and(eq(fiscalYears.id, data.fiscalYearId), eq(fiscalYears.companyId, companyId)),
+          ).limit(1))[0];
+    } else {
+      fiscalYear = (await db.select().from(fiscalYears).where(
         and(eq(fiscalYears.id, data.fiscalYearId), eq(fiscalYears.companyId, companyId)),
-      )
-      .limit(1);
-    if (!fy) return { error: "Fiscal year not found" };
-    fiscalYear = fy;
+      ).limit(1))[0];
+    }
+    if (!fiscalYear) return { error: "Fiscal year not found" };
   } else {
     const resolved = await resolveFiscalYear(companyId, data.miti);
     if ("error" in resolved) return { error: resolved.error };
     fiscalYear = resolved.fiscalYear;
   }
 
-  const party = (
-    await db
-      .select()
-      .from(parties)
-      .where(and(eq(parties.id, data.partyId), eq(parties.companyId, companyId)))
-      .limit(1)
-  )[0];
+  // Resolve party
+  let party: typeof parties.$inferSelect | undefined;
+  if (preloaded) {
+    party = preloaded.parties.get(data.partyId);
+  }
+  if (!party) {
+    party = (
+      await db
+        .select()
+        .from(parties)
+        .where(and(eq(parties.id, data.partyId), eq(parties.companyId, companyId)))
+        .limit(1)
+    )[0];
+  }
   if (!party) return { error: "Party not found" };
 
   return {
@@ -147,6 +238,7 @@ export interface PreparedExpense {
  * @param data - The validated expense input
  * @param defaultVatRate - Fallback VAT rate when the input does not specify one
  * @param messages - Message templates for duplicate and warning strings
+ * @param preloaded - Optional pre-loaded context to avoid DB queries (for batch mode)
  * @returns A prepared row ready for insert, or an error message
  */
 export async function prepareValidatedExpense(
@@ -154,20 +246,33 @@ export async function prepareValidatedExpense(
   data: ExpenseInput,
   defaultVatRate: string,
   messages: DuplicateMessages,
+  preloaded?: PreloadedContext,
 ): Promise<{ ok: true; prepared: PreparedExpense } | { ok: false; error: string }> {
-  const references = await loadExpenseReferences(companyId, data, defaultVatRate);
+  const references = await loadExpenseReferences(companyId, data, defaultVatRate, preloaded);
   if ("error" in references) return { ok: false, error: references.error };
 
   const { context } = references;
   const fingerprint = buildExpenseFingerprint(companyId, data, context.fiscalYearId);
 
-  const duplicate = await checkInvoiceDuplicate(fingerprint);
-  if (duplicate) {
-    return {
-      ok: false,
-      error:
-        duplicate.level === "exact" ? messages.duplicateExact : messages.duplicateInvoice,
-    };
+  // Duplicate check: use preloaded keys when available, fall back to DB query
+  if (preloaded && data.invoiceNumber) {
+    const normalizedInvoice = String(data.invoiceNumber).trim().toLowerCase();
+    const key = `${companyId}:${context.fiscalYearId}:${data.partyId}:${normalizedInvoice}`;
+    if (preloaded.existingInvoiceKeys.has(key)) {
+      return {
+        ok: false,
+        error: messages.duplicateInvoice,
+      };
+    }
+  } else {
+    const duplicate = await checkInvoiceDuplicate(fingerprint);
+    if (duplicate) {
+      return {
+        ok: false,
+        error:
+          duplicate.level === "exact" ? messages.duplicateExact : messages.duplicateInvoice,
+      };
+    }
   }
 
   const warnings: string[] = [];

@@ -77,6 +77,8 @@ export function LedgerTable({
             <th className="px-2 py-2.5">Party</th>
             <th className="w-28 px-2 py-2.5">Invoice</th>
             <th className="w-32 px-2 py-2.5">Category</th>
+            <th className="w-16 px-2 py-2.5 text-right">Qty</th>
+            <th className="w-20 px-2 py-2.5 text-right">Rate</th>
             <th className="w-24 px-2 py-2.5 text-right">Excl. VAT</th>
             <th className="w-20 px-2 py-2.5 text-right">VAT ({VAT_RATE}%)</th>
             <th className="w-24 px-2 py-2.5 text-right">Incl. VAT</th>
@@ -158,6 +160,40 @@ export function LedgerTable({
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
+                </td>
+
+                <td className="px-1 py-1">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    data-row={row.id}
+                    data-field="quantity"
+                    value={row.quantity}
+                    onChange={(e) => onUpdateField(row.id, "quantity", e.target.value)}
+                    onKeyDown={(e) => onCellKeyDown(e, row.id, "quantity")}
+                    placeholder="0"
+                    min="0"
+                    step="0.001"
+                    aria-label={`Quantity for row ${idx + 1}`}
+                    className={`${inputClass(false, !row.quantity)} text-right tabular-amount`}
+                  />
+                </td>
+
+                <td className="px-1 py-1">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    data-row={row.id}
+                    data-field="rate"
+                    value={row.rate}
+                    onChange={(e) => onUpdateField(row.id, "rate", e.target.value)}
+                    onKeyDown={(e) => onCellKeyDown(e, row.id, "rate")}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.0001"
+                    aria-label={`Rate for row ${idx + 1}`}
+                    className={`${inputClass(false, !row.rate)} text-right tabular-amount`}
+                  />
                 </td>
 
                 <td className="px-1 py-1">
@@ -382,6 +418,42 @@ export function LedgerTable({
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Qty</label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  data-row={row.id}
+                  data-field="quantity"
+                  value={row.quantity}
+                  onChange={(e) => onUpdateField(row.id, "quantity", e.target.value)}
+                  onKeyDown={(e) => onCellKeyDown(e, row.id, "quantity")}
+                  placeholder="0"
+                  min="0"
+                  step="0.001"
+                  aria-label={`Quantity for row ${idx + 1}`}
+                  className={`${inputClass(false, !row.quantity)} text-right tabular-amount`}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Rate</label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  data-row={row.id}
+                  data-field="rate"
+                  value={row.rate}
+                  onChange={(e) => onUpdateField(row.id, "rate", e.target.value)}
+                  onKeyDown={(e) => onCellKeyDown(e, row.id, "rate")}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.0001"
+                  aria-label={`Rate for row ${idx + 1}`}
+                  className={`${inputClass(false, !row.rate)} text-right tabular-amount`}
+                />
               </div>
 
               <div>

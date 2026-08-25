@@ -5,10 +5,12 @@ import { PARTY_PURCHASE_THRESHOLD } from "@/lib/constants";
 import { and, eq, sql } from "drizzle-orm";
 
 /**
- * Generates an expense report for a company and fiscal year month, grouped by category.
+ * Generates an expense report for a specified company, fiscal year, and Nepali month, grouped by expense category.
  *
+ * @param companyId - The company identifier
+ * @param fiscalYearId - The fiscal year identifier
  * @param nepaliMonth - The Nepali month included in the report
- * @returns Category-level expense totals and overall totals for the specified month
+ * @returns The requested month and identifiers, category-level expense totals, and overall totals
  */
 export async function getMonthlyReport(
   companyId: string,
@@ -36,22 +38,12 @@ export async function getMonthlyReport(
     )
     .groupBy(categories.id, categories.name);
 
-  const [totals] = await db
-    .select({
-      totalTaxableAmount: sql<string>`coalesce(sum(${expenses.taxableAmount}::numeric), 0)`,
-      totalVatAmount: sql<string>`coalesce(sum(${expenses.vatAmount}::numeric), 0)`,
-      totalAmount: sql<string>`coalesce(sum(${expenses.totalAmount}::numeric), 0)`,
-      expenseCount: sql<number>`count(*)::int`,
-    })
-    .from(expenses)
-    .where(
-      and(
-        eq(expenses.companyId, companyId),
-        eq(expenses.fiscalYearId, fiscalYearId),
-        eq(expenses.nepaliMonth, nepaliMonth),
-        eq(expenses.isDeleted, false),
-      ),
-    );
+  const totals = {
+    totalTaxableAmount: categoriesData.reduce((s, c) => s + Number(c.totalTaxableAmount), 0).toString(),
+    totalVatAmount: categoriesData.reduce((s, c) => s + Number(c.totalVatAmount), 0).toString(),
+    totalAmount: categoriesData.reduce((s, c) => s + Number(c.totalAmount), 0).toString(),
+    expenseCount: categoriesData.reduce((s, c) => s + c.expenseCount, 0),
+  };
 
   return {
     nepaliMonth,
@@ -106,21 +98,12 @@ export async function getFiscalYearReport(companyId: string, fiscalYearId: strin
     };
   });
 
-  const [totals] = await db
-    .select({
-      totalTaxableAmount: sql<string>`coalesce(sum(${expenses.taxableAmount}::numeric), 0)`,
-      totalVatAmount: sql<string>`coalesce(sum(${expenses.vatAmount}::numeric), 0)`,
-      totalAmount: sql<string>`coalesce(sum(${expenses.totalAmount}::numeric), 0)`,
-      expenseCount: sql<number>`count(*)::int`,
-    })
-    .from(expenses)
-    .where(
-      and(
-        eq(expenses.companyId, companyId),
-        eq(expenses.fiscalYearId, fiscalYearId),
-        eq(expenses.isDeleted, false),
-      ),
-    );
+  const totals = {
+    totalTaxableAmount: months.reduce((s, m) => s + Number(m.totalTaxableAmount), 0).toString(),
+    totalVatAmount: months.reduce((s, m) => s + Number(m.totalVatAmount), 0).toString(),
+    totalAmount: months.reduce((s, m) => s + Number(m.totalAmount), 0).toString(),
+    expenseCount: months.reduce((s, m) => s + m.expenseCount, 0),
+  };
 
   return { fiscalYearId, companyId, months, totals };
 }

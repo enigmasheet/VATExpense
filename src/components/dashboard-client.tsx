@@ -7,6 +7,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { DataTable } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Alert } from "@/components/ui/alert";
 
 interface RecentExpense {
   id: string;
@@ -22,6 +23,11 @@ interface DashboardTotals {
   vatAmount: string;
   totalAmount: string;
   expenseCount: number;
+}
+
+interface DashboardAlert {
+  kind: "warning" | "info";
+  text: string;
 }
 
 interface Shortcut {
@@ -43,18 +49,20 @@ interface DashboardClientProps {
   companyName: string;
   fiscalYearName: string;
   totals: DashboardTotals;
+  alerts?: DashboardAlert[];
   recent: RecentExpense[];
 }
 
 /**
  * Displays fiscal-year purchase totals, navigation shortcuts, and recent expenses for a company.
  *
- * @param props - Company, fiscal-year, summary, and recent-expense data displayed on the dashboard.
+ * @param props - Company, fiscal-year, summary, alerts, and recent-expense data displayed on the dashboard.
  */
 export function DashboardClient({
   companyName,
   fiscalYearName,
   totals,
+  alerts = [],
   recent,
 }: DashboardClientProps) {
   const taxable = Number(totals.taxableAmount) || 0;
@@ -64,6 +72,14 @@ export function DashboardClient({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={companyName} subtitle={`FY ${fiscalYearName}`} />
+
+      {alerts.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {alerts.map((a, i) => (
+            <Alert key={i} kind={a.kind}>{a.text}</Alert>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Taxable" value={formatAmount(taxable)} />

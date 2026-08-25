@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { importBatches, importBatchRows, expenses, parties, categories, locations } from "@/lib/db/schema";
 import { apiOk, badRequest, conflict, internalError, notFound, forbidden } from "@/lib/api-response";
-import { requireCompanyIdFromSession } from "@/lib/api-auth";
+import { requireCompanyIdFromSession, getSessionUser } from "@/lib/api-auth";
 import {
   BATCH_STATUS_PENDING,
   BATCH_STATUS_CONFIRMED,
@@ -9,16 +9,18 @@ import {
   BATCH_ROW_STATUS_CONFIRMED,
 } from "@/lib/status-constants";
 
-import { eq, inArray ,and} from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { normalizeItemName } from "@/lib/normalize-master-data";
 import { normalizeMiti } from "@/lib/nepali-date";
 
 export const runtime = "nodejs";
 
 /**
- * Confirms a pending import batch and creates expense records for its valid rows.
- * Uses an atomic status claim to prevent double-confirm race conditions.
- * Re-validates that referenced masters still exist before inserting expenses.
+ * Confirms a pending import batch and creates expense records for eligible rows.
+ *
+ * Revalidates referenced master records, skips duplicate invoice numbers, and prevents concurrent confirmations.
+ *
+ * @returns An API response containing the confirmed batch ID, status, imported row count, and skipped row count.
  */
 export async function POST(
   request: Request,
@@ -120,12 +122,72 @@ export async function POST(
 
     const revalidationSkipped = importableRows.length - importableRowsFinal.length;
 
-    const inserted = await db.transaction(async (tx) => {
-      if (importableRowsFinal.length === 0) return [];
+    // Duplicate detection: batch-check existing DB expenses + in-batch duplicates
+    const rowsWithInvoice = importableRowsFinal.filter((r) => r.rawInvoiceNumber);
+    const existingInvoiceMap = new Map<string, { partyId: string; invoiceNumber: string }>();
 
-      // Batch insert all expenses at once, normalizing miti
-      const expenseValues = importableRowsFinal.map((row) => {
+    if (rowsWithInvoice.length > 0) {
+      const pairs = rowsWithInvoice.map((r) => ({
+        partyId: r.resolvedPartyId!,
+        invoiceNumber: String(r.rawInvoiceNumber).trim().toLowerCase(),
+      }));
+      const uniquePartyIds = [...new Set(pairs.map((p) => p.partyId))];
+      const uniqueInvoices = [...new Set(pairs.map((p) => p.invoiceNumber))];
+
+      const existingExpenses = await db
+        .select({ partyId: expenses.partyId, invoiceNumber: expenses.invoiceNumber })
+        .from(expenses)
+        .where(
+          and(
+            eq(expenses.companyId, companyId),
+            eq(expenses.fiscalYearId, claimed.fiscalYearId),
+            eq(expenses.isDeleted, false),
+            inArray(expenses.partyId, uniquePartyIds),
+            inArray(expenses.invoiceNumber, uniqueInvoices),
+          ),
+        );
+
+      for (const e of existingExpenses) {
+        if (e.invoiceNumber) {
+          existingInvoiceMap.set(`${e.partyId}:${e.invoiceNumber}`, {
+            partyId: e.partyId,
+            invoiceNumber: e.invoiceNumber,
+          });
+        }
+      }
+    }
+
+    // In-batch duplicate detection + existing-expense duplicate detection
+    const batchSeen = new Set<string>();
+    const duplicateRowIds = new Set<string>();
+    for (const row of importableRowsFinal) {
+      if (!row.rawInvoiceNumber) continue;
+      const normalizedInvoice = String(row.rawInvoiceNumber).trim().toLowerCase();
+      const key = `${row.resolvedPartyId!}:${normalizedInvoice}`;
+      if (batchSeen.has(key) || existingInvoiceMap.has(key)) {
+        duplicateRowIds.add(row.id);
+      } else {
+        batchSeen.add(key);
+      }
+    }
+
+    // Filter out duplicate rows
+    const nonDuplicateRows = importableRowsFinal.filter((r) => !duplicateRowIds.has(r.id));
+    const duplicateSkippedCount = duplicateRowIds.size;
+
+    // Get session user for audit fields
+    const sessionUser = await getSessionUser();
+    const userId = sessionUser?.id ?? null;
+
+    const inserted = await db.transaction(async (tx) => {
+      if (nonDuplicateRows.length === 0) return [];
+
+      // Batch insert all expenses at once, normalizing miti and invoice
+      const expenseValues = nonDuplicateRows.map((row) => {
         const partyLocationId = partyLocationMap.get(row.resolvedPartyId!) ?? null;
+        const rawInvoice = row.rawInvoiceNumber
+          ? String(row.rawInvoiceNumber).trim().toLowerCase() || undefined
+          : undefined;
         return {
           companyId: claimed.companyId,
           fiscalYearId: claimed.fiscalYearId,
@@ -134,7 +196,7 @@ export async function POST(
           locationId: row.resolvedLocationId ?? partyLocationId ?? undefined,
           miti: normalizeMiti(row.resolvedMiti!),
           nepaliMonth: row.resolvedNepaliMonth!,
-          invoiceNumber: row.rawInvoiceNumber || undefined,
+          invoiceNumber: rawInvoice,
           item: normalizeItemName(row.rawItem as string),
           quantity: row.rawQuantity ? row.rawQuantity : undefined,
           rate: row.rawRate ? row.rawRate : undefined,
@@ -143,13 +205,15 @@ export async function POST(
           totalAmount: row.resolvedTotalAmount as string,
           vatRate: row.resolvedVatRate as string,
           remarks: row.rawRemarks || undefined,
+          createdBy: userId,
+          updatedBy: userId,
         };
       });
 
       const results = await tx.insert(expenses).values(expenseValues).returning();
 
-      // Batch update all confirmed rows at once
-      const confirmedIds = importableRowsFinal.map((r) => r.id);
+      // Mark confirmed rows
+      const confirmedIds = nonDuplicateRows.map((r) => r.id);
       if (confirmedIds.length > 0) {
         await tx
           .update(importBatchRows)
@@ -157,7 +221,15 @@ export async function POST(
           .where(inArray(importBatchRows.id, confirmedIds));
       }
 
-      // Mark skipped rows (those filtered out by revalidation)
+      // Mark duplicate rows as error
+      if (duplicateRowIds.size > 0) {
+        await tx
+          .update(importBatchRows)
+          .set({ status: "error", errors: JSON.stringify(["Duplicate invoice number (already exists or repeated in batch)"]) })
+          .where(inArray(importBatchRows.id, [...duplicateRowIds]));
+      }
+
+      // Mark skipped rows (filtered out by revalidation)
       const skippedIds = importableRows
         .filter((r) => !importableRowsFinal.includes(r))
         .map((r) => r.id);
@@ -182,7 +254,7 @@ export async function POST(
         batchId: batchId,
         status: BATCH_STATUS_CONFIRMED,
         importedCount: inserted.length,
-        skippedCount: skippedCount + revalidationSkipped,
+        skippedCount: skippedCount + revalidationSkipped + duplicateSkippedCount,
       },
     });
   } catch (err) {

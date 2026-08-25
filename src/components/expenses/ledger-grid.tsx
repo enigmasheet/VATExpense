@@ -8,6 +8,7 @@ import { createLedgerRow, getInvoiceKey } from "@/lib/expenses/ledger-utils";
 import { validateLedgerRow, buildDuplicateIndex } from "@/lib/expenses/ledger-validation";
 import { useToast } from "@/components/ui/toast";
 import { Alert } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { VAT_RATE } from "@/lib/constants";
 import {
   STATUS_PENDING,
@@ -53,6 +54,23 @@ export function LedgerGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const prevErrorsRef = useRef<Map<string, string>>(new Map());
+  const prevRowCountRef = useRef(rows.length);
+
+  // Confirmation dialog for deleting rows with data
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  // Auto-focus the first input of a newly added row
+  useEffect(() => {
+    if (rows.length > prevRowCountRef.current && gridRef.current) {
+      const newRow = rows[rows.length - 1];
+      const selector = `input[data-row="${newRow.id}"][data-field="miti"]`;
+      const el = gridRef.current.querySelector<HTMLInputElement>(selector);
+      if (el) {
+        requestAnimationFrame(() => el.focus());
+      }
+    }
+    prevRowCountRef.current = rows.length;
+  }, [rows]);
 
   useEffect(() => {
     if (!companyId || !fiscalYearId) return;
@@ -189,6 +207,11 @@ export function LedgerGrid({
     return newRow.id;
   }
 
+  /**
+   * Duplicates a ledger row with its editable values and resets its invoice number and save state.
+   *
+   * @param rowId - The identifier of the row to duplicate
+   */
   function duplicateRow(rowId: string) {
     const idx = rows.findIndex((r) => r.id === rowId);
     if (idx < 0) return;
@@ -203,6 +226,8 @@ export function LedgerGrid({
       invoiceNumber: "",
       categoryId: src.categoryId,
       categoryName: src.categoryName,
+      quantity: src.quantity,
+      rate: src.rate,
       taxableAmount: src.taxableAmount,
       vatAmount: src.vatAmount,
       totalAmount: src.totalAmount,
@@ -213,17 +238,50 @@ export function LedgerGrid({
     dispatch({ type: "DUPLICATE_ROW", newRow, sourceIdx: idx });
   }
 
+  /**
+   * Removes a ledger row, requesting confirmation first when it contains data.
+   *
+   * @param rowId - The identifier of the row to remove
+   */
+  function removeRow(rowId: string) {
+    const row = rows.find((r) => r.id === rowId);
+    if (row && (row.partyId || row.invoiceNumber || row.taxableAmount)) {
+      setPendingDeleteId(rowId);
+      return;
+    }
+    dispatch({ type: "REMOVE_ROW", rowId });
+  }
+
+  /**
+   * Confirms deletion of the pending ledger row.
+   */
+  function confirmDeleteRow() {
+    if (pendingDeleteId) {
+      dispatch({ type: "REMOVE_ROW", rowId: pendingDeleteId });
+      setPendingDeleteId(null);
+    }
+  }
+
   const { handleCellKeyDown } = useLedgerNavigation({
     rows,
     gridRef,
     addRow,
     duplicateRow,
-    removeRow: (rowId) => dispatch({ type: "REMOVE_ROW", rowId }),
+    removeRow,
     saveAll,
   });
 
   return (
     <div className="flex flex-col gap-3" ref={gridRef}>
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Delete row"
+        message="This row has data. Are you sure you want to delete it?"
+        confirmLabel="Delete"
+        danger
+        onConfirm={confirmDeleteRow}
+        onCancel={() => setPendingDeleteId(null)}
+      />
       <div aria-live="polite" className="sr-only">
         {statusMessage}
       </div>
@@ -244,7 +302,7 @@ export function LedgerGrid({
         onSelectParty={selectParty}
         onSearchParty={searchParty}
         onDuplicate={duplicateRow}
-        onRemove={(rowId) => dispatch({ type: "REMOVE_ROW", rowId })}
+        onRemove={removeRow}
         onFix={(rowId, action) => dispatch({
           type: "AUTO_FIX",
           rowId,

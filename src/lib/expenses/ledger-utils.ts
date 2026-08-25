@@ -76,6 +76,8 @@ export function createLedgerRow(prev?: LedgerRow): LedgerRow {
     invoiceNumber: "",
     categoryId: prev?.categoryId ?? "",
     categoryName: prev?.categoryName ?? "",
+    quantity: "",
+    rate: "",
     taxableAmount: "",
     vatAmount: "",
     totalAmount: "",

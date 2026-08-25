@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { expenses, parties, categories } from "@/lib/db/schema";
+import { expenses, parties, categories, importBatches } from "@/lib/db/schema";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { findExpenseById } from "@/lib/db-helpers/expenses";
 import { and, eq, sql } from "drizzle-orm";
@@ -139,4 +139,57 @@ export async function getExpenses(params: ExpenseListParams) {
  */
 export async function getExpenseById(id: string, companyId: string) {
   return findExpenseById(id, companyId);
+}
+
+export interface DashboardAlert {
+  kind: "warning" | "info";
+  text: string;
+}
+
+export async function getDashboardAlerts(
+  companyId: string,
+  fiscalYearId: string,
+): Promise<DashboardAlert[]> {
+  const alerts: DashboardAlert[] = [];
+
+  const [missingInvoiceCount, pendingBatchCount] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(expenses)
+      .where(
+        and(
+          eq(expenses.companyId, companyId),
+          eq(expenses.fiscalYearId, fiscalYearId),
+          eq(expenses.isDeleted, false),
+          sql`${expenses.invoiceNumber} IS NULL`,
+        ),
+      ),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(importBatches)
+      .where(
+        and(
+          eq(importBatches.companyId, companyId),
+          eq(importBatches.status, "pending"),
+        ),
+      ),
+  ]);
+
+  if (missingInvoiceCount[0].count > 0) {
+    const n = missingInvoiceCount[0].count;
+    alerts.push({
+      kind: "warning",
+      text: `${n} expense${n === 1 ? " has" : "s have"} no invoice number recorded.`,
+    });
+  }
+
+  if (pendingBatchCount[0].count > 0) {
+    const n = pendingBatchCount[0].count;
+    alerts.push({
+      kind: "info",
+      text: `${n} import batch${n === 1 ? " is" : "es are"} awaiting confirmation.`,
+    });
+  }
+
+  return alerts;
 }
