@@ -32,7 +32,7 @@ export async function GET(request: Request) {
           isNotNull(expenses.invoiceNumber),
         ),
       )
-      .limit(10000);
+      ;
 
     const keys = rows.map((r) => ({
       partyId: r.partyId,

@@ -19,7 +19,7 @@ describe("normalizeInvoiceNumber", () => {
     expect(normalizeInvoiceNumber("  INV-001  ")).toBe("inv-001");
   });
 
-  it("returns unchanged if no whitespace", () => {
+  it("lowercases invoice number", () => {
     expect(normalizeInvoiceNumber("INV001")).toBe("inv001");
   });
 });

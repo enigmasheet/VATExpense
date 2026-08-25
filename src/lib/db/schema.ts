@@ -192,8 +192,8 @@ export const expenses = pgTable(
   },
   (t) => [
     uniqueIndex("expenses_company_fy_party_invoice_uq")
-      .on(t.companyId, t.fiscalYearId, t.partyId, t.invoiceNumber)
-      .where(sql`${t.invoiceNumber} IS NOT NULL`),
+      .on(t.companyId, t.fiscalYearId, t.partyId, sql`lower(${t.invoiceNumber})`)
+      .where(sql`${t.invoiceNumber} IS NOT NULL AND ${t.isDeleted} = false`),
     index("expenses_miti_idx").on(t.miti),
     index("expenses_fiscal_year_idx").on(t.companyId, t.fiscalYearId),
     index("expenses_party_idx").on(t.companyId, t.partyId),

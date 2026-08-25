@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { ERR_NOT_AUTHENTICATED, ERR_COMPANY_NOT_FOUND } from "@/lib/status-constants";
+import { ROLE_SUPER_ADMIN } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { companies } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -36,7 +37,7 @@ export type ActionResult<T> = ActionOk<T> | ActionError;
 export async function requireCompanyId(inputCompanyId?: string): Promise<string> {
   const session = await auth();
   const user = session?.user as { companyId?: string; role?: string } | undefined;
-  const companyId = user?.companyId ?? inputCompanyId;
+  const companyId = user?.companyId ?? (user?.role === ROLE_SUPER_ADMIN ? inputCompanyId : undefined);
   if (!companyId) throw new Error(ERR_NOT_AUTHENTICATED);
 
   // Validate company still exists

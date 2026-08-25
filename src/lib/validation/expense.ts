@@ -62,7 +62,12 @@ export const expenseInputSchema = z.object({
       }
     }),
   invoiceNumber: z.preprocess(
-    (v) => (v === null || v === undefined || v === "" ? null : String(v).trim().toLowerCase() || null),
+    (v) => {
+      if (v === null || v === undefined || v === "") return null;
+      if (typeof v !== "string") return v;
+      const trimmed = v.trim().toLowerCase();
+      return trimmed === "" ? null : trimmed;
+    },
     z.string().min(1, "Invoice number cannot be blank").max(MAX_NAME_LENGTH).nullable().optional(),
   ),
   item: z.string().trim().min(1, "Item is required").max(MAX_ITEM_LENGTH),

@@ -18,6 +18,7 @@ export type LedgerAction =
       field: string;
       value: string;
       categoryName?: string;
+      vatRate?: number;
     }
   | {
       type: "SELECT_PARTY";
@@ -99,7 +100,7 @@ export function ledgerReducer(
         if (action.field === "taxableAmount") {
           const taxable = Number(action.value) || 0;
           if (taxable > 0) {
-            const calc = calcFromTaxable(taxable);
+            const calc = calcFromTaxable(taxable, action.vatRate);
             next.vatAmount = String(calc.vat);
             next.totalAmount = String(calc.total);
           } else {
@@ -109,7 +110,7 @@ export function ledgerReducer(
         } else if (action.field === "totalAmount") {
           const total = Number(action.value) || 0;
           if (total > 0) {
-            const calc = calcFromTotal(total);
+            const calc = calcFromTotal(total, action.vatRate);
             next.taxableAmount = String(calc.taxable);
             next.vatAmount = String(calc.vat);
           } else {
@@ -243,6 +244,7 @@ export function ledgerReducer(
     case "AUTO_FIX": {
       return rows.map((r) => {
         if (r.id !== action.rowId) return r;
+        if (r.status === STATUS_SAVING) return r;
         let next = clearTerminalStatus(r);
 
         if (action.fixType === "fillTodayMiti") {

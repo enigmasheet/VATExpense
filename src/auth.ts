@@ -6,22 +6,65 @@ import { ROLE_SUPER_ADMIN, PATH_LOGIN } from "@/lib/constants";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
-// --- Login rate limiter (in-memory sliding window) ---
+// --- Login rate limiter (in-memory sliding window with bounded sweep) ---
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
-const loginAttempts = new Map<string, number[]>();
+const MAX_TRACKED_KEYS = 10_000;
+const SWEEP_INTERVAL_MS = 60 * 1000; // sweep every 60s
+
+interface RateLimitEntry {
+  timestamps: number[];
+  lastAccess: number;
+}
+
+const loginAttempts = new Map<string, RateLimitEntry>();
+let sweepTimer: ReturnType<typeof setInterval> | null = null;
+
+function ensureSweepRunning() {
+  if (sweepTimer !== null) return;
+  sweepTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of loginAttempts) {
+      const valid = entry.timestamps.filter((t) => now - t < LOGIN_WINDOW_MS);
+      if (valid.length === 0) {
+        loginAttempts.delete(key);
+      } else {
+        entry.timestamps = valid;
+        entry.lastAccess = now;
+      }
+    }
+    // Evict oldest entries if over limit
+    if (loginAttempts.size > MAX_TRACKED_KEYS) {
+      const sorted = [...loginAttempts.entries()].sort(
+        (a, b) => a[1].lastAccess - b[1].lastAccess,
+      );
+      const toRemove = sorted.slice(0, sorted.length - MAX_TRACKED_KEYS);
+      for (const [key] of toRemove) {
+        loginAttempts.delete(key);
+      }
+    }
+  }, SWEEP_INTERVAL_MS);
+  // Allow Node.js to exit even if sweep timer is running
+  if (sweepTimer.unref) sweepTimer.unref();
+}
 
 function recordFailedAttempt(key: string): boolean {
+  ensureSweepRunning();
   const now = Date.now();
-  const attempts = (loginAttempts.get(key) ?? []).filter((t) => now - t < LOGIN_WINDOW_MS);
-  attempts.push(now);
-  loginAttempts.set(key, attempts);
-  return attempts.length > MAX_LOGIN_ATTEMPTS;
+  const entry = loginAttempts.get(key);
+  const timestamps = entry
+    ? entry.timestamps.filter((t) => now - t < LOGIN_WINDOW_MS)
+    : [];
+  timestamps.push(now);
+  loginAttempts.set(key, { timestamps, lastAccess: now });
+  return timestamps.length > MAX_LOGIN_ATTEMPTS;
 }
 
 function isRateLimited(key: string): boolean {
-  const attempts = loginAttempts.get(key) ?? [];
-  return attempts.filter((t) => Date.now() - t < LOGIN_WINDOW_MS).length > MAX_LOGIN_ATTEMPTS;
+  const entry = loginAttempts.get(key);
+  if (!entry) return false;
+  const now = Date.now();
+  return entry.timestamps.filter((t) => now - t < LOGIN_WINDOW_MS).length > MAX_LOGIN_ATTEMPTS;
 }
 
 function clearAttempts(key: string): void {

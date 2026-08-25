@@ -8,6 +8,7 @@ import { createLedgerRow, getInvoiceKey } from "@/lib/expenses/ledger-utils";
 import { validateLedgerRow, buildDuplicateIndex } from "@/lib/expenses/ledger-validation";
 import { useToast } from "@/components/ui/toast";
 import { Alert } from "@/components/ui/alert";
+import { VAT_RATE } from "@/lib/constants";
 import {
   STATUS_PENDING,
   STATUS_SAVING,
@@ -144,7 +145,8 @@ export function LedgerGrid({
   const savedCount = enrichedRows.filter((r) => r.status === STATUS_SAVED).length;
 
   function updateField(rowId: string, field: string, value: string, categoryName?: string) {
-    dispatch({ type: "UPDATE_FIELD", rowId, field, value, categoryName });
+    const vatRate = Number(defaultVatRate) || VAT_RATE;
+    dispatch({ type: "UPDATE_FIELD", rowId, field, value, categoryName, vatRate });
   }
 
   function selectParty(rowId: string, party: Party) {

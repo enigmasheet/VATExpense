@@ -101,6 +101,9 @@ export async function createExpense(
     };
   } catch (err) {
     console.error("createExpense failed", err);
+    if (isUniqueViolation(err)) {
+      return { ok: false, error: "This exact invoice has already been recorded for this party and fiscal year" };
+    }
     return { ok: false, error: ERR_UNEXPECTED };
   }
 }
@@ -408,6 +411,9 @@ export async function updateExpense(
     };
   } catch (err) {
     console.error("updateExpense failed", err);
+    if (isUniqueViolation(err)) {
+      return { ok: false, error: "This exact invoice has already been recorded for this party and fiscal year" };
+    }
     return { ok: false, error: ERR_FAILED_TO_UPDATE };
   }
 }

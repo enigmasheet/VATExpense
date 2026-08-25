@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { fiscalYears, companies, adminAuditLog } from "@/lib/db/schema";
 import { createFiscalYearSchema } from "@/lib/validation/admin";
 import { safeParse } from "@/lib/validation/utils";
-import { apiOk, unauthorized, notFound, badRequest, unprocessableEntity, conflict, internalError } from "@/lib/api-response";
+import { apiOk, unauthorized, notFound, badRequest, unprocessableEntity, conflict, internalError, isUniqueViolation } from "@/lib/api-response";
 import { getSessionUser } from "@/lib/api-auth";
 import { ROLE_SUPER_ADMIN } from "@/lib/constants";
 import { eq, and } from "drizzle-orm";
@@ -105,6 +105,9 @@ export async function POST(
     return apiOk({ data: created }, 201);
   } catch (err) {
     console.error("POST /api/admin/companies/[id]/fiscal-years failed", err);
+    if (isUniqueViolation(err)) {
+      return conflict("A fiscal year with this name already exists for this company");
+    }
     return internalError();
   }
 }

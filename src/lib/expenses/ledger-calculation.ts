@@ -3,13 +3,18 @@ import { VAT_RATE } from "@/lib/constants";
 
 export const VAT_FACTOR = 1 + VAT_RATE / 100;
 
+export function getVatFactor(vatRate: number = VAT_RATE): number {
+  return 1 + vatRate / 100;
+}
+
 /**
  * Calculates VAT and the total amount from a taxable amount.
  */
 export function calcFromTaxable(
   taxable: number,
+  vatRate: number = VAT_RATE,
 ): { vat: number; total: number } {
-  const vat = round2((taxable * VAT_RATE) / 100);
+  const vat = round2((taxable * vatRate) / 100);
   const total = round2(taxable + vat);
   return { vat, total };
 }
@@ -19,8 +24,10 @@ export function calcFromTaxable(
  */
 export function calcFromTotal(
   total: number,
+  vatRate: number = VAT_RATE,
 ): { taxable: number; vat: number } {
-  const taxable = round2(total / VAT_FACTOR);
+  const factor = getVatFactor(vatRate);
+  const taxable = round2(total / factor);
   const vat = round2(total - taxable);
   return { taxable, vat };
 }
