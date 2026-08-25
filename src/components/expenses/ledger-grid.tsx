@@ -221,6 +221,8 @@ export function LedgerGrid({
       invoiceNumber: "",
       categoryId: src.categoryId,
       categoryName: src.categoryName,
+      quantity: src.quantity,
+      rate: src.rate,
       taxableAmount: src.taxableAmount,
       vatAmount: src.vatAmount,
       totalAmount: src.totalAmount,

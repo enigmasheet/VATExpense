@@ -69,7 +69,7 @@ export async function getPartyStatement(
     .leftJoin(categories, eq(categories.id, expenses.categoryId))
     .leftJoin(locations, eq(locations.id, expenses.locationId))
     .where(and(...conditions))
-    .orderBy(sql`${expenses.miti} asc, ${expenses.createdAt} asc`);
+    .orderBy(sql`${expenses.invoiceNumber} asc nulls last, ${expenses.miti} asc, ${expenses.createdAt} asc`);
 
   const { fiscalYears } = await import("@/lib/db/schema");
 

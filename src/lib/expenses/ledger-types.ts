@@ -39,6 +39,8 @@ export interface LedgerRow {
   invoiceNumber: string;
   categoryId: string;
   categoryName: string;
+  quantity: string;
+  rate: string;
   taxableAmount: string;
   vatAmount: string;
   totalAmount: string;
@@ -58,6 +60,8 @@ export type CellField =
   | "partySearch"
   | "invoiceNumber"
   | "categoryId"
+  | "quantity"
+  | "rate"
   | "taxableAmount"
   | "totalAmount";
 
@@ -66,6 +70,8 @@ export const FIELD_ORDER: CellField[] = [
   "partySearch",
   "invoiceNumber",
   "categoryId",
+  "quantity",
+  "rate",
   "taxableAmount",
   "totalAmount",
 ];

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCompanyId, getSessionUser, getCompany, getActiveFiscalYear, getDashboardSummary } from "@/lib/server-data";
+import { getCompanyId, getSessionUser, getCompany, getActiveFiscalYear, getDashboardSummary, getDashboardAlerts } from "@/lib/server-data";
 import { ROLE_SUPER_ADMIN, PATH_LOGIN, PATH_ADMIN } from "@/lib/constants";
 import { DashboardClient } from "@/components/dashboard-client";
 
@@ -34,13 +34,17 @@ export default async function DashboardPage() {
     );
   }
 
-  const summary = await getDashboardSummary(companyId, activeFiscalYear.id);
+  const [summary, alerts] = await Promise.all([
+    getDashboardSummary(companyId, activeFiscalYear.id),
+    getDashboardAlerts(companyId, activeFiscalYear.id),
+  ]);
 
   return (
     <DashboardClient
       companyName={company?.name ?? "VAT Expense Ledger"}
       fiscalYearName={activeFiscalYear.name}
       totals={summary.totals}
+      alerts={alerts}
       recent={summary.recent.map((r) => ({
         ...r,
         partyName: r.partyName ?? "",
