@@ -8,6 +8,7 @@ import { createLedgerRow, getInvoiceKey } from "@/lib/expenses/ledger-utils";
 import { validateLedgerRow, buildDuplicateIndex } from "@/lib/expenses/ledger-validation";
 import { useToast } from "@/components/ui/toast";
 import { Alert } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { VAT_RATE } from "@/lib/constants";
 import {
   STATUS_PENDING,
@@ -53,6 +54,20 @@ export function LedgerGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const prevErrorsRef = useRef<Map<string, string>>(new Map());
+  const prevRowCountRef = useRef(rows.length);
+
+  // Auto-focus the first input of a newly added row
+  useEffect(() => {
+    if (rows.length > prevRowCountRef.current && gridRef.current) {
+      const newRow = rows[rows.length - 1];
+      const selector = `input[data-row="${newRow.id}"][data-field="miti"]`;
+      const el = gridRef.current.querySelector<HTMLInputElement>(selector);
+      if (el) {
+        requestAnimationFrame(() => el.focus());
+      }
+    }
+    prevRowCountRef.current = rows.length;
+  }, [rows]);
 
   useEffect(() => {
     if (!companyId || !fiscalYearId) return;

@@ -71,20 +71,21 @@ export async function getPartyStatement(
     .where(and(...conditions))
     .orderBy(sql`${expenses.miti} asc, ${expenses.createdAt} asc`);
 
-  // Get party name and VAT number — scoped to company
-  const [party] = await db
-    .select({ name: parties.name, vatNumber: parties.vatNumber })
-    .from(parties)
-    .where(and(eq(parties.id, partyId), eq(parties.companyId, companyId)))
-    .limit(1);
-
-  // Get fiscal year name — scoped to company
   const { fiscalYears } = await import("@/lib/db/schema");
-  const [fy] = await db
-    .select({ name: fiscalYears.name })
-    .from(fiscalYears)
-    .where(and(eq(fiscalYears.id, fiscalYearId), eq(fiscalYears.companyId, companyId)))
-    .limit(1);
+
+  // Parallelize party + FY lookups (previously sequential)
+  const [[party], [fy]] = await Promise.all([
+    db
+      .select({ name: parties.name, vatNumber: parties.vatNumber })
+      .from(parties)
+      .where(and(eq(parties.id, partyId), eq(parties.companyId, companyId)))
+      .limit(1),
+    db
+      .select({ name: fiscalYears.name })
+      .from(fiscalYears)
+      .where(and(eq(fiscalYears.id, fiscalYearId), eq(fiscalYears.companyId, companyId)))
+      .limit(1),
+  ]);
 
   // Compute summary
   const summary: PartyStatementSummary = {
