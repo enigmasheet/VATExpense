@@ -204,6 +204,7 @@ export function LedgerGrid({
     const idx = afterId ? rows.findIndex((r) => r.id === afterId) : rows.length - 1;
     const prevRow = idx >= 0 ? rows[idx] : undefined;
     const newRow = createLedgerRow(prevRow);
+    addedRowIdRef.current = newRow.id;
     dispatch({ type: "ADD_ROW", afterId, newRow });
     return newRow.id;
   }
@@ -246,7 +247,7 @@ export function LedgerGrid({
    */
   function removeRow(rowId: string) {
     const row = rows.find((r) => r.id === rowId);
-    if (row && (row.partyId || row.invoiceNumber || row.taxableAmount)) {
+    if (row && (row.partyId || row.partyName || row.invoiceNumber || row.taxableAmount)) {
       setPendingDeleteId(rowId);
       return;
     }
