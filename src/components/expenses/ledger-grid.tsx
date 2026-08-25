@@ -14,6 +14,7 @@ import {
   STATUS_SAVING,
   STATUS_SAVED,
   STATUS_ERROR,
+  STATUS_DUPLICATE,
 } from "@/lib/status-constants";
 import type { Party, Category, LedgerRow } from "@/lib/expenses/ledger-types";
 import { LedgerTable } from "./ledger-table";
@@ -104,13 +105,15 @@ export function LedgerGrid({
     });
   }, [rows, duplicateIndex, existingInvoices, fiscalYearName]);
 
-  // Toast when new duplicate errors appear
+  // Toast when new errors appear (duplicates, FY mismatches)
   useEffect(() => {
     const prevErrors = prevErrorsRef.current;
     for (const row of enrichedRows) {
       const prevError = prevErrors.get(row.id);
-      if (row.error && row.error !== prevError && row.error.includes("already exists")) {
-        toast(row.error, "error");
+      if (row.error && row.error !== prevError) {
+        if (row.error.includes("already exists") || row.error.includes("falls in FY")) {
+          toast(row.error, "error");
+        }
       }
     }
     const nextErrors = new Map<string, string>();
@@ -143,6 +146,8 @@ export function LedgerGrid({
 
   const pendingCount = enrichedRows.filter((r) => r.status === STATUS_PENDING).length;
   const savedCount = enrichedRows.filter((r) => r.status === STATUS_SAVED).length;
+  const errorCount = enrichedRows.filter((r) => r.status === STATUS_ERROR).length;
+  const duplicateCount = enrichedRows.filter((r) => r.status === STATUS_DUPLICATE).length;
 
   function updateField(rowId: string, field: string, value: string, categoryName?: string) {
     const vatRate = Number(defaultVatRate) || VAT_RATE;
@@ -251,7 +256,7 @@ export function LedgerGrid({
       />
 
       {/* Summary */}
-      <LedgerSummary totals={totals} rowCount={enrichedRows.length} />
+      <LedgerSummary totals={totals} rowCount={enrichedRows.length} errorCount={errorCount} duplicateCount={duplicateCount} />
 
       {/* Actions */}
       <LedgerActions

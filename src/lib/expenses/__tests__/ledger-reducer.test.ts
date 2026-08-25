@@ -337,4 +337,30 @@ describe("ledgerReducer", () => {
       expect(result[0].id).toBe("new");
     });
   });
+
+  describe("AUTO_FIX", () => {
+    it("does not change row when status is saving", () => {
+      const rows = [makeRow({ id: "r1", status: "saving", miti: "2080-04-01" })];
+      const result = ledgerReducer(rows, {
+        type: "AUTO_FIX",
+        rowId: "r1",
+        fixType: "fillTodayMiti",
+        value: "2083-10-15",
+      });
+      expect(result[0].miti).toBe("2080-04-01");
+      expect(result[0].status).toBe("saving");
+    });
+
+    it("applies fix when status is not saving", () => {
+      const rows = [makeRow({ id: "r1", status: "error", miti: "" })];
+      const result = ledgerReducer(rows, {
+        type: "AUTO_FIX",
+        rowId: "r1",
+        fixType: "fillTodayMiti",
+        value: "2083-10-15",
+      });
+      expect(result[0].miti).toBe("2083-10-15");
+      expect(result[0].status).toBe("pending");
+    });
+  });
 });
