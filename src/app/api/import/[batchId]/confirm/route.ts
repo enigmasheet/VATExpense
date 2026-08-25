@@ -9,7 +9,7 @@ import {
   BATCH_ROW_STATUS_CONFIRMED,
 } from "@/lib/status-constants";
 
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray ,and} from "drizzle-orm";
 import { normalizeItemName } from "@/lib/normalize-master-data";
 import { normalizeMiti } from "@/lib/nepali-date";
 
