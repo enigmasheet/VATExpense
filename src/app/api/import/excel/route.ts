@@ -141,18 +141,12 @@ export async function POST(request: Request) {
 
     const sheet = workbook.Sheets[sheetName];
 
-    // Limit rows read into memory to detect overflow without materializing the entire sheet
     const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
       raw: false,
-      range: BATCH_SIZE_LIMIT + 1,
     });
 
     if (jsonData.length === 0) {
       return badRequest("File has no data rows");
-    }
-
-    if (jsonData.length > BATCH_SIZE_LIMIT) {
-      return badRequest(`File exceeds the maximum of ${BATCH_SIZE_LIMIT} rows`);
     }
 
     const rows: ParsedRow[] = [];
@@ -163,6 +157,10 @@ export async function POST(request: Request) {
 
     if (rows.length === 0) {
       return badRequest("No valid data rows found in file");
+    }
+
+    if (rows.length > BATCH_SIZE_LIMIT) {
+      return badRequest(`File exceeds the maximum of ${BATCH_SIZE_LIMIT} rows`);
     }
 
     const [batch] = await db
