@@ -69,8 +69,17 @@ export async function getPartyStatement(
     .from(expenses)
     .leftJoin(categories, eq(categories.id, expenses.categoryId))
     .leftJoin(locations, eq(locations.id, expenses.locationId))
-    .where(and(...conditions))
-    .orderBy(sql`${expenses.invoiceNumber} asc nulls last, ${expenses.miti} asc, ${expenses.createdAt} asc`);
+    .where(and(...conditions)).orderBy(sql`
+  CASE
+    WHEN ${expenses.miti} ~ '^\\d{2}/\\d{2}/\\d{4}$'
+      THEN substring(${expenses.miti} from 7 for 4)
+        || substring(${expenses.miti} from 4 for 2)
+        || substring(${expenses.miti} from 1 for 2)
+    ELSE ${expenses.miti}
+  END ASC,
+  CAST(${expenses.invoiceNumber} AS NUMERIC) ASC NULLS LAST,
+  ${expenses.createdAt} ASC
+`);
 
   const { fiscalYears } = await import("@/lib/db/schema");
 
@@ -83,7 +92,12 @@ export async function getPartyStatement(
     db
       .select({ name: fiscalYears.name })
       .from(fiscalYears)
-      .where(and(eq(fiscalYears.id, fiscalYearId), eq(fiscalYears.companyId, companyId)))
+      .where(
+        and(
+          eq(fiscalYears.id, fiscalYearId),
+          eq(fiscalYears.companyId, companyId),
+        ),
+      )
       .limit(1),
   ]);
 
