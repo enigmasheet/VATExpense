@@ -88,7 +88,7 @@ export async function POST(
 
     const [existingParties, existingCategories, existingLocations] = await Promise.all([
       db
-        .select({ id: parties.id })
+        .select({ id: parties.id, locationId: parties.locationId })
         .from(parties)
         .where(and(inArray(parties.id, partyIds), eq(parties.companyId, companyId))),
       db
@@ -106,6 +106,7 @@ export async function POST(
     const validPartyIds = new Set(existingParties.map((p) => p.id));
     const validCategoryIds = new Set(existingCategories.map((c) => c.id));
     const validLocationIds = new Set(existingLocations.map((l) => l.id));
+    const partyLocationMap = new Map(existingParties.map((p) => [p.id, p.locationId]));
 
     const importableRowsFinal = importableRows.filter((r) => {
       if (!validPartyIds.has(r.resolvedPartyId!) || !validCategoryIds.has(r.resolvedCategoryId!)) {
@@ -123,24 +124,27 @@ export async function POST(
       if (importableRowsFinal.length === 0) return [];
 
       // Batch insert all expenses at once, normalizing miti
-      const expenseValues = importableRowsFinal.map((row) => ({
-        companyId: claimed.companyId,
-        fiscalYearId: claimed.fiscalYearId,
-        partyId: row.resolvedPartyId!,
-        categoryId: row.resolvedCategoryId!,
-        locationId: row.resolvedLocationId ?? undefined,
-        miti: normalizeMiti(row.resolvedMiti!),
-        nepaliMonth: row.resolvedNepaliMonth!,
-        invoiceNumber: row.rawInvoiceNumber || undefined,
-        item: normalizeItemName(row.rawItem as string),
-        quantity: row.rawQuantity ? row.rawQuantity : undefined,
-        rate: row.rawRate ? row.rawRate : undefined,
-        taxableAmount: row.resolvedTaxableAmount as string,
-        vatAmount: row.resolvedVatAmount as string,
-        totalAmount: row.resolvedTotalAmount as string,
-        vatRate: row.resolvedVatRate as string,
-        remarks: row.rawRemarks || undefined,
-      }));
+      const expenseValues = importableRowsFinal.map((row) => {
+        const partyLocationId = partyLocationMap.get(row.resolvedPartyId!) ?? null;
+        return {
+          companyId: claimed.companyId,
+          fiscalYearId: claimed.fiscalYearId,
+          partyId: row.resolvedPartyId!,
+          categoryId: row.resolvedCategoryId!,
+          locationId: row.resolvedLocationId ?? partyLocationId ?? undefined,
+          miti: normalizeMiti(row.resolvedMiti!),
+          nepaliMonth: row.resolvedNepaliMonth!,
+          invoiceNumber: row.rawInvoiceNumber || undefined,
+          item: normalizeItemName(row.rawItem as string),
+          quantity: row.rawQuantity ? row.rawQuantity : undefined,
+          rate: row.rawRate ? row.rawRate : undefined,
+          taxableAmount: row.resolvedTaxableAmount as string,
+          vatAmount: row.resolvedVatAmount as string,
+          totalAmount: row.resolvedTotalAmount as string,
+          vatRate: row.resolvedVatRate as string,
+          remarks: row.rawRemarks || undefined,
+        };
+      });
 
       const results = await tx.insert(expenses).values(expenseValues).returning();
 
