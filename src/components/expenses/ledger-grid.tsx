@@ -31,15 +31,6 @@ interface LedgerGridProps {
   defaultVatRate?: string;
 }
 
-/**
- * Provides an editable expense ledger for a company and fiscal year, including validation, VAT calculations, row management, and batch saving.
- *
- * @param companyId - The company whose expenses are being entered
- * @param fiscalYearId - The fiscal year associated with the expenses
- * @param fiscalYearName - The fiscal year name used for date validation
- * @param allParties - Available parties for party selection
- * @param allCategories - Available expense categories
- */
 export function LedgerGrid({
   companyId,
   fiscalYearId,
@@ -123,7 +114,6 @@ export function LedgerGrid({
     });
   }, [rows, duplicateIndex, existingInvoices, fiscalYearName]);
 
-  // Toast when new errors appear (duplicates, FY mismatches)
   useEffect(() => {
     const prevErrors = prevErrorsRef.current;
     for (const row of enrichedRows) {
@@ -208,11 +198,6 @@ export function LedgerGrid({
     return newRow.id;
   }
 
-  /**
-   * Duplicates a ledger row with its editable values and resets its invoice number and save state.
-   *
-   * @param rowId - The identifier of the row to duplicate
-   */
   function duplicateRow(rowId: string) {
     const idx = rows.findIndex((r) => r.id === rowId);
     if (idx < 0) return;

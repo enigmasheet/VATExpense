@@ -150,17 +150,24 @@ export async function POST(request: Request) {
     }
 
     const rows: ParsedRow[] = [];
+    let hitLimit = false;
     for (const row of jsonData) {
       const parsed = mapExcelRow(row);
-      if (parsed) rows.push(parsed);
+      if (parsed) {
+        rows.push(parsed);
+        if (rows.length > BATCH_SIZE_LIMIT) {
+          hitLimit = true;
+          break;
+        }
+      }
+    }
+
+    if (hitLimit) {
+      return badRequest(`File exceeds the maximum of ${BATCH_SIZE_LIMIT} rows`);
     }
 
     if (rows.length === 0) {
       return badRequest("No valid data rows found in file");
-    }
-
-    if (rows.length > BATCH_SIZE_LIMIT) {
-      return badRequest(`File exceeds the maximum of ${BATCH_SIZE_LIMIT} rows`);
     }
 
     const [batch] = await db
