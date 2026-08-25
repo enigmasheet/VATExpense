@@ -61,7 +61,6 @@ export const TOAST_ERROR_MS = 6000;
 // File Import Constants
 // ============================================================
 export const MAX_IMPORT_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-export const IMPORT_BODY_SIZE_LIMIT = "10mb";
 export const MIN_PASSWORD_LENGTH = 8;
 export const ALLOWED_IMPORT_EXTENSIONS = ["xlsx", "xls", "csv"];
 export const IMPORT_DATE_FORMAT = "DD/MM/YYYY";

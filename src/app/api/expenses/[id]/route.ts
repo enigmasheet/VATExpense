@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { expenses } from "@/lib/db/schema";
+import { expenses, categories, locations, trucks, fiscalYears, parties } from "@/lib/db/schema";
 import { expenseInputSchema, validateAmounts } from "@/lib/validation/expense";
 import { safeParse } from "@/lib/validation/utils";
 import {
@@ -112,6 +112,40 @@ export async function PATCH(
       }
     }
 
+    // Validate FK ownership for any referenced entities being changed
+    const fkChecks: Promise<{ id: string } | undefined>[] = [];
+    if (values.fiscalYearId !== undefined && values.fiscalYearId !== null) {
+      fkChecks.push(
+        db.select({ id: fiscalYears.id }).from(fiscalYears).where(and(eq(fiscalYears.id, values.fiscalYearId as string), eq(fiscalYears.companyId, companyId))).limit(1).then((r) => r[0])
+      );
+    }
+    if (values.partyId !== undefined && values.partyId !== null) {
+      fkChecks.push(
+        db.select({ id: parties.id }).from(parties).where(and(eq(parties.id, values.partyId as string), eq(parties.companyId, companyId))).limit(1).then((r) => r[0])
+      );
+    }
+    if (values.categoryId !== undefined && values.categoryId !== null) {
+      fkChecks.push(
+        db.select({ id: categories.id }).from(categories).where(and(eq(categories.id, values.categoryId as string), eq(categories.companyId, companyId))).limit(1).then((r) => r[0])
+      );
+    }
+    if (values.locationId !== undefined && values.locationId !== null) {
+      fkChecks.push(
+        db.select({ id: locations.id }).from(locations).where(and(eq(locations.id, values.locationId as string), eq(locations.companyId, companyId))).limit(1).then((r) => r[0])
+      );
+    }
+    if (values.truckId !== undefined && values.truckId !== null) {
+      fkChecks.push(
+        db.select({ id: trucks.id }).from(trucks).where(and(eq(trucks.id, values.truckId as string), eq(trucks.companyId, companyId))).limit(1).then((r) => r[0])
+      );
+    }
+    if (fkChecks.length > 0) {
+      const fkResults = await Promise.all(fkChecks);
+      if (fkResults.some((r) => !r)) {
+        return badRequest("One or more referenced entities (fiscal year, party, category, location, truck) not found for this company");
+      }
+    }
+
     const merged = {
       quantity: values.quantity !== undefined ? (values.quantity as string) : current.quantity,
       rate: values.rate !== undefined ? (values.rate as string) : current.rate,
@@ -132,6 +166,23 @@ export async function PATCH(
     const effectivePartyId = (values.partyId as string) ?? current.partyId;
     const effectiveInvoiceNumber = (values.invoiceNumber as string | null) ?? current.invoiceNumber;
     const effectiveMiti = (values.miti as string) ?? current.miti;
+
+    // Verify the miti falls inside the effective fiscal year
+    if (values.miti !== undefined || values.fiscalYearId !== undefined) {
+      const parsedMiti = parseMiti(effectiveMiti);
+      if (parsedMiti.ok) {
+        const [fy] = await db
+          .select({ startYear: fiscalYears.startYear })
+          .from(fiscalYears)
+          .where(eq(fiscalYears.id, effectiveFiscalYearId))
+          .limit(1);
+        if (fy && parsedMiti.fiscalYear !== fy.startYear) {
+          return badRequest(
+            `Date ${effectiveMiti} belongs to fiscal year ${parsedMiti.fiscalYearName}, not the selected fiscal year`,
+          );
+        }
+      }
+    }
 
     const fingerprint = {
       companyId,

@@ -31,3 +31,17 @@ export function formatDate(value: string | Date | null | undefined): string {
   const date = typeof value === "string" ? new Date(value) : value;
   return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
+
+/**
+ * Sanitizes a value for safe CSV export by neutralizing formula-injection characters.
+ * Prefixes = + - @ with a single quote (') so Excel/LibreOffice treat the cell as text.
+ * Control characters and leading/trailing whitespace are stripped.
+ */
+export function sanitizeCsvValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  let str = String(value).replace(/[\r\n\t]/g, " ").trim();
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
+  return str;
+}
