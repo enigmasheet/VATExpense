@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/toast";
 
 import { VAT_RATE, VAT_RATE_DEFAULT } from "@/lib/constants";
 import { calcFromTaxable as calcVatFromTaxable, calcFromTotal as calcVatFromTotal } from "@/lib/expenses/ledger-calculation";
+import { formatMitiInput, todayMiti } from "@/lib/expenses/ledger-utils";
 import { MessageList, type Message } from "@/components/ui/alert";
 import type { Party } from "@/lib/expenses/ledger-types";
 
@@ -50,7 +51,7 @@ export interface ExpenseInitial {
 }
 
 const emptyForm: FormValues = {
-  miti: "",
+  miti: todayMiti(),
   invoiceNumber: "",
   partyId: "",
   categoryId: "",
@@ -406,9 +407,9 @@ export function ExpenseForm({
             <Input
               id="e-miti"
               required
-              placeholder="2082-04-05 or 04/05/2082"
+              placeholder="2083-04-15"
               value={values.miti}
-              onChange={set("miti")}
+              onChange={(e) => setValues((v) => ({ ...v, miti: formatMitiInput(e.target.value) }))}
             />
           </Field>
           <Field label="Invoice number" htmlFor="e-invoice" hint="Leave blank for cash memos">

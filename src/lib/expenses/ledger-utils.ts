@@ -1,4 +1,5 @@
 import type { LedgerRow } from "./ledger-types";
+import { fromEnglishDate } from "@/lib/nepali-date";
 
 /**
  * Returns a row-safe identifier, preferring crypto.randomUUID with a
@@ -13,6 +14,31 @@ export function genRowId(): string {
 }
 
 let idCounter = 0;
+
+/**
+ * Returns today's Bikram Sambat date as a YYYY-MM-DD string.
+ * Safe to call at module scope or in components — pure, no browser APIs.
+ */
+export function todayMiti(): string {
+  try {
+    return fromEnglishDate(new Date()).miti;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Strips non-digits from raw input and inserts dashes to produce
+ * a YYYY-MM-DD formatted string (up to 8 digits, 10 characters).
+ *
+ * Examples: "20830" → "2083-0", "20830415" → "2083-04-15"
+ */
+export function formatMitiInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+}
 
 /**
  * Normalizes an invoice number to lowercase-trimmed form.
@@ -35,12 +61,13 @@ export function getInvoiceKey(partyId: string, invoiceNumber: string): string {
 
 /**
  * Creates an incomplete ledger row, carrying forward selected fields
- * from a previous row when provided.
+ * from a previous row when provided. New rows auto-fill miti with
+ * today's Bikram Sambat date.
  */
 export function createLedgerRow(prev?: LedgerRow): LedgerRow {
   return {
     id: genRowId(),
-    miti: prev?.miti ?? "",
+    miti: prev?.miti ?? todayMiti(),
     partyId: "",
     partyName: "",
     partyResolved: false,

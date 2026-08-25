@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { genRowId, normalizeInvoiceNumber, getInvoiceKey, createLedgerRow } from "../ledger-utils";
+import { genRowId, normalizeInvoiceNumber, getInvoiceKey, createLedgerRow, formatMitiInput, todayMiti } from "../ledger-utils";
 
 describe("genRowId", () => {
   it("returns unique IDs on successive calls", () => {
@@ -11,6 +11,50 @@ describe("genRowId", () => {
   it("returns a UUID format string", () => {
     const id = genRowId();
     expect(id).toMatch(/^[0-9a-f-]{36}$/);
+  });
+});
+
+describe("todayMiti", () => {
+  it("returns a YYYY-MM-DD string", () => {
+    const miti = todayMiti();
+    expect(miti).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe("formatMitiInput", () => {
+  it("returns empty string for empty input", () => {
+    expect(formatMitiInput("")).toBe("");
+  });
+
+  it("returns digits only when 4 or fewer", () => {
+    expect(formatMitiInput("2083")).toBe("2083");
+    expect(formatMitiInput("208")).toBe("208");
+  });
+
+  it("inserts first dash after 4 digits", () => {
+    expect(formatMitiInput("20830")).toBe("2083-0");
+    expect(formatMitiInput("208304")).toBe("2083-04");
+  });
+
+  it("inserts second dash after 6 digits", () => {
+    expect(formatMitiInput("2083041")).toBe("2083-04-1");
+    expect(formatMitiInput("20830415")).toBe("2083-04-15");
+  });
+
+  it("truncates to 8 digits", () => {
+    expect(formatMitiInput("20830415")).toBe("2083-04-15");
+    expect(formatMitiInput("208304151234")).toBe("2083-04-15");
+  });
+
+  it("strips non-digit characters", () => {
+    expect(formatMitiInput("2083-04-15")).toBe("2083-04-15");
+    expect(formatMitiInput("2083/04/15")).toBe("2083-04-15");
+    expect(formatMitiInput("2083abcd0415")).toBe("2083-04-15");
+  });
+
+  it("handles partial input with existing dashes", () => {
+    expect(formatMitiInput("2083-0")).toBe("2083-0");
+    expect(formatMitiInput("2083-04-1")).toBe("2083-04-1");
   });
 });
 
@@ -35,9 +79,9 @@ describe("getInvoiceKey", () => {
 });
 
 describe("createLedgerRow", () => {
-  it("creates an empty row with no arguments", () => {
+  it("creates a row with today's miti when no arguments", () => {
     const row = createLedgerRow();
-    expect(row.miti).toBe("");
+    expect(row.miti).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(row.partyId).toBe("");
     expect(row.status).toBe("incomplete");
     expect(row.id).toBeTruthy();

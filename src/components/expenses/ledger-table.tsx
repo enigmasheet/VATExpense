@@ -14,6 +14,7 @@ import {
 import type { Party, Category, LedgerRow, CellField } from "@/lib/expenses/ledger-types";
 import { getFixableAction } from "@/lib/expenses/ledger-validation";
 import type { FixableAction } from "@/lib/expenses/ledger-validation";
+import { formatMitiInput } from "@/lib/expenses/ledger-utils";
 import { PartyAutocomplete } from "./party-autocomplete";
 import { StatusBadge } from "./status-badge";
 import { Button } from "@/components/ui/button";
@@ -95,9 +96,9 @@ export function LedgerTable({
                     data-row={row.id}
                     data-field="miti"
                     value={row.miti}
-                    onChange={(e) => onUpdateField(row.id, "miti", e.target.value)}
+                    onChange={(e) => onUpdateField(row.id, "miti", formatMitiInput(e.target.value))}
                     onKeyDown={(e) => onCellKeyDown(e, row.id, "miti")}
-                    placeholder="2082-05-27"
+                    placeholder="2083-04-15"
                     aria-label={`Miti for row ${idx + 1}`}
                     className={inputClass(
                       !row.miti.trim() && row.status !== STATUS_PENDING,
@@ -316,9 +317,9 @@ export function LedgerTable({
                   data-row={row.id}
                   data-field="miti"
                   value={row.miti}
-                  onChange={(e) => onUpdateField(row.id, "miti", e.target.value)}
+                  onChange={(e) => onUpdateField(row.id, "miti", formatMitiInput(e.target.value))}
                   onKeyDown={(e) => onCellKeyDown(e, row.id, "miti")}
-                  placeholder="2082-05-27"
+                  placeholder="2083-04-15"
                   aria-label={`Miti for row ${idx + 1}`}
                   className={inputClass(
                     !row.miti.trim() && row.status !== STATUS_PENDING,

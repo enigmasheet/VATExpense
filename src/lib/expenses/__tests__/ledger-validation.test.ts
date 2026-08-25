@@ -62,13 +62,13 @@ describe("validateLedgerRow", () => {
   }
 
   it("returns incomplete when all fields empty", () => {
-    const result = validateLedgerRow(makeRow(), emptyIndex, emptyInvoices, "2080/81");
+    const result = validateLedgerRow(makeRow({ miti: "" }), emptyIndex, emptyInvoices, "2080/81");
     expect(result.status).toBe("incomplete");
   });
 
   it("returns error when miti missing", () => {
     const result = validateLedgerRow(
-      makeRow({ partyId: "p1", partyResolved: true, taxableAmount: "100" }),
+      makeRow({ miti: "", partyId: "p1", partyResolved: true, taxableAmount: "100" }),
       emptyIndex,
       emptyInvoices,
       "2080/81",
