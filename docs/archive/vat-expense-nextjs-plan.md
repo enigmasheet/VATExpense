@@ -1,3 +1,5 @@
+> **Archived** — Historical reference. See [PLAN.md](../../PLAN.md) for current status.
+
 # VAT Expense Ledger — Next.js Fullstack Plan (v2.0)
 
 Self-contained plan for the Next.js + Neon implementation. Supersedes the

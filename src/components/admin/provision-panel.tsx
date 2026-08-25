@@ -35,6 +35,12 @@ export function ProvisionPanel({ open, onClose, onSaved }: Props) {
     setAdminPassword("");
   }
 
+  function handleClose() {
+    if (saving) return;
+    reset();
+    onClose();
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -42,16 +48,17 @@ export function ProvisionPanel({ open, onClose, onSaved }: Props) {
       const result = await api<{ data: { companyId: string; fiscalYearName: string } }>("/api/admin/companies", {
         method: "POST",
         body: JSON.stringify({
-          company: { name: companyName, vatNumber: vatNumber || null, defaultVatRate: VAT_RATE_DEFAULT },
-          user: { name: adminName, email: adminEmail, password: adminPassword, role: ROLE_ADMIN },
+          company: { name: companyName.trim(), vatNumber: vatNumber.trim() || null, defaultVatRate: VAT_RATE_DEFAULT },
+          user: { name: adminName.trim(), email: adminEmail.trim(), password: adminPassword, role: ROLE_ADMIN },
         }),
       });
       toast(`Created company with fiscal year ${result.data.fiscalYearName}`, "success");
       reset();
       onSaved();
       onClose();
-    } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : "Provisioning failed", "error");
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : "Provisioning failed", "error");
+      setAdminPassword("");
     } finally {
       setSaving(false);
     }
@@ -62,10 +69,12 @@ export function ProvisionPanel({ open, onClose, onSaved }: Props) {
       open={open}
       title="Provision new company"
       description="Creates a company, its first admin user, and an active fiscal year from today's Nepali date."
-      onClose={onClose}
+      onClose={handleClose}
+      closeOnEscape={!saving}
+      closeOnOverlayClick={!saving}
       footer={
         <>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>
             Cancel
           </Button>
           <Button type="submit" form="provision-form" loading={saving}>
@@ -97,7 +106,16 @@ export function ProvisionPanel({ open, onClose, onSaved }: Props) {
               <Input id="pv-admin-email" type="email" required placeholder="admin@example.com" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} />
             </Field>
             <Field label="Password" htmlFor="pv-admin-password" hint="Min 8 characters">
-              <Input id="pv-admin-password" type="password" required minLength={8} placeholder="Min 8 characters" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} />
+              <Input
+                id="pv-admin-password"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                placeholder="Min 8 characters"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+              />
             </Field>
           </div>
         </div>

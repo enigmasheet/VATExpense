@@ -78,7 +78,8 @@ export const FOCUS_DELAY_MS = 10;
 // ============================================================
 // Category Inference Keywords
 // ============================================================
-export const FUEL_KEYWORDS = ["diesel", "hsd", "petrol", "fuel", "oil"];
+export const FUEL_KEYWORDS = ["diesel", "disel", "petrol", "fuel", "oil", "lubricant"];
+export const FUEL_TOKEN_KEYWORDS = ["per", "hsd", "pms"];
 export const SPARE_PARTS_KEYWORDS = ["parts", "spare", "filter", "belt", "bearing"];
 export const TYRE_KEYWORDS = ["tyre", "tire", "tube"];
 

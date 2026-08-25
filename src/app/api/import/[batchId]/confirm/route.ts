@@ -8,8 +8,10 @@ import {
   BATCH_ROW_STATUS_VALID,
   BATCH_ROW_STATUS_CONFIRMED,
 } from "@/lib/status-constants";
+
+import { eq, inArray } from "drizzle-orm";
+import { normalizeItemName } from "@/lib/normalize-master-data";
 import { normalizeMiti } from "@/lib/nepali-date";
-import { eq, inArray, and } from "drizzle-orm";
 
 export const runtime = "nodejs";
 
@@ -130,7 +132,7 @@ export async function POST(
         miti: normalizeMiti(row.resolvedMiti!),
         nepaliMonth: row.resolvedNepaliMonth!,
         invoiceNumber: row.rawInvoiceNumber || undefined,
-        item: row.rawItem as string,
+        item: normalizeItemName(row.rawItem as string),
         quantity: row.rawQuantity ? row.rawQuantity : undefined,
         rate: row.rawRate ? row.rawRate : undefined,
         taxableAmount: row.resolvedTaxableAmount as string,

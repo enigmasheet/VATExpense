@@ -11,6 +11,9 @@ interface SlideOverProps {
   children: ReactNode;
   footer?: ReactNode;
   width?: string;
+  initialFocusRef?: React.RefObject<HTMLElement>;
+  closeOnOverlayClick?: boolean;
+  closeOnEscape?: boolean;
 }
 
 /**
@@ -24,6 +27,9 @@ interface SlideOverProps {
  * @param children - The panel body content
  * @param footer - Optional actions rendered in a footer bar
  * @param width - Width utility class for the panel (default "max-w-md")
+ * @param initialFocusRef - Ref to focus instead of the first input/button when the panel opens
+ * @param closeOnOverlayClick - Set false to disable closing on backdrop click
+ * @param closeOnEscape - Set false to disable Escape-to-close
  */
 export function SlideOver({
   open,
@@ -33,6 +39,9 @@ export function SlideOver({
   children,
   footer,
   width = "max-w-md",
+  initialFocusRef,
+  closeOnOverlayClick = true,
+  closeOnEscape = true,
 }: SlideOverProps) {
   return (
     <Modal
@@ -44,6 +53,9 @@ export function SlideOver({
       width={width}
       closeLabel="Close panel"
       footer={footer}
+      initialFocusRef={initialFocusRef}
+      closeOnOverlayClick={closeOnOverlayClick}
+      closeOnEscape={closeOnEscape}
     >
       {children}
     </Modal>

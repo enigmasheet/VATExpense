@@ -1,3 +1,5 @@
+> **Archived** — Historical reference. See [PLAN.md](../../PLAN.md) for current status.
+
 ﻿# Future Features — Detailed Implementation Plans
 
 > These features are planned for future implementation. Each includes scope, technical approach, and dependencies.
