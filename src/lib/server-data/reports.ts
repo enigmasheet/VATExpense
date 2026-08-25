@@ -5,10 +5,12 @@ import { PARTY_PURCHASE_THRESHOLD } from "@/lib/constants";
 import { and, eq, sql } from "drizzle-orm";
 
 /**
- * Generates an expense report for a company and fiscal year month, grouped by category.
+ * Generates an expense report for a specified company, fiscal year, and Nepali month, grouped by expense category.
  *
+ * @param companyId - The company identifier
+ * @param fiscalYearId - The fiscal year identifier
  * @param nepaliMonth - The Nepali month included in the report
- * @returns Category-level expense totals and overall totals for the specified month
+ * @returns The requested month and identifiers, category-level expense totals, and overall totals
  */
 export async function getMonthlyReport(
   companyId: string,

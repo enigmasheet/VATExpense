@@ -16,9 +16,11 @@ import { normalizeMiti } from "@/lib/nepali-date";
 export const runtime = "nodejs";
 
 /**
- * Confirms a pending import batch and creates expense records for its valid rows.
- * Uses an atomic status claim to prevent double-confirm race conditions.
- * Re-validates that referenced masters still exist before inserting expenses.
+ * Confirms a pending import batch and creates expense records for eligible rows.
+ *
+ * Revalidates referenced master records, skips duplicate invoice numbers, and prevents concurrent confirmations.
+ *
+ * @returns An API response containing the confirmed batch ID, status, imported row count, and skipped row count.
  */
 export async function POST(
   request: Request,

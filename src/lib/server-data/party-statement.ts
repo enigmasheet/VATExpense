@@ -32,8 +32,9 @@ export interface PartyStatementSummary {
 }
 
 /**
- * Fetches a party statement: all transactions for a party in a fiscal year,
- * with running totals for reconciliation.
+ * Retrieves a party's transactions for a fiscal year with aggregated statement totals.
+ *
+ * @returns The party statement summary and transaction rows
  */
 export async function getPartyStatement(
   companyId: string,

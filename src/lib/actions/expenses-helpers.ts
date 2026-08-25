@@ -73,8 +73,12 @@ export interface PreloadedContext {
 }
 
 /**
- * Pre-loads all reference data needed for a batch of expense rows.
- * Runs 4 queries total regardless of batch size (vs 3-4 per row before).
+ * Preloads party, fiscal-year, and existing invoice reference data for expense rows in a company.
+ *
+ * @param companyId - The company whose reference data is loaded
+ * @param rows - Expense rows whose party, fiscal-year, and invoice references are collected
+ * @param defaultVatRate - VAT rate stored in the preloaded context for rows without an explicit rate
+ * @returns Maps of parties and fiscal years, normalized existing invoice keys, and the default VAT rate
  */
 export async function preloadBatchContext(
   companyId: string,
@@ -158,13 +162,13 @@ export function buildExpenseFingerprint(
 }
 
 /**
- * Loads the fiscal year and party references for an expense input.
+ * Resolves the fiscal year and party associated with an expense.
  *
  * @param companyId - The company that must own the referenced records
- * @param data - The validated expense input
- * @param defaultVatRate - Fallback VAT rate when the input does not specify one
- * @param preloaded - Optional pre-loaded context to avoid DB queries (for batch mode)
- * @returns The resolved references, or an error message string if any are missing
+ * @param data - The expense input containing fiscal year, date, party, and VAT details
+ * @param defaultVatRate - VAT rate used when the input does not specify one
+ * @param preloaded - Optional preloaded references for batch processing
+ * @returns The resolved expense context, or an error message when a fiscal year or party cannot be found
  */
 export async function loadExpenseReferences(
   companyId: string,

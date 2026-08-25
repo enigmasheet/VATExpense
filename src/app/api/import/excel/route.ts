@@ -83,7 +83,7 @@ function mapExcelRow(row: Record<string, unknown>): ParsedRow | null {
 /**
  * Imports spreadsheet data from a multipart form request and creates a pending import batch.
  *
- * @returns A response containing the created batch metadata, or an error response for invalid form data, empty workbook content, or processing failures.
+ * @returns A response containing the created batch metadata, or an error response for invalid input or processing failures.
  */
 export async function POST(request: Request) {
   const companyId = await requireCompanyIdFromSession(request);
