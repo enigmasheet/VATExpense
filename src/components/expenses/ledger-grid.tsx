@@ -56,6 +56,13 @@ export function LedgerGrid({
   const prevErrorsRef = useRef<Map<string, string>>(new Map());
   const prevRowCountRef = useRef(rows.length);
 
+  // Confirmation dialog for deleting rows with data
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const pendingDeleteRow = pendingDeleteId ? rows.find((r) => r.id === pendingDeleteId) : null;
+  const pendingDeleteHasData = pendingDeleteRow
+    ? !!(pendingDeleteRow.partyId || pendingDeleteRow.invoiceNumber || pendingDeleteRow.taxableAmount)
+    : false;
+
   // Auto-focus the first input of a newly added row
   useEffect(() => {
     if (rows.length > prevRowCountRef.current && gridRef.current) {
