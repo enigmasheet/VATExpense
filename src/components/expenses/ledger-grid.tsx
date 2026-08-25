@@ -56,7 +56,6 @@ export function LedgerGrid({
   const prevErrorsRef = useRef<Map<string, string>>(new Map());
   const prevRowCountRef = useRef(rows.length);
 
-  // Confirmation dialog for deleting rows with data
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const addedRowIdRef = useRef<string | null>(null);
 
