@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { trucks, expenses } from "@/lib/db/schema";
 import { normalizeName } from "@/lib/normalize";
 import { and, eq, sql } from "drizzle-orm";
+import { isUniqueViolation } from "@/lib/api-response";
 import type { ServiceResult } from "./types";
 
 export type Truck = typeof trucks.$inferSelect;
@@ -24,19 +25,26 @@ export async function createTruck(
   )[0];
   if (existing) return { ok: false, error: `Truck "${input.name}" already exists` };
 
-  const [created] = await db
-    .insert(trucks)
-    .values({
-      companyId,
-      name: input.name,
-      normalizedName,
-      ownerName: input.ownerName ?? null,
-      truckType: input.truckType ?? null,
-      isActive: input.isActive,
-    })
-    .returning();
+  try {
+    const [created] = await db
+      .insert(trucks)
+      .values({
+        companyId,
+        name: input.name,
+        normalizedName,
+        ownerName: input.ownerName ?? null,
+        truckType: input.truckType ?? null,
+        isActive: input.isActive,
+      })
+      .returning();
 
-  return { ok: true, data: created };
+    return { ok: true, data: created };
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return { ok: false, error: `A truck with this name already exists` };
+    }
+    throw err;
+  }
 }
 
 /**

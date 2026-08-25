@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
-import { unauthorized, notFound } from "./api-response";
-import { ROLE_SUPER_ADMIN } from "@/lib/constants";
+import { unauthorized, notFound, forbidden } from "./api-response";
+import { ROLE_SUPER_ADMIN, ROLE_ADMIN } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { companies } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -58,4 +58,17 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const session = await auth();
   if (!session?.user) return null;
   return session.user as SessionUser;
+}
+
+/**
+ * Requires the caller to have Admin or SuperAdmin role.
+ * Returns the session user on success, or a NextResponse error.
+ */
+export async function requireAdminRole(): Promise<SessionUser | NextResponse> {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
+  if (user.role !== ROLE_SUPER_ADMIN && user.role !== ROLE_ADMIN) {
+    return forbidden("Admin privileges required");
+  }
+  return user;
 }

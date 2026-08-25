@@ -37,7 +37,7 @@ describe("buildDuplicateIndex", () => {
     row2.partyId = "p1";
     row2.invoiceNumber = "INV-001";
     const index = buildDuplicateIndex([row1, row2]);
-    expect(index.get("p1|INV-001")).toBe(2);
+    expect(index.get("p1|inv-001")).toBe(2);
   });
 
   it("counts different invoice keys separately", () => {
@@ -48,8 +48,8 @@ describe("buildDuplicateIndex", () => {
     row2.partyId = "p1";
     row2.invoiceNumber = "INV-002";
     const index = buildDuplicateIndex([row1, row2]);
-    expect(index.get("p1|INV-001")).toBe(1);
-    expect(index.get("p1|INV-002")).toBe(1);
+    expect(index.get("p1|inv-001")).toBe(1);
+    expect(index.get("p1|inv-002")).toBe(1);
   });
 });
 
@@ -157,7 +157,7 @@ describe("validateLedgerRow", () => {
   });
 
   it("returns error when invoice exists in DB", () => {
-    const invoices = new Set(["p1|INV-001"]);
+    const invoices = new Set(["p1|inv-001"]);
     const result = validateLedgerRow(
       makeRow({
         miti: "2080-04-01",
@@ -176,7 +176,7 @@ describe("validateLedgerRow", () => {
   });
 
   it("returns error for duplicate in batch", () => {
-    const index = new Map([["p1|INV-001", 2]]);
+    const index = new Map([["p1|inv-001", 2]]);
     const result = validateLedgerRow(
       makeRow({
         miti: "2080-04-01",

@@ -25,6 +25,7 @@ interface LedgerGridProps {
   fiscalYearName: string;
   allParties: Party[];
   allCategories: Category[];
+  defaultVatRate?: string;
 }
 
 /**
@@ -42,6 +43,7 @@ export function LedgerGrid({
   fiscalYearName,
   allParties,
   allCategories,
+  defaultVatRate,
 }: LedgerGridProps) {
   const [rows, dispatch] = useReducer(ledgerReducer, [createLedgerRow()]);
   const [existingInvoices, setExistingInvoices] = useState<Set<string>>(new Set());
@@ -122,6 +124,7 @@ export function LedgerGrid({
     fiscalYearId,
     dispatch,
     setExistingInvoices,
+    defaultVatRate,
   });
 
   const totals = useMemo(() => {

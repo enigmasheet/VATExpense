@@ -29,11 +29,13 @@ export async function checkInvoiceDuplicate(
 ): Promise<{ level: DuplicateLevel; existing: (typeof expenses.$inferSelect) } | null> {
   if (!fingerprint.invoiceNumber) return null;
 
+  const normalizedInvoice = fingerprint.invoiceNumber.trim().toLowerCase();
+
   const conditions = [
     eq(expenses.companyId, fingerprint.companyId),
     eq(expenses.fiscalYearId, fingerprint.fiscalYearId),
     eq(expenses.partyId, fingerprint.partyId),
-    eq(expenses.invoiceNumber, fingerprint.invoiceNumber),
+    eq(expenses.invoiceNumber, normalizedInvoice),
     eq(expenses.isDeleted, false),
   ];
   if (excludeId) conditions.push(ne(expenses.id, excludeId));

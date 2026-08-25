@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { parties, expenses } from "@/lib/db/schema";
 import { normalizeName, normalizeVatNumber } from "@/lib/normalize";
 import { and, eq, isNull, sql } from "drizzle-orm";
+import { isUniqueViolation } from "@/lib/api-response";
 import type { ServiceResult } from "./types";
 
 export type Party = typeof parties.$inferSelect;
@@ -59,23 +60,30 @@ export async function createParty(
     if (vatDup) return { ok: false, error: `VAT number already used by "${vatDup.name}"` };
   }
 
-  const [created] = await db
-    .insert(parties)
-    .values({
-      companyId,
-      name: input.name,
-      normalizedName,
-      vatNumber: input.vatNumber ?? null,
-      normalizedVatNumber,
-      locationId: input.locationId ?? null,
-      phone: input.phone ?? null,
-      whatsapp: input.whatsapp ?? null,
-      comment: input.comment ?? null,
-      isActive: input.isActive,
-    })
-    .returning();
+  try {
+    const [created] = await db
+      .insert(parties)
+      .values({
+        companyId,
+        name: input.name,
+        normalizedName,
+        vatNumber: input.vatNumber ?? null,
+        normalizedVatNumber,
+        locationId: input.locationId ?? null,
+        phone: input.phone ?? null,
+        whatsapp: input.whatsapp ?? null,
+        comment: input.comment ?? null,
+        isActive: input.isActive,
+      })
+      .returning();
 
-  return { ok: true, data: created };
+    return { ok: true, data: created };
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return { ok: false, error: `A party with this name or VAT number already exists` };
+    }
+    throw err;
+  }
 }
 
 /**

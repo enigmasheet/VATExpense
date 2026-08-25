@@ -97,8 +97,9 @@ export function validateLedgerRow(
     return { status: STATUS_ERROR, error: "Category required", warnings };
   }
 
-  // Taxable amount
-  if (!row.taxableAmount || parseFloat(row.taxableAmount) <= 0) {
+  // Taxable amount — use Number.isFinite to reject NaN (NaN <= 0 is false)
+  const taxable = Number(row.taxableAmount);
+  if (!Number.isFinite(taxable) || taxable <= 0) {
     return {
       status: STATUS_ERROR,
       error: "Taxable amount must be greater than 0",
