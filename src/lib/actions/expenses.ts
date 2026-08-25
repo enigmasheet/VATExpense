@@ -173,10 +173,8 @@ export async function batchSaveExpenses(
       index: number;
     }[] = [];
 
-    // Track seen duplicates within the batch
     const seenInvoiceKeys = new Set<string>();
 
-    // Pre-load all reference data in bulk (4 queries vs 3-4 per row)
     const parsedRows: { index: number; data: ExpenseInput }[] = [];
     for (let i = 0; i < rows.length; i++) {
       const payload = { ...rows[i], companyId };

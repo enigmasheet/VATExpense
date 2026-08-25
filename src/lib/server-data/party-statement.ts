@@ -74,7 +74,6 @@ export async function getPartyStatement(
 
   const { fiscalYears } = await import("@/lib/db/schema");
 
-  // Parallelize party + FY lookups (previously sequential)
   const [[party], [fy]] = await Promise.all([
     db
       .select({ name: parties.name, vatNumber: parties.vatNumber })

@@ -128,9 +128,6 @@ export async function preloadBatchContext(
   return { parties: partiesMap, fiscalYearsById: fysById, existingInvoiceKeys, defaultVatRate };
 }
 
-/**
- * Builds the duplicate-check fingerprint for an expense input.
- */
 export function buildExpenseFingerprint(
   companyId: string,
   data: ExpenseInput,
