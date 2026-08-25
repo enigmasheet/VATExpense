@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { fiscalYears } from "@/lib/db/schema";
+import { fiscalYears, expenses } from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { isUniqueViolation } from "@/lib/api-response";
 import type { ServiceResult } from "./types";
@@ -125,6 +125,15 @@ export async function deleteFiscalYear(
   id: string,
   companyId: string,
 ): Promise<ServiceResult<{ id: string }>> {
+  // Check for expenses referencing this fiscal year
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(expenses)
+    .where(and(eq(expenses.fiscalYearId, id), eq(expenses.companyId, companyId), eq(expenses.isDeleted, false)));
+  if (count > 0) {
+    return { ok: false, error: "Cannot delete fiscal year — it is referenced by existing expenses" };
+  }
+
   const [deleted] = await db
     .delete(fiscalYears)
     .where(and(eq(fiscalYears.id, id), eq(fiscalYears.companyId, companyId)))

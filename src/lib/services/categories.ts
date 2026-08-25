@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { categories } from "@/lib/db/schema";
+import { categories, expenses } from "@/lib/db/schema";
 import { normalizeName } from "@/lib/normalize";
 import { and, eq, sql } from "drizzle-orm";
 import { isUniqueViolation } from "@/lib/api-response";
@@ -81,6 +81,15 @@ export async function deleteCategory(
   id: string,
   companyId: string,
 ): Promise<ServiceResult<{ id: string }>> {
+  // Check for expenses referencing this category
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(expenses)
+    .where(and(eq(expenses.categoryId, id), eq(expenses.companyId, companyId), eq(expenses.isDeleted, false)));
+  if (count > 0) {
+    return { ok: false, error: "Cannot delete category — it is referenced by existing expenses" };
+  }
+
   const [deleted] = await db
     .delete(categories)
     .where(and(eq(categories.id, id), eq(categories.companyId, companyId)))

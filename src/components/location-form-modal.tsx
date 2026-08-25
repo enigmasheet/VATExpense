@@ -23,6 +23,13 @@ export function LocationFormModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function handleClose() {
+    if (loading) return;
+    setName("");
+    setError(null);
+    onCancel();
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -30,9 +37,11 @@ export function LocationFormModal({
     try {
       const res = await api<{ data: { id: string; name: string } }>("/api/locations", {
         method: "POST",
-        body: JSON.stringify({ companyId, name }),
+        body: JSON.stringify({ companyId, name: name.trim() }),
       });
       onSaved(res.data);
+      setName("");
+      setError(null);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.detail);
@@ -45,7 +54,14 @@ export function LocationFormModal({
   }
 
   return (
-    <Modal open={open} title="Add Location" onClose={onCancel} width="max-w-sm">
+    <Modal
+      open={open}
+      title="Add Location"
+      onClose={handleClose}
+      width="max-w-sm"
+      closeOnEscape={!loading}
+      closeOnOverlayClick={!loading}
+    >
       <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
         <Field label="Location name" htmlFor="lf-name">
           <Input
@@ -61,7 +77,7 @@ export function LocationFormModal({
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+          <Button type="button" variant="ghost" size="sm" onClick={handleClose} disabled={loading}>
             Cancel
           </Button>
           <Button type="submit" size="sm" disabled={loading}>

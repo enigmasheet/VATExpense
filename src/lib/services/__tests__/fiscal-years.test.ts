@@ -96,12 +96,22 @@ describe("fiscal-years service", () => {
 
   describe("deleteFiscalYear", () => {
     it("returns not-found when no rows deleted", async () => {
+      vi.mocked(db.select).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 0 }]),
+        }),
+      } as never);
       vi.mocked(db.delete).mockReturnValue(mockDeleteReturn([]) as never);
       const result = await deleteFiscalYear("fy-1", "comp-1");
       expect(result.ok).toBe(false);
     });
 
     it("returns ok when deleted", async () => {
+      vi.mocked(db.select).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 0 }]),
+        }),
+      } as never);
       vi.mocked(db.delete).mockReturnValue(mockDeleteReturn([{ id: "fy-1" }]) as never);
       const result = await deleteFiscalYear("fy-1", "comp-1");
       expect(result.ok).toBe(true);

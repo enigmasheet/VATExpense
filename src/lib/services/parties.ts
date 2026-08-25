@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { parties } from "@/lib/db/schema";
+import { parties, expenses } from "@/lib/db/schema";
 import { normalizeName, normalizeVatNumber } from "@/lib/normalize";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { isUniqueViolation } from "@/lib/api-response";
@@ -148,6 +148,15 @@ export async function deleteParty(
   id: string,
   companyId: string,
 ): Promise<ServiceResult<{ id: string }>> {
+  // Check for expenses referencing this party
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(expenses)
+    .where(and(eq(expenses.partyId, id), eq(expenses.companyId, companyId), eq(expenses.isDeleted, false)));
+  if (count > 0) {
+    return { ok: false, error: "Cannot delete party — it is referenced by existing expenses" };
+  }
+
   const [deleted] = await db
     .delete(parties)
     .where(and(eq(parties.id, id), eq(parties.companyId, companyId)))

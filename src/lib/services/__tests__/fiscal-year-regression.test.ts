@@ -116,6 +116,11 @@ describe("fiscal year regression protection", () => {
 
   describe("deleteFiscalYear", () => {
     it("deletes FY scoped to company", async () => {
+      vi.mocked(db.select).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 0 }]),
+        }),
+      } as never);
       const deleteChain = mockDeleteReturn([{ id: "fy1" }]);
       vi.mocked(db.delete).mockReturnValue(deleteChain as never);
 
@@ -125,6 +130,11 @@ describe("fiscal year regression protection", () => {
     });
 
     it("returns not-found when FY doesn't exist", async () => {
+      vi.mocked(db.select).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 0 }]),
+        }),
+      } as never);
       const deleteChain = mockDeleteReturn([]);
       vi.mocked(db.delete).mockReturnValue(deleteChain as never);
 

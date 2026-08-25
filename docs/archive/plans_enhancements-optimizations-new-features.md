@@ -1,3 +1,5 @@
+> **Archived** — Historical reference. See [PLAN.md](../../PLAN.md) for current status.
+
 ﻿# VAT Expense Ledger — Enhancements, Optimizations & New Features Plan
 
 > Generated from a comprehensive codebase audit across UI/UX, backend/API, code quality, and test coverage.

@@ -61,7 +61,6 @@ export const TOAST_ERROR_MS = 6000;
 // File Import Constants
 // ============================================================
 export const MAX_IMPORT_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-export const IMPORT_BODY_SIZE_LIMIT = "10mb";
 export const MIN_PASSWORD_LENGTH = 8;
 export const ALLOWED_IMPORT_EXTENSIONS = ["xlsx", "xls", "csv"];
 export const IMPORT_DATE_FORMAT = "DD/MM/YYYY";
@@ -79,7 +78,8 @@ export const FOCUS_DELAY_MS = 10;
 // ============================================================
 // Category Inference Keywords
 // ============================================================
-export const FUEL_KEYWORDS = ["diesel", "hsd", "petrol", "fuel", "oil"];
+export const FUEL_KEYWORDS = ["diesel", "disel", "petrol", "fuel", "oil", "lubricant"];
+export const FUEL_TOKEN_KEYWORDS = ["per", "hsd", "pms"];
 export const SPARE_PARTS_KEYWORDS = ["parts", "spare", "filter", "belt", "bearing"];
 export const TYRE_KEYWORDS = ["tyre", "tire", "tube"];
 

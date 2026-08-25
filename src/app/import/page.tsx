@@ -92,6 +92,7 @@ export default function ImportPage() {
   const [autoCreate, setAutoCreate] = useState(true);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [uploadWarnings, setUploadWarnings] = useState<string[]>([]);
+  const [applyingRowId, setApplyingRowId] = useState<string | null>(null);
 
   const handleFileChange = useCallback(() => {
     setHasFile(!!fileRef.current?.files?.[0]);
@@ -220,6 +221,30 @@ export default function ImportPage() {
       fileRef.current.value = "";
     }
   }, []);
+
+  const handleApplySuggestion = useCallback(
+    async (rowId: string, field: "party" | "category", value: string) => {
+      if (!preview) return;
+      setApplyingRowId(rowId);
+      try {
+        const patchField = field === "party" ? "rawPartyName" : "rawCategoryName";
+        await api(`/api/import/${preview.batchId}/rows/${rowId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ [patchField]: value }),
+        });
+        // Re-fetch preview to get re-resolved rows
+        const previewData = await api<{ data: BatchPreview }>(
+          `/api/import/${preview.batchId}/preview?autoCreate=${autoCreate}`,
+        );
+        setPreview(previewData.data);
+      } catch (e) {
+        setError(e instanceof ApiError ? e.detail : "Failed to apply suggestion");
+      } finally {
+        setApplyingRowId(null);
+      }
+    },
+    [preview, autoCreate],
+  );
 
   // Compute issue breakdown from preview rows
   const issueBreakdown = useMemo(() => {
@@ -454,7 +479,16 @@ export default function ImportPage() {
                       <span className="text-warning">
                         {row.raw.partyName}
                         <span className="ml-1 text-xs">
-                          {"\u2192"} Did you mean <strong>{row.suggestions.party}</strong>?
+                          {"\u2192"} Did you mean{" "}
+                          <button
+                            type="button"
+                            className="font-semibold underline decoration-dotted underline-offset-2 hover:text-primary disabled:opacity-50"
+                            disabled={applyingRowId === row.id}
+                            onClick={() => handleApplySuggestion(row.id, "party", row.suggestions.party!)}
+                          >
+                            {row.suggestions.party}
+                          </button>
+                          ?
                         </span>
                       </span>
                     );
@@ -471,7 +505,16 @@ export default function ImportPage() {
                       <span className="text-warning">
                         {row.raw.categoryName}
                         <span className="ml-1 text-xs">
-                          {"\u2192"} Did you mean <strong>{row.suggestions.category}</strong>?
+                          {"\u2192"} Did you mean{" "}
+                          <button
+                            type="button"
+                            className="font-semibold underline decoration-dotted underline-offset-2 hover:text-primary disabled:opacity-50"
+                            disabled={applyingRowId === row.id}
+                            onClick={() => handleApplySuggestion(row.id, "category", row.suggestions.category!)}
+                          >
+                            {row.suggestions.category}
+                          </button>
+                          ?
                         </span>
                       </span>
                     );

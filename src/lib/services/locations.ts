@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { locations } from "@/lib/db/schema";
+import { locations, expenses } from "@/lib/db/schema";
 import { normalizeName } from "@/lib/normalize";
 import { and, eq, sql } from "drizzle-orm";
 import { isUniqueViolation } from "@/lib/api-response";
@@ -81,6 +81,15 @@ export async function deleteLocation(
   id: string,
   companyId: string,
 ): Promise<ServiceResult<{ id: string }>> {
+  // Check for expenses referencing this location
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(expenses)
+    .where(and(eq(expenses.locationId, id), eq(expenses.companyId, companyId), eq(expenses.isDeleted, false)));
+  if (count > 0) {
+    return { ok: false, error: "Cannot delete location — it is referenced by existing expenses" };
+  }
+
   const [deleted] = await db
     .delete(locations)
     .where(and(eq(locations.id, id), eq(locations.companyId, companyId)))

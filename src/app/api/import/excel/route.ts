@@ -7,7 +7,7 @@ import {
   BATCH_STATUS_PENDING,
   BATCH_ROW_STATUS_PENDING,
   HTTP_CREATED,
-  IMPORT_BODY_SIZE_LIMIT,
+  MAX_IMPORT_FILE_SIZE,
   IMPORT_DATE_FORMAT,
   ALLOWED_IMPORT_EXTENSIONS,
 } from "@/lib/status-constants";
@@ -15,7 +15,6 @@ import * as XLSX from "xlsx";
 import { eq, and } from "drizzle-orm";
 
 export const runtime = "nodejs";
-export const maxBodySize = IMPORT_BODY_SIZE_LIMIT;
 
 interface ParsedRow {
   miti: string;
@@ -103,6 +102,11 @@ export async function POST(request: Request) {
   if (!file) return badRequest("file is required");
   if (!fiscalYearId) return badRequest("fiscalYearId is required");
 
+  // Validate file size
+  if (file.size > MAX_IMPORT_FILE_SIZE) {
+    return badRequest(`File size exceeds the maximum of ${Math.round(MAX_IMPORT_FILE_SIZE / 1024 / 1024)}MB`);
+  }
+
   // Validate fiscalYearId exists and belongs to this company
   const [fy] = await db
     .select({ id: fiscalYears.id })
@@ -119,7 +123,11 @@ export async function POST(request: Request) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const workbook = XLSX.read(buffer, { type: "buffer", dateNF: IMPORT_DATE_FORMAT });
+    const isExcel = ext === "xlsx" || ext === "xls";
+    const workbook = XLSX.read(buffer, {
+      type: "buffer",
+      ...(isExcel ? { dateNF: IMPORT_DATE_FORMAT } : { raw: true }),
+    });
     const sheetName = workbook.SheetNames[0];
     if (!sheetName) return badRequest("File has no sheets");
 
@@ -132,10 +140,19 @@ export async function POST(request: Request) {
     }
 
     const sheet = workbook.Sheets[sheetName];
-    const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: false });
+
+    // Limit rows read into memory to detect overflow without materializing the entire sheet
+    const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+      raw: false,
+      range: BATCH_SIZE_LIMIT + 1,
+    });
 
     if (jsonData.length === 0) {
       return badRequest("File has no data rows");
+    }
+
+    if (jsonData.length > BATCH_SIZE_LIMIT) {
+      return badRequest(`File exceeds the maximum of ${BATCH_SIZE_LIMIT} rows`);
     }
 
     const rows: ParsedRow[] = [];
@@ -146,10 +163,6 @@ export async function POST(request: Request) {
 
     if (rows.length === 0) {
       return badRequest("No valid data rows found in file");
-    }
-
-    if (rows.length > BATCH_SIZE_LIMIT) {
-      return badRequest(`File has ${rows.length} rows, exceeding the maximum of ${BATCH_SIZE_LIMIT}`);
     }
 
     const [batch] = await db

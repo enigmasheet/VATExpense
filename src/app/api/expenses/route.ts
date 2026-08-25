@@ -6,6 +6,7 @@ import {
   categories,
   locations,
   trucks,
+  fiscalYears,
 } from "@/lib/db/schema";
 import { expenseInputSchema, validateAmounts } from "@/lib/validation/expense";
 import { safeParse } from "@/lib/validation/utils";
@@ -20,7 +21,7 @@ import {
 import { requireCompanyIdFromSession, requireAdminRole } from "@/lib/api-auth";
 import { findFiscalYearByIdAndCompany, findPartyByIdAndCompany } from "@/lib/db-helpers/entities";
 import { resolveFiscalYear } from "@/lib/actions/expenses-helpers";
-import { parseMiti } from "@/lib/nepali-date";
+import { parseMiti, fyName } from "@/lib/nepali-date";
 import { checkInvoiceDuplicate, findSuspiciousDuplicates } from "@/lib/expenses/duplicates";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@/lib/constants";
 import { and, eq, ilike, or, sql, aliasedTable, type SQL } from "drizzle-orm";
@@ -155,103 +156,167 @@ export async function POST(request: Request) {
 
   try {
     // Parallel lookups for independent entities
-    const [company, party] = await Promise.all([
+    const [company, party, category, location, truck] = await Promise.all([
       db.select().from(companies).where(eq(companies.id, input.companyId)).limit(1).then((r) => r[0]),
       findPartyByIdAndCompany(input.partyId, input.companyId),
+      input.categoryId
+        ? db.select({ id: categories.id }).from(categories).where(and(eq(categories.id, input.categoryId), eq(categories.companyId, input.companyId))).limit(1).then((r) => r[0])
+        : Promise.resolve({ id: input.categoryId } as { id: string }),
+      input.locationId
+        ? db.select({ id: locations.id }).from(locations).where(and(eq(locations.id, input.locationId), eq(locations.companyId, input.companyId))).limit(1).then((r) => r[0])
+        : Promise.resolve(null),
+      input.truckId
+        ? db.select({ id: trucks.id }).from(trucks).where(and(eq(trucks.id, input.truckId), eq(trucks.companyId, input.companyId))).limit(1).then((r) => r[0])
+        : Promise.resolve(null),
     ]);
 
     if (!company) return notFound("Company not found");
     if (!party) return notFound("Party not found for this company");
-
-    // Resolve fiscal year — use provided ID or auto-resolve from miti
-    let fiscalYearId: string;
-    if (input.fiscalYearId) {
-      const fy = await findFiscalYearByIdAndCompany(input.fiscalYearId, input.companyId);
-      if (!fy) return notFound("Fiscal year not found for this company");
-      fiscalYearId = fy.id;
-    } else {
-      const resolved = await resolveFiscalYear(input.companyId, input.miti);
-      if ("error" in resolved) return notFound(resolved.error);
-      fiscalYearId = resolved.fiscalYearId;
-    }
-
-    const vatRate = input.vatRate ?? company.defaultVatRate;
-
-    const fingerprint = {
-      companyId: input.companyId,
-      fiscalYearId,
-      partyId: input.partyId,
-      invoiceNumber: input.invoiceNumber ?? null,
-      miti: input.miti,
-      taxableAmount: input.taxableAmount,
-      vatAmount: input.vatAmount,
-      totalAmount: input.totalAmount,
-    };
-
-    // Parallel duplicate checks
-    const [duplicate, suspicious] = await Promise.all([
-      checkInvoiceDuplicate(fingerprint),
-      !input.invoiceNumber ? findSuspiciousDuplicates(fingerprint) : Promise.resolve([]),
-    ]);
-
-    if (duplicate) {
-      return conflict(
-        duplicate.level === "exact"
-          ? "This exact invoice has already been recorded for this party and fiscal year"
-          : "An invoice with this number already exists for this party and fiscal year — review before saving",
-        {
-          duplicateLevel: duplicate.level,
-          existing: duplicate.existing,
-        },
-      );
-    }
-
-    const warnings: string[] = [];
-    if (suspicious.length > 0) {
-      warnings.push(
-        `${suspicious.length} similar expense(s) already exist without an invoice number — possibly a duplicate`,
-      );
-    }
-
-    const toleranceWarnings = validateAmounts({
-      quantity: input.quantity ?? null,
-      rate: input.rate ?? null,
-      taxableAmount: input.taxableAmount,
-      vatAmount: input.vatAmount,
-      totalAmount: input.totalAmount,
-      vatRate,
-    });
-    warnings.push(...toleranceWarnings);
+    if (!category) return notFound("Category not found for this company");
+    if (input.locationId && !location) return notFound("Location not found for this company");
+    if (input.truckId && !truck) return notFound("Truck not found for this company");
 
     const miti = parseMiti(input.miti);
     if (!miti.ok) return unprocessableEntity("Invalid miti", [miti.error]);
 
-    const [created] = await db
-      .insert(expenses)
-      .values({
+    // Resolve fiscal year — use provided ID or auto-resolve from miti
+    let fiscalYearId: string;
+    let resolvedFy: { startYear: number } | undefined;
+    if (input.fiscalYearId) {
+      const fy = await findFiscalYearByIdAndCompany(input.fiscalYearId, input.companyId);
+      if (!fy) return notFound("Fiscal year not found for this company");
+      fiscalYearId = fy.id;
+      resolvedFy = fy;
+    } else {
+      const resolved = await resolveFiscalYear(input.companyId, input.miti);
+      if ("error" in resolved) return notFound(resolved.error);
+      fiscalYearId = resolved.fiscalYearId;
+      resolvedFy = resolved.fiscalYear;
+    }
+
+    // Verify the miti falls inside the resolved fiscal year
+    if (resolvedFy && miti.fiscalYear !== resolvedFy.startYear) {
+      return badRequest(
+        `Date ${input.miti} belongs to fiscal year ${miti.fiscalYearName}, not the selected fiscal year`,
+      );
+    }
+
+    const vatRate = input.vatRate ?? company.defaultVatRate;
+
+    // Wrap FY auto-create + expense insert + duplicate check in a transaction
+    // to prevent orphaned FY records on insert failure
+    const result = await db.transaction(async (tx) => {
+      // If no explicit FY was provided, auto-create within the transaction
+      let resolvedFiscalYearId = fiscalYearId;
+      if (!input.fiscalYearId) {
+        const name = fyName(miti.fiscalYear);
+        const [existingFy] = await tx
+          .select()
+          .from(fiscalYears)
+          .where(and(eq(fiscalYears.companyId, input.companyId), eq(fiscalYears.name, name)))
+          .limit(1);
+
+        if (existingFy) {
+          resolvedFiscalYearId = existingFy.id;
+        } else {
+          const [newFy] = await tx
+            .insert(fiscalYears)
+            .values({
+              companyId: input.companyId,
+              name,
+              startYear: miti.fiscalYear,
+              endYear: miti.fiscalYear + 1,
+              isActive: false,
+            })
+            .returning();
+          resolvedFiscalYearId = newFy.id;
+        }
+      }
+
+      const fingerprint = {
         companyId: input.companyId,
-        fiscalYearId,
+        fiscalYearId: resolvedFiscalYearId,
         partyId: input.partyId,
-        categoryId: input.categoryId,
-        locationId: input.locationId ?? null,
-        truckId: input.truckId ?? null,
-        miti: input.miti,
-        nepaliMonth: miti.monthName,
         invoiceNumber: input.invoiceNumber ?? null,
-        item: input.item,
+        miti: input.miti,
+        taxableAmount: input.taxableAmount,
+        vatAmount: input.vatAmount,
+        totalAmount: input.totalAmount,
+      };
+
+      // Parallel duplicate checks
+      const [duplicate, suspicious] = await Promise.all([
+        checkInvoiceDuplicate(fingerprint),
+        !input.invoiceNumber ? findSuspiciousDuplicates(fingerprint) : Promise.resolve([]),
+      ]);
+
+      if (duplicate) {
+        return {
+          created: null,
+          warnings: [] as string[],
+          duplicate,
+        };
+      }
+
+      const warningList: string[] = [];
+      if (suspicious.length > 0) {
+        warningList.push(
+          `${suspicious.length} similar expense(s) already exist without an invoice number — possibly a duplicate`,
+        );
+      }
+
+      const toleranceWarnings = validateAmounts({
         quantity: input.quantity ?? null,
         rate: input.rate ?? null,
         taxableAmount: input.taxableAmount,
         vatAmount: input.vatAmount,
         totalAmount: input.totalAmount,
         vatRate,
-        remarks: input.remarks ?? null,
-        createdBy: userId ?? null,
-        updatedBy: userId ?? null,
-      })
-      .returning();
+      });
+      warningList.push(...toleranceWarnings);
 
-    return apiOk({ data: created, warnings }, 201);
+      const [inserted] = await tx
+        .insert(expenses)
+        .values({
+          companyId: input.companyId,
+          fiscalYearId: resolvedFiscalYearId,
+          partyId: input.partyId,
+          categoryId: input.categoryId,
+          locationId: input.locationId ?? null,
+          truckId: input.truckId ?? null,
+          miti: input.miti,
+          nepaliMonth: miti.monthName,
+          invoiceNumber: input.invoiceNumber ?? null,
+          item: input.item,
+          quantity: input.quantity ?? null,
+          rate: input.rate ?? null,
+          taxableAmount: input.taxableAmount,
+          vatAmount: input.vatAmount,
+          totalAmount: input.totalAmount,
+          vatRate,
+          remarks: input.remarks ?? null,
+          createdBy: userId ?? null,
+          updatedBy: userId ?? null,
+        })
+        .returning();
+
+      return { created: inserted, warnings: warningList, duplicate: null as null };
+    });
+
+    if (result.duplicate) {
+      const dup = result.duplicate;
+      return conflict(
+        dup.level === "exact"
+          ? "This exact invoice has already been recorded for this party and fiscal year"
+          : "An invoice with this number already exists for this party and fiscal year — review before saving",
+        {
+          duplicateLevel: dup.level,
+          existing: dup.existing,
+        },
+      );
+    }
+
+    return apiOk({ data: result.created, warnings: result.warnings }, 201);
   } catch (err) {
     console.error("POST /api/expenses failed", err);
     return internalError();

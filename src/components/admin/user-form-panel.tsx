@@ -62,6 +62,17 @@ export function UserFormPanel({ mode, open, user, companies, onClose, onSaved }:
     }
   }, [open, user]);
 
+  function handleClose() {
+    if (saving) return;
+    setCompanyId("");
+    setName("");
+    setEmail("");
+    setPassword("");
+    setRole(ROLE_DATA_ENTRY);
+    setIsActive(true);
+    onClose();
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -69,13 +80,13 @@ export function UserFormPanel({ mode, open, user, companies, onClose, onSaved }:
       if (editing) {
         await api(`/api/admin/users/${user!.id}`, {
           method: "PATCH",
-          body: JSON.stringify({ name, email, role, isActive }),
+          body: JSON.stringify({ name: name.trim(), email: email.trim(), role, isActive }),
         });
         toast("User updated", "success");
       } else {
         await api("/api/admin/users", {
           method: "POST",
-          body: JSON.stringify({ companyId, name, email, password, role }),
+          body: JSON.stringify({ companyId, name: name.trim(), email: email.trim(), password, role }),
         });
         toast("User created", "success");
       }
@@ -83,6 +94,7 @@ export function UserFormPanel({ mode, open, user, companies, onClose, onSaved }:
       onClose();
     } catch (e: unknown) {
       toast(e instanceof Error ? e.message : "Failed to save user", "error");
+      setPassword("");
     } finally {
       setSaving(false);
     }
@@ -97,10 +109,12 @@ export function UserFormPanel({ mode, open, user, companies, onClose, onSaved }:
           ? `Update ${user?.email ?? ""}`
           : "Add a new user to a company with a role."
       }
-      onClose={onClose}
+      onClose={handleClose}
+      closeOnEscape={!saving}
+      closeOnOverlayClick={!saving}
       footer={
         <>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>
             Cancel
           </Button>
           <Button type="submit" form="user-form" loading={saving}>
@@ -140,7 +154,15 @@ export function UserFormPanel({ mode, open, user, companies, onClose, onSaved }:
         </Field>
         {!editing && (
           <Field label="Password" htmlFor="user-password" hint="Min 8 characters">
-            <Input id="user-password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input
+              id="user-password"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </Field>
         )}
         <Field label="Role" htmlFor="user-role">

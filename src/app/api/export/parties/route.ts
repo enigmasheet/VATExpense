@@ -2,6 +2,7 @@ import { getPartyPurchaseReport } from "@/lib/server-data";
 import { badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { PARTY_PURCHASE_THRESHOLD } from "@/lib/constants";
+import { sanitizeCsvValue } from "@/lib/format";
 import {
   HTTP_NOT_FOUND,
   CONTENT_TYPE_JSON,
@@ -48,8 +49,8 @@ export async function GET(request: Request) {
 
     const data = rows.map((r, i) => ({
       "S.N.": i + 1,
-      "Party": r.partyName,
-      "VAT No.": r.vatNumber ?? "",
+      "Party": sanitizeCsvValue(r.partyName),
+      "VAT No.": sanitizeCsvValue(r.vatNumber),
       "Transactions": r.expenseCount,
       "Taxable Amount": Number(r.totalTaxableAmount),
       "VAT Amount": Number(r.totalVatAmount),

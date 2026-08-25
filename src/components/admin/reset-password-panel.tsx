@@ -33,6 +33,13 @@ export function ResetPasswordPanel({ open, user, onClose }: Props) {
   const [confirm, setConfirm] = useState("");
   const [saving, setSaving] = useState(false);
 
+  function handleClose() {
+    if (saving) return;
+    setPassword("");
+    setConfirm("");
+    onClose();
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password !== confirm) {
@@ -51,6 +58,8 @@ export function ResetPasswordPanel({ open, user, onClose }: Props) {
       onClose();
     } catch (e: unknown) {
       toast(e instanceof Error ? e.message : "Failed to reset password", "error");
+      setPassword("");
+      setConfirm("");
     } finally {
       setSaving(false);
     }
@@ -61,10 +70,12 @@ export function ResetPasswordPanel({ open, user, onClose }: Props) {
       open={open}
       title="Reset Password"
       description={user ? `Set a new password for ${user.email}` : undefined}
-      onClose={onClose}
+      onClose={handleClose}
+      closeOnEscape={!saving}
+      closeOnOverlayClick={!saving}
       footer={
         <>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="secondary" onClick={handleClose} disabled={saving}>
             Cancel
           </Button>
           <Button type="submit" form="reset-password-form" disabled={saving}>

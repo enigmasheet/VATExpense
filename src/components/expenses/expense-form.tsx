@@ -367,6 +367,7 @@ export function ExpenseForm({
         const msgs: Message[] = [];
         if (err.status === 409) {
           msgs.push({ kind: "danger", text: err.detail });
+          toast(err.detail, "error");
         } else if (err.status === 422 && err.body?.errors) {
           (err.body.errors as string[]).forEach((text) => msgs.push({ kind: "danger", text }));
         } else {

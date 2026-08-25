@@ -25,6 +25,17 @@ export function requiredNumeric(scale: number) {
   );
 }
 
+export function requiredPositiveNumeric(scale: number, maxDigits = 12) {
+  const maxStr = "9".repeat(maxDigits) + "." + "9".repeat(scale);
+  return requiredNumeric(scale).refine(
+    (v) => {
+      const n = Number(v);
+      return n > 0 && Number(v) <= Number(maxStr);
+    },
+    `Must be a positive number up to ${Number(maxStr).toLocaleString()}`,
+  );
+}
+
 export const expenseInputSchema = z.object({
   companyId: companyIdSchema,
   fiscalYearId: z.preprocess(
@@ -55,12 +66,19 @@ export const expenseInputSchema = z.object({
     z.string().min(1, "Invoice number cannot be blank").max(MAX_NAME_LENGTH).nullable().optional(),
   ),
   item: z.string().trim().min(1, "Item is required").max(MAX_ITEM_LENGTH),
-  quantity: optionalPositiveNumeric(3),
-  rate: optionalPositiveNumeric(4),
-  taxableAmount: requiredNumeric(2),
-  vatAmount: requiredNumeric(2),
-  totalAmount: requiredNumeric(2),
-  vatRate: optionalNumeric(2),
+
+  quantity: optionalNumeric(3),
+  rate: optionalNumeric(4),
+  taxableAmount: requiredPositiveNumeric(2),
+  vatAmount: requiredPositiveNumeric(2),
+  totalAmount: requiredPositiveNumeric(2),
+  vatRate: z.preprocess(
+    (v) => toFixedStr(v, 2),
+    z.string().nullable().optional(),
+  ).refine(
+    (v) => v === null || v === undefined || (Number(v) > 0 && Number(v) <= 100),
+    "VAT rate must be between 0 and 100",
+  ),
   remarks: z.preprocess(
     (v) => (v === null || v === undefined || v === "" ? null : v),
     z.string().trim().max(MAX_REMARKS_LENGTH).nullable().optional(),
