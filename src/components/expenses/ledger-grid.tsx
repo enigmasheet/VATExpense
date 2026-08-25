@@ -58,10 +58,6 @@ export function LedgerGrid({
 
   // Confirmation dialog for deleting rows with data
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const pendingDeleteRow = pendingDeleteId ? rows.find((r) => r.id === pendingDeleteId) : null;
-  const pendingDeleteHasData = pendingDeleteRow
-    ? !!(pendingDeleteRow.partyId || pendingDeleteRow.invoiceNumber || pendingDeleteRow.taxableAmount)
-    : false;
 
   // Auto-focus the first input of a newly added row
   useEffect(() => {
@@ -235,17 +231,42 @@ export function LedgerGrid({
     dispatch({ type: "DUPLICATE_ROW", newRow, sourceIdx: idx });
   }
 
+  function removeRow(rowId: string) {
+    const row = rows.find((r) => r.id === rowId);
+    if (row && (row.partyId || row.invoiceNumber || row.taxableAmount)) {
+      setPendingDeleteId(rowId);
+      return;
+    }
+    dispatch({ type: "REMOVE_ROW", rowId });
+  }
+
+  function confirmDeleteRow() {
+    if (pendingDeleteId) {
+      dispatch({ type: "REMOVE_ROW", rowId: pendingDeleteId });
+      setPendingDeleteId(null);
+    }
+  }
+
   const { handleCellKeyDown } = useLedgerNavigation({
     rows,
     gridRef,
     addRow,
     duplicateRow,
-    removeRow: (rowId) => dispatch({ type: "REMOVE_ROW", rowId }),
+    removeRow,
     saveAll,
   });
 
   return (
     <div className="flex flex-col gap-3" ref={gridRef}>
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Delete row"
+        message="This row has data. Are you sure you want to delete it?"
+        confirmLabel="Delete"
+        danger
+        onConfirm={confirmDeleteRow}
+        onCancel={() => setPendingDeleteId(null)}
+      />
       <div aria-live="polite" className="sr-only">
         {statusMessage}
       </div>
@@ -266,7 +287,7 @@ export function LedgerGrid({
         onSelectParty={selectParty}
         onSearchParty={searchParty}
         onDuplicate={duplicateRow}
-        onRemove={(rowId) => dispatch({ type: "REMOVE_ROW", rowId })}
+        onRemove={removeRow}
         onFix={(rowId, action) => dispatch({
           type: "AUTO_FIX",
           rowId,
