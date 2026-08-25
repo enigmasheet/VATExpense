@@ -240,11 +240,6 @@ export function LedgerGrid({
     dispatch({ type: "DUPLICATE_ROW", newRow, sourceIdx: idx });
   }
 
-  /**
-   * Removes a ledger row, requesting confirmation first when it contains data.
-   *
-   * @param rowId - The identifier of the row to remove
-   */
   function removeRow(rowId: string) {
     const row = rows.find((r) => r.id === rowId);
     if (row && (row.partyId || row.partyName || row.invoiceNumber || row.taxableAmount)) {
@@ -254,9 +249,6 @@ export function LedgerGrid({
     dispatch({ type: "REMOVE_ROW", rowId });
   }
 
-  /**
-   * Confirms deletion of the pending ledger row.
-   */
   function confirmDeleteRow() {
     if (pendingDeleteId) {
       dispatch({ type: "REMOVE_ROW", rowId: pendingDeleteId });
