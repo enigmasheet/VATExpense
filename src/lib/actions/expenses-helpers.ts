@@ -204,7 +204,7 @@ export async function prepareValidatedExpense(
         fiscalYearId: context.fiscalYearId,
         partyId: data.partyId,
         categoryId: data.categoryId,
-        locationId: data.locationId ?? null,
+        locationId: data.locationId ?? context.party.locationId ?? null,
         truckId: data.truckId ?? null,
         miti: data.miti,
         nepaliMonth: miti.monthName,
