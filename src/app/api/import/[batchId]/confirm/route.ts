@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { importBatches, importBatchRows, expenses, parties, categories, locations } from "@/lib/db/schema";
+import { importBatches, importBatchRows, expenses, parties, categories, locations, fiscalYears } from "@/lib/db/schema";
 import { apiOk, badRequest, conflict, internalError, notFound, forbidden } from "@/lib/api-response";
 import { requireCompanyIdFromSession, getSessionUser } from "@/lib/api-auth";
 import {
@@ -11,17 +11,10 @@ import {
 
 import { eq, inArray, and } from "drizzle-orm";
 import { normalizeItemName } from "@/lib/normalize-master-data";
-import { normalizeMiti } from "@/lib/nepali-date";
+import { normalizeMiti, parseMiti } from "@/lib/nepali-date";
 
 export const runtime = "nodejs";
 
-/**
- * Confirms a pending import batch and creates expense records for eligible rows.
- *
- * Revalidates referenced master records, skips duplicate invoice numbers, and prevents concurrent confirmations.
- *
- * @returns An API response containing the confirmed batch ID, status, imported row count, and skipped row count.
- */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ batchId: string }> },
@@ -31,7 +24,6 @@ export async function POST(
   if (typeof companyId !== "string") return companyId;
 
   try {
-    // Atomic claim: update status from pending → confirming to prevent race conditions
     const [claimed] = await db
       .update(importBatches)
       .set({ status: "confirming" })
@@ -39,18 +31,15 @@ export async function POST(
       .returning();
 
     if (!claimed) {
-      // Check if batch exists at all
       const batch = (
         await db.select().from(importBatches).where(eq(importBatches.id, batchId)).limit(1)
       )[0];
       if (!batch) return notFound("Import batch not found");
       if (batch.companyId !== companyId) return forbidden("Access denied");
-      // Status was not pending
       return conflict(`Batch is already ${batch.status}`);
     }
 
     if (claimed.companyId !== companyId) {
-      // Rollback status claim — can't return 409 directly as we need to revert
       await db
         .update(importBatches)
         .set({ status: BATCH_STATUS_PENDING })
@@ -74,14 +63,12 @@ export async function POST(
       return badRequest("No valid rows to import");
     }
 
-    // Filter to rows that have all required resolved fields
     const importableRows = validRows.filter(
       (r) => r.resolvedPartyId && r.resolvedCategoryId && r.resolvedMiti && r.resolvedNepaliMonth,
     );
 
     const skippedCount = validRows.length - importableRows.length;
 
-    // Re-validate: collect unique referenced master IDs and check they still exist
     const partyIds = [...new Set(importableRows.map((r) => r.resolvedPartyId!))];
     const categoryIds = [...new Set(importableRows.map((r) => r.resolvedCategoryId!))];
     const locationIds = [
@@ -122,7 +109,21 @@ export async function POST(
 
     const revalidationSkipped = importableRows.length - importableRowsFinal.length;
 
-    // Duplicate detection: batch-check existing DB expenses + in-batch duplicates
+    const uniqueMitis = [...new Set(importableRowsFinal.map((r) => r.resolvedMiti!).filter(Boolean))];
+    const fyRows = uniqueMitis.length > 0
+      ? await db.select().from(fiscalYears).where(eq(fiscalYears.companyId, companyId))
+      : [];
+    const fyNameToId = new Map(fyRows.map((fy) => [fy.name, fy.id]));
+    const mitiToFiscalYearId = new Map<string, string>();
+    for (const miti of uniqueMitis) {
+      const parsed = parseMiti(miti);
+      if (parsed.ok) {
+        mitiToFiscalYearId.set(miti, fyNameToId.get(parsed.fiscalYearName) ?? claimed.fiscalYearId);
+      } else {
+        mitiToFiscalYearId.set(miti, claimed.fiscalYearId);
+      }
+    }
+
     const rowsWithInvoice = importableRowsFinal.filter((r) => r.rawInvoiceNumber);
     const existingInvoiceMap = new Map<string, { partyId: string; invoiceNumber: string }>();
 
@@ -130,18 +131,20 @@ export async function POST(
       const pairs = rowsWithInvoice.map((r) => ({
         partyId: r.resolvedPartyId!,
         invoiceNumber: String(r.rawInvoiceNumber).trim().toLowerCase(),
+        fiscalYearId: mitiToFiscalYearId.get(r.resolvedMiti!) ?? claimed.fiscalYearId,
       }));
       const uniquePartyIds = [...new Set(pairs.map((p) => p.partyId))];
       const uniqueInvoices = [...new Set(pairs.map((p) => p.invoiceNumber))];
+      const uniqueFyIds = [...new Set(pairs.map((p) => p.fiscalYearId))];
 
       const existingExpenses = await db
-        .select({ partyId: expenses.partyId, invoiceNumber: expenses.invoiceNumber })
+        .select({ partyId: expenses.partyId, invoiceNumber: expenses.invoiceNumber, fiscalYearId: expenses.fiscalYearId })
         .from(expenses)
         .where(
           and(
             eq(expenses.companyId, companyId),
-            eq(expenses.fiscalYearId, claimed.fiscalYearId),
             eq(expenses.isDeleted, false),
+            inArray(expenses.fiscalYearId, uniqueFyIds),
             inArray(expenses.partyId, uniquePartyIds),
             inArray(expenses.invoiceNumber, uniqueInvoices),
           ),
@@ -149,7 +152,7 @@ export async function POST(
 
       for (const e of existingExpenses) {
         if (e.invoiceNumber) {
-          existingInvoiceMap.set(`${e.partyId}:${e.invoiceNumber}`, {
+          existingInvoiceMap.set(`${e.fiscalYearId}:${e.partyId}:${e.invoiceNumber}`, {
             partyId: e.partyId,
             invoiceNumber: e.invoiceNumber,
           });
@@ -157,13 +160,13 @@ export async function POST(
       }
     }
 
-    // In-batch duplicate detection + existing-expense duplicate detection
     const batchSeen = new Set<string>();
     const duplicateRowIds = new Set<string>();
     for (const row of importableRowsFinal) {
       if (!row.rawInvoiceNumber) continue;
       const normalizedInvoice = String(row.rawInvoiceNumber).trim().toLowerCase();
-      const key = `${row.resolvedPartyId!}:${normalizedInvoice}`;
+      const fyId = mitiToFiscalYearId.get(row.resolvedMiti!) ?? claimed.fiscalYearId;
+      const key = `${fyId}:${row.resolvedPartyId!}:${normalizedInvoice}`;
       if (batchSeen.has(key) || existingInvoiceMap.has(key)) {
         duplicateRowIds.add(row.id);
       } else {
@@ -171,57 +174,52 @@ export async function POST(
       }
     }
 
-    // Filter out duplicate rows
     const nonDuplicateRows = importableRowsFinal.filter((r) => !duplicateRowIds.has(r.id));
     const duplicateSkippedCount = duplicateRowIds.size;
 
-    // Get session user for audit fields
     const sessionUser = await getSessionUser();
     const userId = sessionUser?.id ?? null;
 
     const inserted = await db.transaction(async (tx) => {
-      if (nonDuplicateRows.length === 0) return [];
+      let results: typeof expenses.$inferSelect[] = [];
 
-      // Batch insert all expenses at once, normalizing miti and invoice
-      const expenseValues = nonDuplicateRows.map((row) => {
-        const partyLocationId = partyLocationMap.get(row.resolvedPartyId!) ?? null;
-        const rawInvoice = row.rawInvoiceNumber
-          ? String(row.rawInvoiceNumber).trim().toLowerCase() || undefined
-          : undefined;
-        return {
-          companyId: claimed.companyId,
-          fiscalYearId: claimed.fiscalYearId,
-          partyId: row.resolvedPartyId!,
-          categoryId: row.resolvedCategoryId!,
-          locationId: row.resolvedLocationId ?? partyLocationId ?? undefined,
-          miti: normalizeMiti(row.resolvedMiti!),
-          nepaliMonth: row.resolvedNepaliMonth!,
-          invoiceNumber: rawInvoice,
-          item: normalizeItemName(row.rawItem as string),
-          quantity: row.rawQuantity ? row.rawQuantity : undefined,
-          rate: row.rawRate ? row.rawRate : undefined,
-          taxableAmount: row.resolvedTaxableAmount as string,
-          vatAmount: row.resolvedVatAmount as string,
-          totalAmount: row.resolvedTotalAmount as string,
-          vatRate: row.resolvedVatRate as string,
-          remarks: row.rawRemarks || undefined,
-          createdBy: userId,
-          updatedBy: userId,
-        };
-      });
+      if (nonDuplicateRows.length > 0) {
+        const expenseValues = nonDuplicateRows.map((row) => {
+          const partyLocationId = partyLocationMap.get(row.resolvedPartyId!) ?? null;
+          const rawInvoice = row.rawInvoiceNumber
+            ? String(row.rawInvoiceNumber).trim().toLowerCase() || undefined
+            : undefined;
+          return {
+            companyId: claimed.companyId,
+            fiscalYearId: mitiToFiscalYearId.get(row.resolvedMiti!) ?? claimed.fiscalYearId,
+            partyId: row.resolvedPartyId!,
+            categoryId: row.resolvedCategoryId!,
+            locationId: row.resolvedLocationId ?? partyLocationId ?? undefined,
+            miti: normalizeMiti(row.resolvedMiti!),
+            nepaliMonth: row.resolvedNepaliMonth!,
+            invoiceNumber: rawInvoice,
+            item: normalizeItemName(row.rawItem as string),
+            quantity: row.rawQuantity ? row.rawQuantity : undefined,
+            rate: row.rawRate ? row.rawRate : undefined,
+            taxableAmount: row.resolvedTaxableAmount as string,
+            vatAmount: row.resolvedVatAmount as string,
+            totalAmount: row.resolvedTotalAmount as string,
+            vatRate: row.resolvedVatRate as string,
+            remarks: row.rawRemarks || undefined,
+            createdBy: userId,
+            updatedBy: userId,
+          };
+        });
 
-      const results = await tx.insert(expenses).values(expenseValues).returning();
+        results = await tx.insert(expenses).values(expenseValues).returning();
 
-      // Mark confirmed rows
-      const confirmedIds = nonDuplicateRows.map((r) => r.id);
-      if (confirmedIds.length > 0) {
+        const confirmedIds = nonDuplicateRows.map((r) => r.id);
         await tx
           .update(importBatchRows)
           .set({ status: BATCH_ROW_STATUS_CONFIRMED })
           .where(inArray(importBatchRows.id, confirmedIds));
       }
 
-      // Mark duplicate rows as error
       if (duplicateRowIds.size > 0) {
         await tx
           .update(importBatchRows)
@@ -229,7 +227,6 @@ export async function POST(
           .where(inArray(importBatchRows.id, [...duplicateRowIds]));
       }
 
-      // Mark skipped rows (filtered out by revalidation)
       const skippedIds = importableRows
         .filter((r) => !importableRowsFinal.includes(r))
         .map((r) => r.id);
@@ -240,7 +237,6 @@ export async function POST(
           .where(inArray(importBatchRows.id, skippedIds));
       }
 
-      // Update batch status to confirmed
       await tx
         .update(importBatches)
         .set({ status: BATCH_STATUS_CONFIRMED })

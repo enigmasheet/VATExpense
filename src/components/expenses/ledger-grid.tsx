@@ -58,16 +58,17 @@ export function LedgerGrid({
 
   // Confirmation dialog for deleting rows with data
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const addedRowIdRef = useRef<string | null>(null);
 
-  // Auto-focus the first input of a newly added row
   useEffect(() => {
     if (rows.length > prevRowCountRef.current && gridRef.current) {
-      const newRow = rows[rows.length - 1];
-      const selector = `input[data-row="${newRow.id}"][data-field="miti"]`;
+      const targetId = addedRowIdRef.current ?? rows[rows.length - 1].id;
+      const selector = `input[data-row="${targetId}"][data-field="miti"]`;
       const el = gridRef.current.querySelector<HTMLInputElement>(selector);
       if (el) {
         requestAnimationFrame(() => el.focus());
       }
+      addedRowIdRef.current = null;
     }
     prevRowCountRef.current = rows.length;
   }, [rows]);
