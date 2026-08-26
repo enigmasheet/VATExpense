@@ -208,9 +208,7 @@ export function ExpenseForm({
 
   function refreshParties() {
     if (!companyId) return;
-    api<{ data: Party[] }>(`/api/parties?companyId=${companyId}`)
-      .then(({ data }) => setParties(data))
-      .catch(() => toast("Failed to refresh parties", "error"));
+    queryClient.invalidateQueries({ queryKey: queryKeys.parties(companyId) });
   }
 
   function searchParties(q: string) {
@@ -390,16 +388,18 @@ export function ExpenseForm({
       });
       toast("Item linked to category.");
       setLinkModalOpen(false);
-      const { data } = await api<{ data: ItemMapping[] }>(`/api/item-categories?companyId=${companyId}`);
-      setItemMappings(data);
-      const created = data.find(
-        (m) => m.itemName.toLowerCase() === linkName.trim().toLowerCase(),
-      );
-      if (created) {
-        setItemSearch(created.itemName);
-        setItemResolved(true);
-        setValues((v) => ({ ...v, item: created.itemName, categoryId: created.categoryId }));
-      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.itemCategories(companyId) });
+      // Find the created item mapping from the refreshed data
+      setTimeout(() => {
+        const created = itemMappings.find(
+          (m) => m.itemName.toLowerCase() === linkName.trim().toLowerCase(),
+        );
+        if (created) {
+          setItemSearch(created.itemName);
+          setItemResolved(true);
+          setValues((v) => ({ ...v, item: created.itemName, categoryId: created.categoryId }));
+        }
+      }, 100);
     } catch (err) {
       setLinkError(err instanceof ApiError ? err.detail : "Failed to save item link");
     } finally {
