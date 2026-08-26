@@ -99,6 +99,7 @@ export function ExpenseForm({
   const router = useRouter();
   const { companyId, fiscalYearId, fiscalYears, companies } = useApp();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const defaultVatRate = companies[0]?.defaultVatRate ?? VAT_RATE_DEFAULT;
   const [values, setValues] = useState<FormValues>(() =>
     mode === "edit" && initial
@@ -159,11 +160,15 @@ export function ExpenseForm({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const [parties, setParties] = useState<Party[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [itemMappings, setItemMappings] = useState<ItemMapping[]>([]);
-  const [trucks, setTrucks] = useState<{ id: string; name: string; ownerName: string | null }[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
+  // React Query hooks for reference data
+  const { data: parties = [], isLoading: partiesLoading } = useParties(companyId ?? "");
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories(companyId ?? "");
+  const { data: itemMappings = [], isLoading: itemMappingsLoading } = useItemCategories(companyId ?? "");
+  const { data: trucks = [], isLoading: trucksLoading } = useTrucks(companyId ?? "");
+
+  const loadingOptions = partiesLoading || categoriesLoading || itemMappingsLoading || trucksLoading;
+
+  // Rest of the component state...
   const [partyModalOpen, setPartyModalOpen] = useState(false);
   const [partySearch, setPartySearch] = useState("");
   const [partyResolved, setPartyResolved] = useState(false);
@@ -320,24 +325,6 @@ export function ExpenseForm({
       setPartyResolved(true);
     }
   }
-
-  useEffect(() => {
-    if (!companyId) return;
-    Promise.all([
-      api<{ data: Party[] }>(`/api/parties?companyId=${companyId}`)
-        .then(({ data }) => setParties(data))
-        .catch((e) => console.error("Failed to load parties:", e)),
-      api<{ data: { id: string; name: string }[] }>(`/api/categories?companyId=${companyId}`)
-        .then(({ data }) => setCategories(data))
-        .catch((e) => console.error("Failed to load categories:", e)),
-      api<{ data: ItemMapping[] }>(`/api/item-categories?companyId=${companyId}`)
-        .then(({ data }) => setItemMappings(data))
-        .catch((e) => console.error("Failed to load item links:", e)),
-      api<{ data: { id: string; name: string; ownerName: string | null }[] }>(`/api/trucks?companyId=${companyId}`)
-        .then(({ data }) => setTrucks(data))
-        .catch((e) => console.error("Failed to load trucks:", e)),
-    ]).finally(() => setLoadingOptions(false));
-  }, [companyId]);
 
   const set = useCallback(
     (field: keyof FormValues) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>

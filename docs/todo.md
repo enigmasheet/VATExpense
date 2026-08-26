@@ -52,27 +52,31 @@ I want to separate these responsibilities into sensible files while preserving t
 
 The result should be:
 
-    Page
+```
+Page
 
-      ↓
+  ↓
 
-    Page-level sections/components
+Page-level sections/components
 
-      ↓
+  ↓
 
-    Hooks / API functions / small helpers
+Hooks / API functions / small helpers
+```
 
 NOT:
 
-    Page
+```
+Page
 
-      ↓
+  ↓
 
-    Huge feature architecture
+Huge feature architecture
 
-      ↓
+  ↓
 
-    Multiple unnecessary abstraction layers
+Multiple unnecessary abstraction layers
+```
 
 ==================================================
 
@@ -90,25 +94,25 @@ Before modifying anything:
 
 4\. Inspect existing:
 
-   - hooks
+- hooks
 
-   - services
+- services
 
-   - API utilities
+- API utilities
 
-   - React Query setup
+- React Query setup
 
-   - query keys
+- query keys
 
-   - shared components
+- shared components
 
-   - form components
+- form components
 
-   - table components
+- table components
 
-   - validation
+- validation
 
-   - types
+- types
 
 5\. Identify conventions already used by this codebase.
 
@@ -126,37 +130,41 @@ Improve the current architecture rather than replacing it.
 
 For example, if the project currently uses:
 
-    app/
+```
+app/
 
-    components/
+components/
 
-    hooks/
+hooks/
 
-    services/
+services/
 
-    lib/
+lib/
 
-    types/
+types/
+```
 
 then continue using that structure.
 
 Do NOT automatically introduce:
 
-    features/
+```
+features/
 
-        categories/
+    categories/
 
-            components/
+        components/
 
-            hooks/
+        hooks/
 
-            services/
+        services/
 
-            types/
+        types/
 
-            schemas/
+        schemas/
 
-            utils/
+        utils/
+```
 
 unless the existing project already follows that pattern.
 
@@ -176,13 +184,15 @@ The page should primarily handle:
 
 For example:
 
-    CategoriesPage
+```
+CategoriesPage
 
-        ├── PageHeader
+    ├── PageHeader
 
-        ├── Categories section
+    ├── Categories section
 
-        └── Item Categories section
+    └── Item Categories section
+```
 
 The page should NOT contain hundreds of lines of implementation details.
 
@@ -196,17 +206,21 @@ If the current page contains clearly separate sections, extract them into compon
 
 For example:
 
-    components/categories/
+```
+components/categories/
 
-        CategoriesSection.tsx
+    CategoriesSection.tsx
 
-        ItemCategorySection.tsx
+    ItemCategorySection.tsx
+```
 
 OR, if the existing project uses a flatter component structure:
 
-    components/CategoriesSection.tsx
+```
+components/CategoriesSection.tsx
 
-    components/ItemCategorySection.tsx
+components/ItemCategorySection.tsx
+```
 
 Choose whichever matches the existing codebase.
 
@@ -236,17 +250,21 @@ Do NOT extract simple wrappers or 5-line pieces just to reduce line count.
 
 If the page currently contains calls such as:
 
-    api("/api/categories", ...)
+```
+api("/api/categories", ...)
 
-    api`/api/categories/${id}`, ...)
+api`/api/categories/${id}`, ...)
 
-    api("/api/item-categories", ...)
+api("/api/item-categories", ...)
+```
 
 move those API calls into the EXISTING service/API pattern.
 
 For example, if the project already has:
 
-    services/categoryService.ts
+```
+services/categoryService.ts
+```
 
 extend that file.
 
@@ -256,15 +274,19 @@ The component should ideally not know endpoint URLs.
 
 Prefer:
 
-    createCategory(...)
+```
+createCategory(...)
 
-    updateCategory(...)
+updateCategory(...)
 
-    deleteCategory(...)
+deleteCategory(...)
+```
 
 instead of:
 
-    api("/api/categories", ...)
+```
+api("/api/categories", ...)
+```
 
 inside UI components.
 
@@ -278,19 +300,25 @@ If the page contains large React Query logic, move it into the existing hooks pa
 
 For example:
 
-    hooks/useCategories.ts
+```
+hooks/useCategories.ts
+```
 
 or whatever naming convention the project already uses.
 
 Queries:
 
-    useCategories(companyId)
+```
+useCategories(companyId)
 
-    useItemCategories(companyId)
+useItemCategories(companyId)
+```
 
 Mutations can either be:
 
-    useCategoryMutations.ts
+```
+useCategoryMutations.ts
+```
 
 or kept near the query hook if that is already the project's convention.
 
@@ -306,7 +334,9 @@ Do not introduce a new query-key architecture if one already exists.
 
 If the project currently uses:
 
-    queryKeys.categories(companyId)
+```
+queryKeys.categories(companyId)
+```
 
 continue using it.
 
@@ -314,11 +344,15 @@ Company-specific data MUST include companyId in the query key.
 
 Correct:
 
-    \["categories", companyId\]
+```
+\["categories", companyId\]
+```
 
 Incorrect:
 
-    \["categories"\]
+```
+\["categories"\]
+```
 
 because this is a multi-company application.
 
@@ -332,15 +366,17 @@ Do not change this behavior during the refactor.
 
 If the page currently contains state like:
 
-    categoryFormOpen
+```
+categoryFormOpen
 
-    categoryName
+categoryName
 
-    categoryMode
+categoryMode
 
-    editingCategory
+editingCategory
 
-    categoryError
+categoryError
+```
 
 and this state is only used by the category form,
 
@@ -348,15 +384,17 @@ move that state into the category form/section component.
 
 Likewise, if the page contains:
 
-    itemCategoryFormOpen
+```
+itemCategoryFormOpen
 
-    itemCategoryName
+itemCategoryName
 
-    itemCategoryMode
+itemCategoryMode
 
-    editingItemCategory
+editingItemCategory
 
-    itemCategoryError
+itemCategoryError
+```
 
 move that state closer to the item-category form.
 
@@ -372,19 +410,25 @@ Keep state at the highest level where it is actually required.
 
 If there is a generic:
 
-    ConfirmDialog
+```
+ConfirmDialog
+```
 
 do not automatically create:
 
-    DeleteCategoryDialog.tsx
+```
+DeleteCategoryDialog.tsx
 
-    DeleteItemCategoryDialog.tsx
+DeleteItemCategoryDialog.tsx
+```
 
 unless those dialogs contain meaningful logic.
 
 It is perfectly acceptable for a section component to contain:
 
-    const \[deleteTarget, setDeleteTarget\] = useState(...)
+```
+const \[deleteTarget, setDeleteTarget\] = useState(...)
+```
 
 and render the shared ConfirmDialog.
 
@@ -398,15 +442,19 @@ The goal is clean responsibility, not maximum file count.
 
 If the page contains a large:
 
-    &lt;DataTable
+```
+&lt;DataTable
 
-        columns={\[ ... \]}
+    columns={\[ ... \]}
 
-    /&gt;
+/&gt;
+```
 
 configuration, consider moving the table into:
 
-    CategoriesTable.tsx
+```
+CategoriesTable.tsx
+```
 
 if it contains:
 
@@ -434,7 +482,9 @@ Prefer keeping related table configuration close to its table component.
 
 If search is only used by one section:
 
-    const \[search, setSearch\] = useState("");
+```
+const \[search, setSearch\] = useState("");
+```
 
 keep it inside that section/table component.
 
@@ -466,19 +516,23 @@ Do NOT create a separate file for every interface.
 
 For example, avoid:
 
-    Category.ts
+```
+Category.ts
 
-    ItemCategory.ts
+ItemCategory.ts
 
-    CategoryForm.ts
+CategoryForm.ts
 
-    DeleteTarget.ts
+DeleteTarget.ts
+```
 
 unless these types are sufficiently complex or shared.
 
 A reasonable:
 
-    types/category.ts
+```
+types/category.ts
+```
 
 or existing project equivalent is preferred.
 
@@ -490,13 +544,15 @@ or existing project equivalent is preferred.
 
 If validation already exists in the project:
 
-    Zod
+```
+Zod
 
-    Yup
+Yup
 
-    custom validation
+custom validation
 
-    React Hook Form
+React Hook Form
+```
 
 reuse the existing approach.
 
@@ -520,13 +576,15 @@ If caching improvements are needed, use React Query's existing cache.
 
 For example:
 
-    staleTime
+```
+staleTime
 
-    gcTime
+gcTime
 
-    queryKey
+queryKey
 
-    invalidateQueries
+invalidateQueries
+```
 
 should remain centralized according to the existing architecture.
 
@@ -542,23 +600,25 @@ Mutation logic should own its cache invalidation where practical.
 
 For example:
 
-    createCategory()
+```
+createCategory()
 
-        ↓
+    ↓
 
-    invalidate categories query
+invalidate categories query
 
-    updateCategory()
+updateCategory()
 
-        ↓
+    ↓
 
-    invalidate categories query
+invalidate categories query
 
-    deleteCategory()
+deleteCategory()
 
-        ↓
+    ↓
 
-    invalidate categories query
+invalidate categories query
+```
 
 If item-category changes affect categories or another related query, invalidate the appropriate related query as well.
 
@@ -574,31 +634,45 @@ Use this general rule:
 
 PAGE:
 
-    layout + composition
+```
+layout + composition
+```
 
 SECTION:
 
-    section-specific UI + local state
+```
+section-specific UI + local state
+```
 
 TABLE:
 
-    table rendering + table-specific interaction
+```
+table rendering + table-specific interaction
+```
 
 FORM:
 
-    form state + form UI + submission
+```
+form state + form UI + submission
+```
 
 HOOK:
 
-    React Query / data state
+```
+React Query / data state
+```
 
 SERVICE:
 
-    API communication
+```
+API communication
+```
 
 SHARED UI:
 
-    generic reusable components
+```
+generic reusable components
+```
 
 Do not create additional layers unless they solve a real problem.
 
@@ -610,63 +684,67 @@ Do not create additional layers unless they solve a real problem.
 
 If the current structure looks like:
 
-    app/
+```
+app/
 
-        categories/
+    categories/
 
-            page.tsx
+        page.tsx
 
-    components/
+components/
 
-        ...
+    ...
 
-    hooks/
+hooks/
 
-        ...
+    ...
 
-    services/
+services/
 
-        ...
+    ...
+```
 
 do something similar to:
 
-    app/
+```
+app/
 
-        categories/
+    categories/
 
-            page.tsx
+        page.tsx
 
-    components/
+components/
 
-        categories/
+    categories/
 
-            CategoriesSection.tsx
+        CategoriesSection.tsx
 
-            CategoriesTable.tsx
+        CategoriesTable.tsx
 
-            CategoryForm.tsx
+        CategoryForm.tsx
 
-            ItemCategorySection.tsx
+        ItemCategorySection.tsx
 
-            ItemCategoryTable.tsx
+        ItemCategoryTable.tsx
 
-            ItemCategoryForm.tsx
+        ItemCategoryForm.tsx
 
-    hooks/
+hooks/
 
-        useCategories.ts
+    useCategories.ts
 
-        useItemCategories.ts
+    useItemCategories.ts
 
-    services/
+services/
 
-        categoryService.ts
+    categoryService.ts
 
-        itemCategoryService.ts
+    itemCategoryService.ts
 
-    types/
+types/
 
-        category.ts
+    category.ts
+```
 
 BUT:
 
@@ -676,7 +754,9 @@ Use the existing project's structure and naming conventions.
 
 If the project already has:
 
-    components/Categories.tsx
+```
+components/Categories.tsx
+```
 
 then improve that structure rather than introducing an entirely different system.
 
@@ -690,27 +770,31 @@ Do not separate code purely by technical type if that makes navigation harder.
 
 For example, if a table has:
 
-    columns
+```
+columns
 
-    formatting
+formatting
 
-    action handlers
+action handlers
 
-    row actions
+row actions
+```
 
 keep them together when practical.
 
 Avoid jumping between:
 
-    components/
+```
+components/
 
-    columns/
+columns/
 
-    handlers/
+handlers/
 
-    config/
+config/
 
-    utils/
+utils/
+```
 
 for a simple table.
 
@@ -724,15 +808,17 @@ A developer should be able to understand one feature without opening 15 files.
 
 Do NOT create:
 
-    useCrud()
+```
+useCrud()
 
-    GenericCrud()
+GenericCrud()
 
-    CrudPage()
+CrudPage()
 
-    GenericEntityForm()
+GenericEntityForm()
 
-    GenericMutation()
+GenericMutation()
+```
 
 unless the existing project already has a successful abstraction for this.
 
@@ -796,17 +882,19 @@ Do not change business rules.
 
 After refactoring the current page, inspect similar pages such as:
 
-    /locations
+```
+/locations
 
-    /trucks
+/trucks
 
-    /parties
+/parties
 
-    /categories
+/categories
 
-    /packaging
+/packaging
 
-    /carriers
+/carriers
+```
 
 Identify repeated structural problems.
 
@@ -826,21 +914,29 @@ Prefer modifying existing files over creating new files when the existing file a
 
 Do not create:
 
-    10 new files
+```
+10 new files
+```
 
 when:
 
-    3 well-chosen files
+```
+3 well-chosen files
+```
 
 would solve the problem.
 
 The goal is:
 
-    fewer responsibilities per file
+```
+fewer responsibilities per file
+```
 
 NOT:
 
-    more files.
+```
+more files.
+```
 
 ==================================================
 
@@ -912,10 +1008,14 @@ This is an incremental improvement to the CURRENT architecture.
 
 Think:
 
-    "Improve what already exists"
+```
+"Improve what already exists"
+```
 
 not:
 
-    "Replace the architecture."
+```
+"Replace the architecture."
+```
 
 Use the existing codebase's conventions as the highest priority.
