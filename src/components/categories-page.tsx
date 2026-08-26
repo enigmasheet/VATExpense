@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SlideOver } from "@/components/ui/slide-over";
 import { useToast } from "@/components/ui/toast";
 import { Alert } from "@/components/ui/alert";
+import { SubmitEvent } from "react";
 
 interface Category {
   id: string;
@@ -105,7 +106,7 @@ export function CategoriesPage() {
     setCatFormOpen(true);
   }
 
-  async function handleSaveCategory(e: React.FormEvent) {
+  async function handleSaveCategory(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!companyId) return;
     setSubmitting(true);
@@ -151,7 +152,7 @@ export function CategoriesPage() {
     setLinkFormOpen(true);
   }
 
-  async function handleSaveLink(e: React.FormEvent) {
+  async function handleSaveLink(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!companyId) return;
     setSubmitting(true);

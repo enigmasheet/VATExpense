@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api-client";
+import { SubmitEvent } from "react";
 import { useApp } from "@/lib/useApp";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -89,7 +90,7 @@ export function TruckDocumentsPage({
     setFormOpen(true);
   }
 
-  async function handleSave(e: React.FormEvent) {
+  async function handleSave(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!companyId) return;
     setSubmitting(true);
