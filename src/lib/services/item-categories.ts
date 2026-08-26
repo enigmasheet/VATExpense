@@ -11,7 +11,7 @@ export interface ItemCategoryWithName {
   id: string;
   itemName: string;
   categoryId: string;
-  categoryName: string;
+  categoryName: string | null;
 }
 
 export async function listItemCategories(

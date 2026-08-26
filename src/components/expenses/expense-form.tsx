@@ -232,13 +232,6 @@ export function ExpenseForm({
     setValues((v) => ({ ...v, partyId: party.id, locationId: party.locationId ?? "" }));
   }
 
-  function refreshItemMappings() {
-    if (!companyId) return;
-    api<{ data: ItemMapping[] }>(`/api/item-categories?companyId=${companyId}`)
-      .then(({ data }) => setItemMappings(data))
-      .catch(() => {});
-  }
-
   function searchItems(q: string) {
     if (q.length < 1) {
       setItemResults([]);
@@ -461,6 +454,10 @@ export function ExpenseForm({
           setMessages([{ kind: "success", text: "Expense recorded." }]);
         }
         setValues(emptyForm);
+        setPartySearch("");
+        setPartyResolved(false);
+        setItemSearch("");
+        setItemResolved(false);
         isDirty.current = false;
       } else {
         const res = await api<{ data: unknown; warnings?: string[] }>(`/api/expenses/${expenseId}`, {
@@ -849,7 +846,7 @@ export function ExpenseForm({
               onChange={(e) => setLinkName(e.target.value)}
             />
           </Field>
-          <Field label="Category" htmlFor="link-category-id" required>
+          <Field label="Category" htmlFor="link-category-id">
             <Select
               id="link-category-id"
               required

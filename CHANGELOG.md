@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Party statement sorting** (`party-statement.ts`): Invoice numbers are now sorted numerically (`862` before `8456`, previously text-sorted) and BS dates sort chronologically regardless of stored format (`YYYY-MM-DD` or `DD/MM/YYYY`). Sort order is now miti → createdAt → numeric invoice number.
+
+### Added
+
+- **Item-category links**: New `item_categories` table mapping item names to expense categories. Full CRUD on the Categories page (new "Item-Category Links" section). New APIs: `GET/POST /api/item-categories`, `PATCH/DELETE /api/item-categories/[id]`, `GET /api/item-categories/lookup?item=`.
+- **Item autocomplete on expense form**: The Item field is now an autocomplete backed by item-category links. Selecting an item auto-fills the category; unknown items show a red indicator and a "Link" button opens a modal to create the link inline.
+- **Location auto-fill + hidden field**: Location dropdown removed from the expense form; `locationId` now auto-fills from the selected party's location and is still saved with the expense.
+- **Truck documents**: New `truck_documents` table supporting multiple documents per truck (type, number, BS expiry date, BS reminder date). CRUD via `/trucks/[id]/documents` page, linked from a new "Documents" column on the Trucks page.
+
 ## [1.0.0] - 2026-08-20
 
 ### Fixed

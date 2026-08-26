@@ -50,6 +50,13 @@ Single tracking document for planned work, open PRs, and completed changes. Both
 
 ## Completed
 
+### Item-Category Links + Expense Form UX + Truck Documents (2026-08-26)
+- **Item-category links:** New `item_categories` table (`schema.ts`, migration `0011`), service, actions, and APIs (`/api/item-categories`, `[id]`, `lookup`). CRUD integrated into the Categories page as a second section ("Item-Category Links").
+- **Expense form:** Location dropdown hidden — `locationId` auto-fills from selected party. Category dropdown removed. Item field is now an autocomplete backed by item-category links with inline "Link" modal for unknown items.
+- **Truck documents:** New `truck_documents` table (type, number, BS expiry date, BS reminder date), service/actions/APIs, documents page at `/trucks/[id]/documents` linked from the Trucks page.
+- **Party statement sorting fixed:** numeric invoice sort + BS-date chronological sort in `party-statement.ts`.
+- **Verification:** typecheck clean, lint clean, 412 tests pass, production build passes, schema pushed to local DB.
+
 ### Modal Visibility Bug Fix
 **Problem:** Admin slide-over panels appeared "not rendering" — `open=true` but invisible (`opacity-0 pointer-events-none`).
 **Root cause:** Render-phase `prevOpen` reset raced the RAF effect; `visible` stuck `false` while `open` true.

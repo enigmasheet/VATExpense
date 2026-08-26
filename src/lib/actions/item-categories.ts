@@ -5,8 +5,9 @@ import {
   createItemCategory as createItemCategoryService,
   updateItemCategory as updateItemCategoryService,
   deleteItemCategory as deleteItemCategoryService,
-  listItemCategories,
+  listItemCategories as listItemCategoriesService,
   type ItemCategory,
+  type ItemCategoryWithName,
 } from "@/lib/services/item-categories";
 import { ERR_NOT_AUTHENTICATED } from "@/lib/status-constants";
 
@@ -43,9 +44,9 @@ export async function deleteItemCategory(id: string): Promise<ActionResult<{ id:
   return { ok: true, data: result.data };
 }
 
-export async function getItemCategories(): Promise<ActionResult<ReturnType<typeof listItemCategories>>> {
+export async function getItemCategories(): Promise<ActionResult<ItemCategoryWithName[]>> {
   let companyId: string;
   try { companyId = await requireCompanyId(); } catch { return { ok: false, error: ERR_NOT_AUTHENTICATED }; }
-  const data = await listItemCategories(companyId);
+  const data = await listItemCategoriesService(companyId);
   return { ok: true, data };
 }

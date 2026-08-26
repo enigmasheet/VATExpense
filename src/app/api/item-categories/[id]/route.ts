@@ -1,4 +1,4 @@
-import { apiOk, badRequest, conflict, notFound, internalError } from "@/lib/api-response";
+import { apiOk, badRequest, notFound, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { updateItemCategorySchema } from "@/lib/validation/masters";
 import * as itemCategoryService from "@/lib/services/item-categories";
