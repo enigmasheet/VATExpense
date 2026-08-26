@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { api, ApiError } from "@/lib/api-client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError, apiUrl } from "@/lib/api-client";
 import { useApp } from "@/lib/useApp";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
@@ -36,11 +37,22 @@ interface MasterPageProps<T> {
   columns: ColumnSpec<T>[];
   buildPayload: (companyId: string, values: Record<string, string>) => Record<string, unknown>;
   emptyHint: string;
+  queryKeyFactory?: (companyId: string) => readonly [string, string];
 }
 
 interface Option {
   value: string;
   label: string;
+}
+
+function getQueryKeyFromUrl(listUrl: string): string {
+  if (listUrl.includes("/locations")) return "locations";
+  if (listUrl.includes("/trucks")) return "trucks";
+  if (listUrl.includes("/parties")) return "parties";
+  if (listUrl.includes("/fiscal-years")) return "fiscal-years";
+  if (listUrl.includes("/categories")) return "categories";
+  if (listUrl.includes("/item-categories")) return "item-categories";
+  return listUrl.replace(/^\/api\//, "").replace(/\//g, "-");
 }
 
 /**
@@ -56,6 +68,7 @@ interface Option {
  * @param columns - Custom columns rendered for each record
  * @param buildPayload - Creates the API payload from the company ID and form values
  * @param emptyHint - Message displayed when no records exist
+ * @param queryKeyFactory - Optional function to create React Query key for caching
  */
 export function MasterPage<T extends { id: string; name: string; isActive: boolean }>({
   title,
@@ -66,16 +79,38 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
   columns,
   buildPayload,
   emptyHint,
+  queryKeyFactory,
 }: MasterPageProps<T>) {
   const { companyId } = useApp();
   const { toast } = useToast();
-  const [items, setItems] = useState<T[]>([]);
+  const queryClient = useQueryClient();
+
+  const resourceKey = getQueryKeyFromUrl(listUrl);
+  const defaultQueryKeyFactory = useCallback(
+    (cid: string) => [resourceKey, cid] as const,
+    [resourceKey]
+  );
+
+  const keyFactory = queryKeyFactory ?? defaultQueryKeyFactory;
+
+  const { data: items = [], isLoading: loading, error: queryError } = useQuery({
+    queryKey: keyFactory(companyId ?? ""),
+    queryFn: async () => {
+      const res = await api<{ data: T[] }>(apiUrl(listUrl, { companyId: companyId ?? "" }));
+      return res.data;
+    },
+    enabled: !!companyId,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 10 * 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+  });
+
   const [options, setOptions] = useState<Record<string, Option[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [toggleTarget, setToggleTarget] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
   // Slide-over form state (create + edit share one panel)
@@ -84,18 +119,6 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [editingItem, setEditingItem] = useState<T | null>(null);
 
-  const refresh = useCallback(() => {
-    if (!companyId) return;
-    api<{ data: T[] }>(`${listUrl}?companyId=${companyId}`)
-      .then(({ data }) => setItems(data))
-      .catch((e: ApiError) => setError(e.detail))
-      .finally(() => setLoading(false));
-  }, [companyId, listUrl]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
   useEffect(() => {
     if (!companyId) return;
     const urls = fields
@@ -103,7 +126,7 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
       .map((f) => f.optionsUrl as string);
     Promise.all(
       urls.map((url) =>
-        api<{ data: { id: string; name: string }[] }>(`${url}?companyId=${companyId}`).then(
+        api<{ data: { id: string; name: string }[] }>(apiUrl(url, { companyId })).then(
           ({ data }) => [url, data.map((o) => ({ value: o.id, label: o.name }))] as const,
         ),
       ),
@@ -111,6 +134,11 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
       .then((pairs) => setOptions(Object.fromEntries(pairs)))
       .catch((e) => console.error("Failed to load dropdown options:", e));
   }, [companyId, fields]);
+
+  const invalidateList = useCallback(() => {
+    if (!companyId) return;
+    queryClient.invalidateQueries({ queryKey: keyFactory(companyId) });
+  }, [companyId, queryClient, keyFactory]);
 
   function openCreate() {
     setFormMode("create");
@@ -141,7 +169,72 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
     setFormValues({});
   }
 
-  async function handleSave(e: React.FormEvent) {
+  const createMutation = useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      return api(listUrl, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    onSuccess: () => {
+      setFormValues({});
+      toast(`${singularName ?? title} added.`);
+      invalidateList();
+    },
+    onError: (err) => {
+      setError(err instanceof ApiError ? err.detail : "Failed to save");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, body }: { id: string; body: Record<string, unknown> }) => {
+      return api(`${listUrl}/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+    },
+    onSuccess: () => {
+      closeForm();
+      toast("Updated.");
+      invalidateList();
+    },
+    onError: (err) => {
+      setError(err instanceof ApiError ? err.detail : "Failed to save");
+    },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      return api(`${listUrl}/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive }),
+      });
+    },
+    onSuccess: (_data, variables) => {
+      setToggleTarget(null);
+      toast(`${variables.id} ${variables.isActive ? "deactivated" : "activated"}.`);
+      invalidateList();
+    },
+    onError: (err) => {
+      toast(err instanceof ApiError ? err.detail : "Failed to update status", "error");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api(`${listUrl}/${id}`, { method: "DELETE" });
+    },
+    onSuccess: () => {
+      setDeleteTarget(null);
+      toast("Deleted.");
+      invalidateList();
+    },
+    onError: (err) => {
+      toast(err instanceof ApiError ? err.detail : "Failed to delete", "error");
+    },
+  });
+
+  function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!companyId) return;
     setSubmitting(true);
@@ -154,71 +247,38 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
       trimmedValues[key] = field?.type === "text" ? val.trim() : val;
     }
 
-    try {
-      if (formMode === "create") {
-        await api(listUrl, {
-          method: "POST",
-          body: JSON.stringify(buildPayload(companyId, trimmedValues)),
-        });
-        setFormValues({});
-        refresh();
-        toast(`${singularName ?? title} added.`);
-      } else {
-        const body: Record<string, unknown> = {};
-        for (const f of fields) {
-          if (f.name in trimmedValues) {
-            const val = trimmedValues[f.name];
-            body[f.name] = val === "" ? null : val;
-          }
+    if (formMode === "create") {
+      const payload = buildPayload(companyId, trimmedValues);
+      createMutation.mutate(payload);
+    } else {
+      const body: Record<string, unknown> = {};
+      for (const f of fields) {
+        if (f.name in trimmedValues) {
+          const val = trimmedValues[f.name];
+          body[f.name] = val === "" ? null : val;
         }
-        await api(`${listUrl}/${editingItem!.id}`, {
-          method: "PATCH",
-          body: JSON.stringify(body),
-        });
-        closeForm();
-        refresh();
-        toast("Updated.");
       }
-    } catch (err) {
-      setError(err instanceof ApiError ? err.detail : "Failed to save");
-    } finally {
-      setSubmitting(false);
+      updateMutation.mutate({ id: editingItem!.id, body });
     }
+    setSubmitting(false);
   }
 
   function toggleActive(item: T) {
     setToggleTarget(item);
   }
 
-  async function confirmToggleActive() {
-    if (!toggleTarget || !companyId) return;
-    try {
-      await api(`${listUrl}/${toggleTarget.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ isActive: !toggleTarget.isActive }),
-      });
-      setToggleTarget(null);
-      refresh();
-      toast(`${toggleTarget.name} ${toggleTarget.isActive ? "deactivated" : "activated"}.`);
-    } catch (err) {
-      toast(err instanceof ApiError ? err.detail : "Failed to update status", "error");
-    }
+  function confirmToggleActive() {
+    if (!toggleTarget) return;
+    toggleMutation.mutate({ id: toggleTarget.id, isActive: !toggleTarget.isActive });
   }
 
   function confirmDelete(id: string, name: string) {
     setDeleteTarget({ id, name });
   }
 
-  async function deleteItem() {
-    if (!deleteTarget || !companyId) return;
-    try {
-      await api(`${listUrl}/${deleteTarget.id}`, { method: "DELETE" });
-      setDeleteTarget(null);
-      refresh();
-      toast("Deleted.");
-    } catch (err) {
-      toast(err instanceof ApiError ? err.detail : "Failed to delete", "error");
-    }
+  function deleteItem() {
+    if (!deleteTarget) return;
+    deleteMutation.mutate(deleteTarget.id);
   }
 
   const filtered = search
@@ -277,14 +337,14 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
   }
 
   const actions = (item: T) => (
-      <div className="flex items-center justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={() => openEdit(item)} disabled={formOpen}>
-          Edit
-        </Button>
-        <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={() => confirmDelete(item.id, item.name)}>
-          Delete
-        </Button>
-      </div>
+    <div className="flex items-center justify-end gap-2">
+      <Button variant="ghost" size="sm" onClick={() => openEdit(item)} disabled={formOpen}>
+        Edit
+      </Button>
+      <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={() => confirmDelete(item.id, item.name)}>
+        Delete
+      </Button>
+    </div>
   );
 
   const mobileCard = (item: T) => (
@@ -328,6 +388,9 @@ export function MasterPage<T extends { id: string; name: string; isActive: boole
           </Button>
         }
       />
+
+      {error && <Alert kind="danger">{error}</Alert>}
+      {queryError && <Alert kind="danger">{(queryError as Error).message}</Alert>}
 
       <DataTable
         topContent={
