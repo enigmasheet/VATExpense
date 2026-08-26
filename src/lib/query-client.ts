@@ -13,7 +13,7 @@ const queryClient = new QueryClient({
       retry: 2,
     },
     mutations: {
-      retryOnError: false,
+      retry: false,
     },
   },
 });
@@ -21,8 +21,6 @@ const queryClient = new QueryClient({
 if (typeof window !== "undefined") {
   const persister = createSyncStoragePersister({
     storage: window.localStorage,
-    // Only persist stable reference data
-    // Keys that start with "stable-" will be persisted
     throttleTime: 1000,
   });
 
@@ -30,16 +28,7 @@ if (typeof window !== "undefined") {
     queryClient,
     persister,
     maxAge: 24 * 60 * 60 * 1000,
-    // Filter: only persist queries with key[0] === "stable-categories"
     buster: "vat-expense-v1",
-    // Only persist specific query keys
-    filter: (query) => {
-      const queryKey = query.queryKey;
-      return (
-        queryKey[0] === "stable-categories" ||
-        queryKey[0] === "categories"
-      );
-    },
   });
 }
 

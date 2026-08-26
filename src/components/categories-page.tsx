@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api-client";
 import { useApp } from "@/lib/useApp";
+import { useCategories, useItemCategories } from "@/lib/hooks/use-reference-data";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +15,7 @@ import { SlideOver } from "@/components/ui/slide-over";
 import { useToast } from "@/components/ui/toast";
 import { Alert } from "@/components/ui/alert";
 import { SubmitEvent } from "react";
+import { queryKeys } from "@/lib/query-keys";
 
 interface Category {
   id: string;
@@ -39,12 +42,11 @@ type DeleteTarget =
 export function CategoriesPage() {
   const { companyId } = useApp();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [links, setLinks] = useState<ItemCategoryLink[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
-  const [loadingLinks, setLoadingLinks] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: categories = [], isLoading: loadingCategories, error: categoriesError } = useCategories(companyId ?? "");
+  const { data: links = [], isLoading: loadingLinks, error: linksError } = useItemCategories(companyId ?? "");
+
   const [submitting, setSubmitting] = useState(false);
   const [catSearch, setCatSearch] = useState("");
   const [linkSearch, setLinkSearch] = useState("");
@@ -66,29 +68,108 @@ export function CategoriesPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  const refreshCategories = useCallback(() => {
+  const error = categoriesError?.message ?? linksError?.message ?? null;
+
+  const invalidateCategories = useCallback(() => {
     if (!companyId) return;
-    api<{ data: Category[] }>(`/api/categories?companyId=${companyId}`)
-      .then(({ data }) => setCategories(data))
-      .catch((e: ApiError) => setError(e.detail))
-      .finally(() => setLoadingCategories(false));
-  }, [companyId]);
+    queryClient.invalidateQueries({ queryKey: queryKeys.categories(companyId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.itemCategories(companyId) });
+  }, [companyId, queryClient]);
 
-  const refreshLinks = useCallback(() => {
+  const invalidateLinks = useCallback(() => {
     if (!companyId) return;
-    api<{ data: ItemCategoryLink[] }>(`/api/item-categories?companyId=${companyId}`)
-      .then(({ data }) => setLinks(data))
-      .catch((e: ApiError) => setError(e.detail))
-      .finally(() => setLoadingLinks(false));
-  }, [companyId]);
+    queryClient.invalidateQueries({ queryKey: queryKeys.itemCategories(companyId) });
+  }, [companyId, queryClient]);
 
-  useEffect(() => {
-    refreshCategories();
-  }, [refreshCategories]);
+  const createCategoryMutation = useMutation({
+    mutationFn: async (name: string) => {
+      return api("/api/categories", {
+        method: "POST",
+        body: JSON.stringify({ companyId, name: name.trim() }),
+      });
+    },
+    onSuccess: () => {
+      toast("Category added.");
+      invalidateCategories();
+    },
+    onError: (err) => {
+      setCatError(err instanceof ApiError ? err.detail : "Failed to save");
+    },
+  });
 
-  useEffect(() => {
-    refreshLinks();
-  }, [refreshLinks]);
+  const updateCategoryMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      return api(`/api/categories/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: name.trim() }),
+      });
+    },
+    onSuccess: () => {
+      toast("Updated.");
+      invalidateCategories();
+    },
+    onError: (err) => {
+      setCatError(err instanceof ApiError ? err.detail : "Failed to save");
+    },
+  });
+
+  const createLinkMutation = useMutation({
+    mutationFn: async ({ itemName, categoryId }: { itemName: string; categoryId: string }) => {
+      return api("/api/item-categories", {
+        method: "POST",
+        body: JSON.stringify({ itemName: itemName.trim(), categoryId }),
+      });
+    },
+    onSuccess: () => {
+      toast("Item link added.");
+      invalidateLinks();
+    },
+    onError: (err) => {
+      setLinkError(err instanceof ApiError ? err.detail : "Failed to save");
+    },
+  });
+
+  const updateLinkMutation = useMutation({
+    mutationFn: async ({ id, itemName, categoryId }: { id: string; itemName: string; categoryId: string }) => {
+      return api(`/api/item-categories/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ itemName: itemName.trim(), categoryId }),
+      });
+    },
+    onSuccess: () => {
+      toast("Updated.");
+      invalidateLinks();
+    },
+    onError: (err) => {
+      setLinkError(err instanceof ApiError ? err.detail : "Failed to save");
+    },
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api(`/api/categories/${id}`, { method: "DELETE" });
+    },
+    onSuccess: () => {
+      toast("Deleted.");
+      invalidateCategories();
+    },
+    onError: (err) => {
+      toast(err instanceof ApiError ? err.detail : "Failed to delete", "error");
+    },
+  });
+
+  const deleteLinkMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api(`/api/item-categories/${id}`, { method: "DELETE" });
+    },
+    onSuccess: () => {
+      toast("Deleted.");
+      invalidateLinks();
+    },
+    onError: (err) => {
+      toast(err instanceof ApiError ? err.detail : "Failed to delete", "error");
+    },
+  });
 
   function openCreateCategory() {
     setCatFormMode("create");
@@ -113,22 +194,13 @@ export function CategoriesPage() {
     setCatError(null);
     try {
       if (catFormMode === "create") {
-        await api("/api/categories", {
-          method: "POST",
-          body: JSON.stringify({ companyId, name: catName.trim() }),
-        });
-        toast("Category added.");
+        await createCategoryMutation.mutateAsync(catName);
       } else {
-        await api(`/api/categories/${editingCategory!.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ name: catName.trim() }),
-        });
-        toast("Updated.");
+        await updateCategoryMutation.mutateAsync({ id: editingCategory!.id, name: catName });
       }
       setCatFormOpen(false);
-      refreshCategories();
-    } catch (err) {
-      setCatError(err instanceof ApiError ? err.detail : "Failed to save");
+    } catch {
+      // Error handled by mutation onError
     } finally {
       setSubmitting(false);
     }
@@ -159,44 +231,28 @@ export function CategoriesPage() {
     setLinkError(null);
     try {
       if (linkFormMode === "create") {
-        await api("/api/item-categories", {
-          method: "POST",
-          body: JSON.stringify({ itemName: linkItemName.trim(), categoryId: linkCategoryId }),
-        });
-        toast("Item link added.");
+        await createLinkMutation.mutateAsync({ itemName: linkItemName, categoryId: linkCategoryId });
       } else {
-        await api(`/api/item-categories/${editingLink!.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ itemName: linkItemName.trim(), categoryId: linkCategoryId }),
-        });
-        toast("Updated.");
+        await updateLinkMutation.mutateAsync({ id: editingLink!.id, itemName: linkItemName, categoryId: linkCategoryId });
       }
       setLinkFormOpen(false);
-      refreshLinks();
-    } catch (err) {
-      setLinkError(err instanceof ApiError ? err.detail : "Failed to save");
+    } catch {
+      // Error handled by mutation onError
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleDelete() {
-    if (!deleteTarget || !companyId) return;
-    const url =
-      deleteTarget.type === "category"
-        ? `/api/categories/${deleteTarget.id}`
-        : `/api/item-categories/${deleteTarget.id}`;
+    if (!deleteTarget) return;
     try {
-      await api(url, { method: "DELETE" });
-      toast("Deleted.");
       if (deleteTarget.type === "category") {
-        refreshCategories();
-        refreshLinks();
+        await deleteCategoryMutation.mutateAsync(deleteTarget.id);
       } else {
-        refreshLinks();
+        await deleteLinkMutation.mutateAsync(deleteTarget.id);
       }
-    } catch (err) {
-      toast(err instanceof ApiError ? err.detail : "Failed to delete", "error");
+    } catch {
+      // Error handled by mutation onError
     } finally {
       setDeleteTarget(null);
     }
