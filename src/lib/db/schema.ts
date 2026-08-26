@@ -25,6 +25,7 @@ export const companies = pgTable("companies", {
   brandName: text("brand_name"),
   logoUrl: text("logo_url"),
   primaryColor: text("primary_color"),
+  import_enabled: boolean("import_enabled").notNull().default(true),
   createdBy: uuid("created_by"),
   updatedBy: uuid("updated_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

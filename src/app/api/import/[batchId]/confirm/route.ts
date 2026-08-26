@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { importBatches, importBatchRows, expenses, parties, categories, locations, fiscalYears } from "@/lib/db/schema";
+import { importBatches, importBatchRows, expenses, parties, categories, locations, fiscalYears, companies } from "@/lib/db/schema";
 import { apiOk, badRequest, conflict, internalError, notFound, forbidden } from "@/lib/api-response";
 import { requireCompanyIdFromSession, getSessionUser } from "@/lib/api-auth";
 import {
@@ -22,6 +22,14 @@ export async function POST(
   const { batchId } = await params;
   const companyId = await requireCompanyIdFromSession(request);
   if (typeof companyId !== "string") return companyId;
+
+  // Check if import is enabled for this company
+  const [company] = await db
+    .select({ import_enabled: companies.import_enabled })
+    .from(companies)
+    .where(eq(companies.id, companyId))
+    .limit(1);
+  if (!company?.import_enabled) return notFound("Import disabled for this company");
 
   try {
     const [claimed] = await db

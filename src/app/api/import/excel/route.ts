@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { importBatches, importBatchRows, fiscalYears } from "@/lib/db/schema";
-import { apiOk, badRequest, internalError } from "@/lib/api-response";
+import { importBatches, importBatchRows, fiscalYears, companies } from "@/lib/db/schema";
+import { apiOk, badRequest, internalError, notFound } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { VAT_RATE, BATCH_SIZE_LIMIT } from "@/lib/constants";
 import {
@@ -88,6 +88,14 @@ function mapExcelRow(row: Record<string, unknown>): ParsedRow | null {
 export async function POST(request: Request) {
   const companyId = await requireCompanyIdFromSession(request);
   if (typeof companyId !== "string") return companyId;
+
+  // Check if import is enabled for this company
+  const [company] = await db
+    .select({ import_enabled: companies.import_enabled })
+    .from(companies)
+    .where(eq(companies.id, companyId))
+    .limit(1);
+  if (!company?.import_enabled) return notFound("Import disabled for this company");
 
   let formData: FormData;
   try {
