@@ -8,6 +8,7 @@ import { useApp } from "@/lib/useApp";
 import { round2 } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
+import { Modal } from "@/components/ui/modal";
 import { PartyFormModal } from "@/components/party-form-modal";
 import { useToast } from "@/components/ui/toast";
 
@@ -48,6 +49,13 @@ export interface ExpenseInitial {
   totalAmount: string;
   vatRate: string;
   remarks: string | null;
+}
+
+interface ItemMapping {
+  id: string;
+  itemName: string;
+  categoryId: string;
+  categoryName: string | null;
 }
 
 const emptyForm: FormValues = {
@@ -150,7 +158,7 @@ export function ExpenseForm({
 
   const [parties, setParties] = useState<Party[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+  const [itemMappings, setItemMappings] = useState<ItemMapping[]>([]);
   const [trucks, setTrucks] = useState<{ id: string; name: string; ownerName: string | null }[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [partyModalOpen, setPartyModalOpen] = useState(false);
@@ -162,6 +170,24 @@ export function ExpenseForm({
   const partyInputRef = useRef<HTMLInputElement>(null);
   const partyDropdownRef = useRef<HTMLDivElement>(null);
   const [partyDropdownPos, setPartyDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  // Item autocomplete (backed by item_categories links)
+  const initialItem = mode === "edit" && initial ? initial.item : "";
+  const [itemSearch, setItemSearch] = useState(initialItem);
+  const [itemResolved, setItemResolved] = useState(mode === "edit" && !!initial?.item);
+  const [itemResults, setItemResults] = useState<ItemMapping[]>([]);
+  const [itemOpen, setItemOpen] = useState(false);
+  const [itemHighlightIdx, setItemHighlightIdx] = useState(-1);
+  const itemInputRef = useRef<HTMLInputElement>(null);
+  const itemDropdownRef = useRef<HTMLDivElement>(null);
+  const [itemDropdownPos, setItemDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  // New item-link modal
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [linkName, setLinkName] = useState("");
+  const [linkCategoryId, setLinkCategoryId] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [savingLink, setSavingLink] = useState(false);
 
   const updatePartyDropdownPos = useCallback(() => {
     const rect = partyInputRef.current?.getBoundingClientRect();
@@ -203,7 +229,34 @@ export function ExpenseForm({
     setPartySearch(party.name);
     setPartyResolved(true);
     setPartyOpen(false);
-    setValues((v) => ({ ...v, partyId: party.id }));
+    setValues((v) => ({ ...v, partyId: party.id, locationId: party.locationId ?? "" }));
+  }
+
+  function refreshItemMappings() {
+    if (!companyId) return;
+    api<{ data: ItemMapping[] }>(`/api/item-categories?companyId=${companyId}`)
+      .then(({ data }) => setItemMappings(data))
+      .catch(() => {});
+  }
+
+  function searchItems(q: string) {
+    if (q.length < 1) {
+      setItemResults([]);
+      setItemOpen(false);
+      return;
+    }
+    const lower = q.toLowerCase();
+    const matched = itemMappings.filter((m) => m.itemName.toLowerCase().includes(lower));
+    setItemResults(matched.slice(0, 8));
+    setItemOpen(matched.length > 0);
+    setItemHighlightIdx(-1);
+  }
+
+  function selectItemMapping(mapping: ItemMapping) {
+    setItemSearch(mapping.itemName);
+    setItemResolved(true);
+    setItemOpen(false);
+    setValues((v) => ({ ...v, item: mapping.itemName, categoryId: mapping.categoryId }));
   }
 
   // Click outside to close party dropdown
@@ -229,6 +282,38 @@ export function ExpenseForm({
     };
   }, [partyOpen, updatePartyDropdownPos]);
 
+  const updateItemDropdownPos = useCallback(() => {
+    const rect = itemInputRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const vw = window.innerWidth;
+    const width = Math.min(rect.width, vw - 16);
+    const left = Math.min(Math.max(rect.left, 8), vw - width - 8);
+    setItemDropdownPos({ top: rect.bottom + 4, left, width });
+  }, []);
+
+  // Click outside to close item dropdown
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (itemDropdownRef.current && !itemDropdownRef.current.contains(e.target as Node)) {
+        setItemOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Reposition item dropdown while open
+  useEffect(() => {
+    if (!itemOpen) return;
+    updateItemDropdownPos();
+    window.addEventListener("resize", updateItemDropdownPos);
+    window.addEventListener("scroll", updateItemDropdownPos, true);
+    return () => {
+      window.removeEventListener("resize", updateItemDropdownPos);
+      window.removeEventListener("scroll", updateItemDropdownPos, true);
+    };
+  }, [itemOpen, updateItemDropdownPos]);
+
   // Initialize partySearch from initial values (edit mode) once parties load.
   // Guarded conditional state update during render (React-recommended pattern)
   // so it stops as soon as partyResolved flips.
@@ -249,9 +334,9 @@ export function ExpenseForm({
       api<{ data: { id: string; name: string }[] }>(`/api/categories?companyId=${companyId}`)
         .then(({ data }) => setCategories(data))
         .catch((e) => console.error("Failed to load categories:", e)),
-      api<{ data: { id: string; name: string }[] }>(`/api/locations?companyId=${companyId}`)
-        .then(({ data }) => setLocations(data))
-        .catch((e) => console.error("Failed to load locations:", e)),
+      api<{ data: ItemMapping[] }>(`/api/item-categories?companyId=${companyId}`)
+        .then(({ data }) => setItemMappings(data))
+        .catch((e) => console.error("Failed to load item links:", e)),
       api<{ data: { id: string; name: string; ownerName: string | null }[] }>(`/api/trucks?companyId=${companyId}`)
         .then(({ data }) => setTrucks(data))
         .catch((e) => console.error("Failed to load trucks:", e)),
@@ -309,6 +394,34 @@ export function ExpenseForm({
 
   function onTotalChange(e: React.ChangeEvent<HTMLInputElement>) {
     calcFromTotal(e.target.value);
+  }
+
+  async function saveItemLink() {
+    if (!companyId || !linkName.trim() || !linkCategoryId) return;
+    setSavingLink(true);
+    setLinkError(null);
+    try {
+      await api("/api/item-categories", {
+        method: "POST",
+        body: JSON.stringify({ itemName: linkName.trim(), categoryId: linkCategoryId }),
+      });
+      toast("Item linked to category.");
+      setLinkModalOpen(false);
+      const { data } = await api<{ data: ItemMapping[] }>(`/api/item-categories?companyId=${companyId}`);
+      setItemMappings(data);
+      const created = data.find(
+        (m) => m.itemName.toLowerCase() === linkName.trim().toLowerCase(),
+      );
+      if (created) {
+        setItemSearch(created.itemName);
+        setItemResolved(true);
+        setValues((v) => ({ ...v, item: created.itemName, categoryId: created.categoryId }));
+      }
+    } catch (err) {
+      setLinkError(err instanceof ApiError ? err.detail : "Failed to save item link");
+    } finally {
+      setSavingLink(false);
+    }
   }
 
   async function onSubmit(e: React.SubmitEvent<HTMLFormElement>) {
@@ -400,7 +513,7 @@ export function ExpenseForm({
       <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4">
         <h2 className="font-display text-lg font-semibold">Invoice details</h2>
         {loadingOptions && (
-          <p className="text-xs text-muted">Loading parties, categories, and locations...</p>
+          <p className="text-xs text-muted">Loading parties and items...</p>
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Miti (BS)" htmlFor="e-miti">
@@ -515,26 +628,6 @@ export function ExpenseForm({
               </Button>
             </div>
           </Field>
-          <Field label="Category" htmlFor="e-category">
-            <Select id="e-category" required value={values.categoryId} onChange={set("categoryId")}>
-              <option value="">Select category</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Location" htmlFor="e-location">
-            <Select id="e-location" value={values.locationId} onChange={set("locationId")}>
-              <option value="">—</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
           <Field label="Truck" htmlFor="e-truck" hint="Optional — for fuel/maintenance tracking">
             <Select id="e-truck" value={values.truckId} onChange={set("truckId")}>
               <option value="">—</option>
@@ -545,14 +638,109 @@ export function ExpenseForm({
               ))}
             </Select>
           </Field>
-          <Field label="Item / description" htmlFor="e-item">
-            <Input
-              id="e-item"
-              required
-              placeholder="What was purchased?"
-              value={values.item}
-              onChange={set("item")}
-            />
+          <Field label="Item" htmlFor="e-item" hint="Category is picked automatically from item links">
+            <div className="flex gap-2" ref={itemDropdownRef}>
+              <div className="relative flex-1">
+                <input
+                  ref={itemInputRef}
+                  id="e-item"
+                  type="text"
+                  required
+                  value={itemSearch}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setItemSearch(val);
+                    setItemResolved(false);
+                    setValues((v) => ({ ...v, item: val }));
+                    searchItems(val);
+                  }}
+                  onFocus={() => {
+                    updateItemDropdownPos();
+                    if (itemResults.length > 0) setItemOpen(true);
+                    else if (itemSearch.length > 0) {
+                      searchItems(itemSearch);
+                      setItemOpen(itemResults.length > 0);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (!itemOpen) return;
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setItemHighlightIdx((i) => Math.min(i + 1, itemResults.length - 1));
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setItemHighlightIdx((i) => Math.max(i - 1, 0));
+                    } else if (e.key === "Enter" && itemHighlightIdx >= 0) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      selectItemMapping(itemResults[itemHighlightIdx]);
+                    } else if (e.key === "Escape") {
+                      setItemOpen(false);
+                    } else if (e.key === "Tab") {
+                      setItemOpen(false);
+                    }
+                  }}
+                  placeholder="Type item name..."
+                  className={`h-10 w-full rounded border bg-transparent px-3 pr-8 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 ${
+                    !itemResolved && itemSearch
+                      ? "border-danger/40 bg-danger/5"
+                      : "border-border/50"
+                  }`}
+                />
+                {itemResolved && (
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-emerald-500">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  </span>
+                )}
+                {itemOpen && itemResults.length > 0 && createPortal(
+                  <div
+                    role="listbox"
+                    className="fixed max-h-48 overflow-y-auto rounded-lg border border-border/50 bg-surface py-1 shadow-lg z-50"
+                    style={itemDropdownPos ? {
+                      top: itemDropdownPos.top,
+                      left: itemDropdownPos.left,
+                      width: itemDropdownPos.width,
+                    } : { top: 0, left: 0, width: 0 }}
+                  >
+                    {itemResults.map((mapping, idx) => (
+                      <button
+                        key={mapping.id}
+                        type="button"
+                        role="option"
+                        aria-selected={mapping.itemName === itemSearch && itemResolved}
+                        className={`block w-full px-3 py-2.5 text-left text-sm hover:bg-surface-hover ${
+                          idx === itemHighlightIdx ? "bg-surface-hover" : ""
+                        } ${mapping.itemName === itemSearch && itemResolved ? "font-medium text-primary" : "text-foreground"}`}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          selectItemMapping(mapping);
+                        }}
+                      >
+                        <span className="font-medium">{mapping.itemName}</span>
+                        {mapping.categoryName && (
+                          <span className="ml-2 text-muted">{mapping.categoryName}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>,
+                  document.body,
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setLinkName(itemSearch);
+                  setLinkError(null);
+                  setLinkModalOpen(true);
+                }}
+              >
+                Link
+              </Button>
+            </div>
           </Field>
         </div>
       </section>
@@ -632,6 +820,67 @@ export function ExpenseForm({
         }}
         onCancel={() => setPartyModalOpen(false)}
       />
+
+      <Modal
+        open={linkModalOpen}
+        title="Link item to category"
+        description="New items are saved as links so their category is picked automatically next time."
+        onClose={() => {
+          if (savingLink) return;
+          setLinkModalOpen(false);
+        }}
+        closeOnEscape={!savingLink}
+        closeOnOverlayClick={!savingLink}
+      >
+        <form
+          id="item-link-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveItemLink();
+          }}
+          className="flex flex-col gap-4"
+        >
+          <Field label="Item name" htmlFor="link-item-name" hint="As typed on the invoice, e.g. Diesel">
+            <Input
+              id="link-item-name"
+              required
+              placeholder="e.g. Diesel"
+              value={linkName}
+              onChange={(e) => setLinkName(e.target.value)}
+            />
+          </Field>
+          <Field label="Category" htmlFor="link-category-id" required>
+            <Select
+              id="link-category-id"
+              required
+              value={linkCategoryId}
+              onChange={(e) => setLinkCategoryId(e.target.value)}
+            >
+              <option value="">Select category</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {linkError && <MessageList messages={[{ kind: "danger", text: linkError }]} />}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setLinkModalOpen(false)}
+              disabled={savingLink}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" loading={savingLink} disabled={!companyId}>
+              {savingLink ? "Saving..." : "Save link"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </form>
   );
 }
