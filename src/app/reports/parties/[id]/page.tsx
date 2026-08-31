@@ -150,11 +150,19 @@ export default async function PartyStatementPage({ params, searchParams }: Props
           </div>
         ) : (
           <DataTable
+            rowClassName={() => "hover:bg-surface-subtle cursor-pointer"}
             columns={[
               {
                 header: "Miti",
                 cell: (row) => (
-                  <span className="font-mono text-sm">{row.miti}</span>
+                  <span className="whitespace-nowrap">
+                    <Link
+                      href={`/expenses/${row.id}`}
+                      className="font-mono text-sm font-medium text-primary hover:underline"
+                    >
+                      {row.miti}
+                    </Link>
+                  </span>
                 ),
               },
               {
@@ -211,7 +219,12 @@ export default async function PartyStatementPage({ params, searchParams }: Props
               <>
                 <div className="flex items-start justify-between">
                   <div className="flex flex-col">
-                    <span className="font-mono text-sm">{row.miti}</span>
+                    <Link
+                      href={`/expenses/${row.id}`}
+                      className="font-mono text-sm font-medium text-primary hover:underline"
+                    >
+                      {row.miti}
+                    </Link>
                     <span className="font-medium">{row.itemName}</span>
                     {row.invoiceNumber && (
                       <span className="text-xs text-muted">Inv: {row.invoiceNumber}</span>
