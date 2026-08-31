@@ -25,6 +25,7 @@ export const companies = pgTable("companies", {
   brandName: text("brand_name"),
   logoUrl: text("logo_url"),
   primaryColor: text("primary_color"),
+  import_enabled: boolean("import_enabled").notNull().default(true),
   createdBy: uuid("created_by"),
   updatedBy: uuid("updated_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -107,6 +108,32 @@ export const categories = pgTable(
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 
+export const itemCategories = pgTable(
+  "item_categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    itemName: text("item_name").notNull(),
+    normalizedItemName: text("normalized_item_name").notNull(),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    createdBy: uuid("created_by"),
+    updatedBy: uuid("updated_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("item_categories_company_item_uq").on(t.companyId, t.normalizedItemName),
+    index("item_categories_company_idx").on(t.companyId),
+  ],
+);
+
+export type ItemCategory = typeof itemCategories.$inferSelect;
+export type NewItemCategory = typeof itemCategories.$inferInsert;
+
 export const parties = pgTable(
   "parties",
   {
@@ -164,6 +191,35 @@ export const trucks = pgTable(
 
 export type Truck = typeof trucks.$inferSelect;
 export type NewTruck = typeof trucks.$inferInsert;
+
+export const truckDocuments = pgTable(
+  "truck_documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    truckId: uuid("truck_id")
+      .notNull()
+      .references(() => trucks.id, { onDelete: "cascade" }),
+    documentType: text("document_type").notNull(),
+    documentNumber: text("document_number"),
+    expiryDate: text("expiry_date"), // BS date, e.g. "2083-03-15"
+    reminderDate: text("reminder_date"), // BS date — when to be reminded
+    isActive: boolean("is_active").notNull().default(true),
+    createdBy: uuid("created_by"),
+    updatedBy: uuid("updated_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("truck_documents_truck_idx").on(t.truckId),
+    index("truck_documents_company_idx").on(t.companyId),
+  ],
+);
+
+export type TruckDocument = typeof truckDocuments.$inferSelect;
+export type NewTruckDocument = typeof truckDocuments.$inferInsert;
 
 export const expenses = pgTable(
   "expenses",

@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/query-client";
 import { AppProvider } from "@/lib/useApp";
 import { AuthProvider } from "@/lib/auth-provider";
 import { ToastProvider } from "@/components/ui/toast";
@@ -27,8 +29,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
     return (
-      <AuthProvider>
-        <AppProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <AppProvider>
           <ToastProvider>
             {isAdminRoute ? (
               <>{children}</>
@@ -38,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               {/* Skip to content link for keyboard/screen-reader users */}
               <a
                 href="#main-content"
-                className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded"
+                className="sr-only focus:not-sr-only focus:absolute focus:z-100 focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded"
               >
                 Skip to content
               </a>
@@ -67,7 +70,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             </>
             )}
           </ToastProvider>
-        </AppProvider>
-      </AuthProvider>
+          </AppProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     );
 }

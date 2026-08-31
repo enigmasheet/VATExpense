@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { importBatches, importBatchRows, parties, categories, locations, expenses } from "@/lib/db/schema";
+import { importBatches, importBatchRows, parties, categories, locations, expenses, companies } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError, notFound, forbidden } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { loadActiveMasterData } from "@/lib/db-helpers/masters";
@@ -51,6 +51,14 @@ export async function GET(
   const { batchId } = await params;
   const companyId = await requireCompanyIdFromSession(request);
   if (typeof companyId !== "string") return companyId;
+
+  // Check if import is enabled for this company
+  const [company] = await db
+    .select({ import_enabled: companies.import_enabled })
+    .from(companies)
+    .where(eq(companies.id, companyId))
+    .limit(1);
+  if (!company?.import_enabled) return notFound("Import disabled for this company");
 
   const url = new URL(request.url);
   const autoCreate = url.searchParams.get("autoCreate") === "true";

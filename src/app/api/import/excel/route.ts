@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { importBatches, importBatchRows, fiscalYears } from "@/lib/db/schema";
-import { apiOk, badRequest, internalError } from "@/lib/api-response";
+import { importBatches, importBatchRows, fiscalYears, companies } from "@/lib/db/schema";
+import { apiOk, badRequest, internalError, notFound } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { VAT_RATE, BATCH_SIZE_LIMIT } from "@/lib/constants";
 import {
@@ -89,6 +89,14 @@ export async function POST(request: Request) {
   const companyId = await requireCompanyIdFromSession(request);
   if (typeof companyId !== "string") return companyId;
 
+  // Check if import is enabled for this company
+  const [company] = await db
+    .select({ import_enabled: companies.import_enabled })
+    .from(companies)
+    .where(eq(companies.id, companyId))
+    .limit(1);
+  if (!company?.import_enabled) return notFound("Import disabled for this company");
+
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -150,17 +158,24 @@ export async function POST(request: Request) {
     }
 
     const rows: ParsedRow[] = [];
+    let hitLimit = false;
     for (const row of jsonData) {
       const parsed = mapExcelRow(row);
-      if (parsed) rows.push(parsed);
+      if (parsed) {
+        rows.push(parsed);
+        if (rows.length > BATCH_SIZE_LIMIT) {
+          hitLimit = true;
+          break;
+        }
+      }
+    }
+
+    if (hitLimit) {
+      return badRequest(`File exceeds the maximum of ${BATCH_SIZE_LIMIT} rows`);
     }
 
     if (rows.length === 0) {
       return badRequest("No valid data rows found in file");
-    }
-
-    if (rows.length > BATCH_SIZE_LIMIT) {
-      return badRequest(`File exceeds the maximum of ${BATCH_SIZE_LIMIT} rows`);
     }
 
     const [batch] = await db

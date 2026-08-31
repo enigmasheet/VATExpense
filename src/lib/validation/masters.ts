@@ -78,6 +78,45 @@ export const updateTruckSchema = z.object({
 export type CreateTruckInput = z.infer<typeof createTruckSchema>;
 export type UpdateTruckInput = z.infer<typeof updateTruckSchema>;
 
+export const createItemCategorySchema = z.object({
+  companyId: companyIdSchema,
+  itemName: z.string().trim().min(1, "Item name is required").max(MAX_NAME_LENGTH),
+  categoryId: z.uuid("categoryId must be a valid UUID"),
+});
+
+export const updateItemCategorySchema = z.object({
+  itemName: z.string().trim().min(1, "Item name is required").max(MAX_NAME_LENGTH).optional(),
+  categoryId: z.uuid("categoryId must be a valid UUID").optional(),
+});
+
+export type CreateItemCategoryInput = z.infer<typeof createItemCategorySchema>;
+export type UpdateItemCategoryInput = z.infer<typeof updateItemCategorySchema>;
+
+const bsDateText = z.preprocess(
+  (v) => (v === null || v === undefined || v === "" ? null : v),
+  z.string().trim().max(10, "Date must be in YYYY-MM-DD format").nullable().optional(),
+);
+
+export const createTruckDocumentSchema = z.object({
+  companyId: companyIdSchema,
+  truckId: z.uuid("truckId must be a valid UUID"),
+  documentType: z.string().trim().min(1, "Document type is required").max(MAX_NAME_LENGTH),
+  documentNumber: optionalTextToNull,
+  expiryDate: bsDateText,
+  reminderDate: bsDateText,
+});
+
+export const updateTruckDocumentSchema = z.object({
+  documentType: z.string().trim().min(1, "Document type is required").max(MAX_NAME_LENGTH).optional(),
+  documentNumber: optionalTextToNull.optional(),
+  expiryDate: bsDateText.optional(),
+  reminderDate: bsDateText.optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type CreateTruckDocumentInput = z.infer<typeof createTruckDocumentSchema>;
+export type UpdateTruckDocumentInput = z.infer<typeof updateTruckDocumentSchema>;
+
 export const updatePartySchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(MAX_NAME_LENGTH).optional(),
   vatNumber: optionalTextToNull.optional(),

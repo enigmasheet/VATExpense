@@ -61,10 +61,6 @@ export interface DuplicateMessages {
   suspicious: (count: number) => string;
 }
 
-/**
- * Pre-loaded reference data for batch expense processing.
- * Eliminates N+1 queries by loading all parties, FYs, and existing invoices upfront.
- */
 export interface PreloadedContext {
   parties: Map<string, typeof parties.$inferSelect>;
   fiscalYearsById: Map<string, typeof fiscalYears.$inferSelect>;
@@ -72,14 +68,6 @@ export interface PreloadedContext {
   defaultVatRate: string;
 }
 
-/**
- * Preloads party, fiscal-year, and existing invoice reference data for expense rows in a company.
- *
- * @param companyId - The company whose reference data is loaded
- * @param rows - Expense rows whose party, fiscal-year, and invoice references are collected
- * @param defaultVatRate - VAT rate stored in the preloaded context for rows without an explicit rate
- * @returns Maps of parties and fiscal years, normalized existing invoice keys, and the default VAT rate
- */
 export async function preloadBatchContext(
   companyId: string,
   rows: ExpenseInput[],
@@ -106,7 +94,6 @@ export async function preloadBatchContext(
   const partiesMap = new Map(loadedParties.map((p) => [p.id, p]));
   const fysById = new Map(loadedFys.map((fy) => [fy.id, fy]));
 
-  // Pre-fetch existing invoices for duplicate detection
   const invoicePairs = rows
     .filter((r) => r.invoiceNumber)
     .map((r) => ({
@@ -141,9 +128,6 @@ export async function preloadBatchContext(
   return { parties: partiesMap, fiscalYearsById: fysById, existingInvoiceKeys, defaultVatRate };
 }
 
-/**
- * Builds the duplicate-check fingerprint for an expense input.
- */
 export function buildExpenseFingerprint(
   companyId: string,
   data: ExpenseInput,
@@ -161,22 +145,12 @@ export function buildExpenseFingerprint(
   };
 }
 
-/**
- * Resolves the fiscal year and party associated with an expense.
- *
- * @param companyId - The company that must own the referenced records
- * @param data - The expense input containing fiscal year, date, party, and VAT details
- * @param defaultVatRate - VAT rate used when the input does not specify one
- * @param preloaded - Optional preloaded references for batch processing
- * @returns The resolved expense context, or an error message when a fiscal year or party cannot be found
- */
 export async function loadExpenseReferences(
   companyId: string,
   data: ExpenseInput,
   defaultVatRate: string,
   preloaded?: PreloadedContext,
 ): Promise<{ context: ExpenseContext } | { error: string }> {
-  // Resolve fiscal year — use provided ID or auto-resolve from miti
   let fiscalYear: typeof fiscalYears.$inferSelect;
   if (data.fiscalYearId) {
     if (preloaded) {
@@ -230,17 +204,6 @@ export interface PreparedExpense {
   insert: typeof expenses.$inferInsert;
 }
 
-/**
- * Prepares an already-validated expense for insertion: resolves references, checks
- * duplicates, collects warnings, and builds the insert payload.
- *
- * @param companyId - The company the expense belongs to
- * @param data - The validated expense input
- * @param defaultVatRate - Fallback VAT rate when the input does not specify one
- * @param messages - Message templates for duplicate and warning strings
- * @param preloaded - Optional pre-loaded context to avoid DB queries (for batch mode)
- * @returns A prepared row ready for insert, or an error message
- */
 export async function prepareValidatedExpense(
   companyId: string,
   data: ExpenseInput,

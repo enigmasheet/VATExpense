@@ -4,14 +4,25 @@ import { NEPALI_MONTHS } from "@/lib/nepali-date";
 import { PARTY_PURCHASE_THRESHOLD } from "@/lib/constants";
 import { and, eq, sql } from "drizzle-orm";
 
-/**
- * Generates an expense report for a specified company, fiscal year, and Nepali month, grouped by expense category.
- *
- * @param companyId - The company identifier
- * @param fiscalYearId - The fiscal year identifier
- * @param nepaliMonth - The Nepali month included in the report
- * @returns The requested month and identifiers, category-level expense totals, and overall totals
- */
+function addDecimalStrings(a: string, b: string): string {
+  const [ai, af = ""] = a.split(".");
+  const [bi, bf = ""] = b.split(".");
+  const maxFrac = Math.max(af.length, bf.length);
+  const afPadded = af.padEnd(maxFrac, "0");
+  const bfPadded = bf.padEnd(maxFrac, "0");
+  const intSum = BigInt(ai) + BigInt(bi);
+  const fracSum = BigInt(afPadded) + BigInt(bfPadded);
+  if (fracSum === 0n) return intSum.toString();
+  const carry = fracSum / BigInt(10 ** maxFrac);
+  const fracRemainder = fracSum % BigInt(10 ** maxFrac);
+  const result = intSum + carry;
+  return `${result}.${fracRemainder.toString().padStart(maxFrac, "0")}`;
+}
+
+function sumDecimals(values: string[]): string {
+  return values.reduce((s, v) => (s === "0" ? v : addDecimalStrings(s, v)), "0");
+}
+
 export async function getMonthlyReport(
   companyId: string,
   fiscalYearId: string,
@@ -39,9 +50,9 @@ export async function getMonthlyReport(
     .groupBy(categories.id, categories.name);
 
   const totals = {
-    totalTaxableAmount: categoriesData.reduce((s, c) => s + Number(c.totalTaxableAmount), 0).toString(),
-    totalVatAmount: categoriesData.reduce((s, c) => s + Number(c.totalVatAmount), 0).toString(),
-    totalAmount: categoriesData.reduce((s, c) => s + Number(c.totalAmount), 0).toString(),
+    totalTaxableAmount: sumDecimals(categoriesData.map((c) => c.totalTaxableAmount)),
+    totalVatAmount: sumDecimals(categoriesData.map((c) => c.totalVatAmount)),
+    totalAmount: sumDecimals(categoriesData.map((c) => c.totalAmount)),
     expenseCount: categoriesData.reduce((s, c) => s + c.expenseCount, 0),
   };
 
@@ -54,18 +65,8 @@ export async function getMonthlyReport(
   };
 }
 
-/**
- * Nepali month names in calendar order (Baisakh first).
- */
 const NEPALI_MONTHS_ORDER = NEPALI_MONTHS;
 
-/**
- * Generates an expense report for every month in a fiscal year.
- *
- * @param companyId - The company identifier
- * @param fiscalYearId - The fiscal year identifier
- * @returns Monthly expense totals in fiscal-year order and aggregate totals for the fiscal year
- */
 export async function getFiscalYearReport(companyId: string, fiscalYearId: string) {
   const monthData = await db
     .select({
@@ -99,25 +100,15 @@ export async function getFiscalYearReport(companyId: string, fiscalYearId: strin
   });
 
   const totals = {
-    totalTaxableAmount: months.reduce((s, m) => s + Number(m.totalTaxableAmount), 0).toString(),
-    totalVatAmount: months.reduce((s, m) => s + Number(m.totalVatAmount), 0).toString(),
-    totalAmount: months.reduce((s, m) => s + Number(m.totalAmount), 0).toString(),
-    expenseCount: months.reduce((s, m) => s + m.expenseCount, 0),
+    totalTaxableAmount: sumDecimals(monthData.map((m) => m.totalTaxableAmount)),
+    totalVatAmount: sumDecimals(monthData.map((m) => m.totalVatAmount)),
+    totalAmount: sumDecimals(monthData.map((m) => m.totalAmount)),
+    expenseCount: monthData.reduce((s, m) => s + m.expenseCount, 0),
   };
 
   return { fiscalYearId, companyId, months, totals };
 }
 
-/**
- * Retrieves the purchase totals per party for a fiscal year, keeping only parties
- * whose purchases exceed the given threshold (based on the selected amount basis).
- *
- * @param companyId - The identifier of the company
- * @param fiscalYearId - The identifier of the fiscal year
- * @param basis - Which amount column drives the threshold filter and ordering
- * @param threshold - Minimum purchase total (inclusive comparison uses strict >) to include a party
- * @returns The qualifying parties with their aggregated expense totals
- */
 export async function getPartyPurchaseReport(
   companyId: string,
   fiscalYearId: string,

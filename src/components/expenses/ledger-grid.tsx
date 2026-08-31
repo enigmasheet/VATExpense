@@ -31,15 +31,6 @@ interface LedgerGridProps {
   defaultVatRate?: string;
 }
 
-/**
- * Provides an editable expense ledger for a company and fiscal year, including validation, VAT calculations, row management, and batch saving.
- *
- * @param companyId - The company whose expenses are being entered
- * @param fiscalYearId - The fiscal year associated with the expenses
- * @param fiscalYearName - The fiscal year name used for date validation
- * @param allParties - Available parties for party selection
- * @param allCategories - Available expense categories
- */
 export function LedgerGrid({
   companyId,
   fiscalYearId,
@@ -56,18 +47,18 @@ export function LedgerGrid({
   const prevErrorsRef = useRef<Map<string, string>>(new Map());
   const prevRowCountRef = useRef(rows.length);
 
-  // Confirmation dialog for deleting rows with data
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const addedRowIdRef = useRef<string | null>(null);
 
-  // Auto-focus the first input of a newly added row
   useEffect(() => {
     if (rows.length > prevRowCountRef.current && gridRef.current) {
-      const newRow = rows[rows.length - 1];
-      const selector = `input[data-row="${newRow.id}"][data-field="miti"]`;
+      const targetId = addedRowIdRef.current ?? rows[rows.length - 1].id;
+      const selector = `input[data-row="${targetId}"][data-field="miti"]`;
       const el = gridRef.current.querySelector<HTMLInputElement>(selector);
       if (el) {
         requestAnimationFrame(() => el.focus());
       }
+      addedRowIdRef.current = null;
     }
     prevRowCountRef.current = rows.length;
   }, [rows]);
@@ -123,7 +114,6 @@ export function LedgerGrid({
     });
   }, [rows, duplicateIndex, existingInvoices, fiscalYearName]);
 
-  // Toast when new errors appear (duplicates, FY mismatches)
   useEffect(() => {
     const prevErrors = prevErrorsRef.current;
     for (const row of enrichedRows) {
@@ -203,15 +193,11 @@ export function LedgerGrid({
     const idx = afterId ? rows.findIndex((r) => r.id === afterId) : rows.length - 1;
     const prevRow = idx >= 0 ? rows[idx] : undefined;
     const newRow = createLedgerRow(prevRow);
+    addedRowIdRef.current = newRow.id;
     dispatch({ type: "ADD_ROW", afterId, newRow });
     return newRow.id;
   }
 
-  /**
-   * Duplicates a ledger row with its editable values and resets its invoice number and save state.
-   *
-   * @param rowId - The identifier of the row to duplicate
-   */
   function duplicateRow(rowId: string) {
     const idx = rows.findIndex((r) => r.id === rowId);
     if (idx < 0) return;
@@ -238,23 +224,15 @@ export function LedgerGrid({
     dispatch({ type: "DUPLICATE_ROW", newRow, sourceIdx: idx });
   }
 
-  /**
-   * Removes a ledger row, requesting confirmation first when it contains data.
-   *
-   * @param rowId - The identifier of the row to remove
-   */
   function removeRow(rowId: string) {
     const row = rows.find((r) => r.id === rowId);
-    if (row && (row.partyId || row.invoiceNumber || row.taxableAmount)) {
+    if (row && (row.partyId || row.partyName || row.invoiceNumber || row.taxableAmount)) {
       setPendingDeleteId(rowId);
       return;
     }
     dispatch({ type: "REMOVE_ROW", rowId });
   }
 
-  /**
-   * Confirms deletion of the pending ledger row.
-   */
   function confirmDeleteRow() {
     if (pendingDeleteId) {
       dispatch({ type: "REMOVE_ROW", rowId: pendingDeleteId });

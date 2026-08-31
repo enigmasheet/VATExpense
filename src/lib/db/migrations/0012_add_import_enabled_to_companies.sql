@@ -1,0 +1,1 @@
+ALTER TABLE "companies" ADD COLUMN "import_enabled" boolean NOT NULL DEFAULT true;

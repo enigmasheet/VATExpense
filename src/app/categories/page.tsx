@@ -1,29 +1,7 @@
-"use client";
+import { CategoriesPage } from "@/components/categories-page";
 
-import { MasterPage } from "@/components/master-page";
+export const metadata = { title: "Categories" };
 
-/**
- * Renders the expense categories management page.
- */
-export default function CategoriesPage() {
-  return (
-    <MasterPage
-      title="Categories"
-      singularName="Category"
-      description="Expense categories such as rent, utilities and office supplies."
-      listUrl="/api/categories"
-      fields={[
-        {
-          name: "name",
-          label: "Category name",
-          type: "text",
-          required: true,
-          placeholder: "e.g. Office Supplies",
-        },
-      ]}
-      columns={[]}
-      buildPayload={(companyId, values) => ({ companyId, name: values.name })}
-      emptyHint="No categories yet. Add your first one."
-    />
-  );
+export default function Page() {
+  return <CategoriesPage />;
 }
