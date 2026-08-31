@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getFiscalYearFromMiti, buildDuplicateIndex, validateLedgerRow } from "../ledger-validation";
+import { getFiscalYearFromMiti, buildDuplicateIndex, validateLedgerRow, getFixableAction } from "../ledger-validation";
 import type { LedgerRow } from "../ledger-types";
 import { createLedgerRow } from "../ledger-utils";
 
@@ -210,5 +210,46 @@ describe("validateLedgerRow", () => {
     );
     expect(result.status).toBe("pending");
     expect(result.error).toBeUndefined();
+  });
+});
+
+describe("getFixableAction", () => {
+  it("returns fillTodayMiti for Miti required", () => {
+    const action = getFixableAction("Miti required");
+    expect(action).not.toBeNull();
+    expect(action!.fixType).toBe("fillTodayMiti");
+    expect(action!.label).toBe("Fill today's date");
+    expect(action!.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("returns fillTodayMiti for Invalid date", () => {
+    const action = getFixableAction("Invalid date");
+    expect(action).not.toBeNull();
+    expect(action!.fixType).toBe("fillTodayMiti");
+  });
+
+  it("returns selectGeneralCategory for Category required", () => {
+    const action = getFixableAction("Category required");
+    expect(action).not.toBeNull();
+    expect(action!.fixType).toBe("selectGeneralCategory");
+    expect(action!.label).toBe("Select General");
+    expect(action!.categoryName).toBe("General");
+  });
+
+  it("returns autoCreateFiscalYear for FY mismatch error", () => {
+    const action = getFixableAction("Date falls in FY 2082/83 (not 2080/81)");
+    expect(action).not.toBeNull();
+    expect(action!.fixType).toBe("autoCreateFiscalYear");
+    expect(action!.label).toBe("Create FY & fix");
+  });
+
+  it("returns null for non-fixable error", () => {
+    expect(getFixableAction("Party not found")).toBeNull();
+    expect(getFixableAction("Invoice number required")).toBeNull();
+    expect(getFixableAction("Taxable amount must be greater than 0")).toBeNull();
+  });
+
+  it("returns null for undefined", () => {
+    expect(getFixableAction(undefined)).toBeNull();
   });
 });

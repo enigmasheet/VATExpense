@@ -351,7 +351,7 @@ describe("ledgerReducer", () => {
       expect(result[0].status).toBe("saving");
     });
 
-    it("applies fix when status is not saving", () => {
+    it("applies fillTodayMiti fix", () => {
       const rows = [makeRow({ id: "r1", status: "error", miti: "" })];
       const result = ledgerReducer(rows, {
         type: "AUTO_FIX",
@@ -361,6 +361,59 @@ describe("ledgerReducer", () => {
       });
       expect(result[0].miti).toBe("2083-10-15");
       expect(result[0].status).toBe("pending");
+    });
+
+    it("applies selectGeneralCategory fix", () => {
+      const rows = [makeRow({ id: "r1", status: "error", categoryId: "", categoryName: "" })];
+      const result = ledgerReducer(rows, {
+        type: "AUTO_FIX",
+        rowId: "r1",
+        fixType: "selectGeneralCategory",
+        value: "",
+        categoryName: "General",
+      });
+      expect(result[0].categoryId).toBe("");
+      expect(result[0].categoryName).toBe("General");
+      expect(result[0].status).toBe("pending");
+    });
+
+    it("applies autoCreateFiscalYear fix — clears error only", () => {
+      const rows = [makeRow({ id: "r1", status: "error", error: "Date falls in FY 2082/83 (not 2080/81)" })];
+      const result = ledgerReducer(rows, {
+        type: "AUTO_FIX",
+        rowId: "r1",
+        fixType: "autoCreateFiscalYear",
+        value: "",
+      });
+      expect(result[0].error).toBeUndefined();
+      expect(result[0].status).toBe("pending");
+    });
+
+    it("does not change row for autoCreateFiscalYear when saving", () => {
+      const rows = [makeRow({ id: "r1", status: "saving", error: "Date falls in FY 2082/83 (not 2080/81)" })];
+      const result = ledgerReducer(rows, {
+        type: "AUTO_FIX",
+        rowId: "r1",
+        fixType: "autoCreateFiscalYear",
+        value: "",
+      });
+      expect(result[0].error).toBe("Date falls in FY 2082/83 (not 2080/81)");
+      expect(result[0].status).toBe("saving");
+    });
+
+    it("does not affect other rows", () => {
+      const rows = [
+        makeRow({ id: "r1", status: "error", miti: "" }),
+        makeRow({ id: "r2", status: "pending", miti: "2080-04-01" }),
+      ];
+      const result = ledgerReducer(rows, {
+        type: "AUTO_FIX",
+        rowId: "r1",
+        fixType: "fillTodayMiti",
+        value: "2083-10-15",
+      });
+      expect(result[0].miti).toBe("2083-10-15");
+      expect(result[1].miti).toBe("2080-04-01");
     });
   });
 });

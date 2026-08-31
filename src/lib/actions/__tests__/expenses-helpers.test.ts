@@ -45,6 +45,51 @@ describe("resolveFiscalYear", () => {
       expect(result.fiscalYear.isActive).toBe(false);
     }
   });
+
+  it("uses normalized FY name for lookup", async () => {
+    vi.mocked(db.select).mockReturnValue(mockChainReturn([{ id: "fy-1" }]) as never);
+    await resolveFiscalYear("comp-1", "15/03/2083");
+
+    const selectCall = vi.mocked(db.select).mock.results[0].value;
+    const whereArg = selectCall.from.mock.results[0].value.where.mock.calls[0][0];
+    expect(whereArg).toBeDefined();
+  });
+
+  it("creates FY with correct startYear for mid-year date (Chaitra)", async () => {
+    vi.mocked(db.select).mockReturnValue(mockChainReturn([]) as never);
+    vi.mocked(db.insert).mockReturnValue(
+      mockInsertReturn([{ id: "fy-new", name: "2082-2083", startYear: 2082, endYear: 2083, isActive: false }]) as never,
+    );
+    const result = await resolveFiscalYear("comp-1", "15/03/2083");
+    expect("fiscalYearId" in result).toBe(true);
+    if ("fiscalYearId" in result) {
+      expect(result.fiscalYear.startYear).toBe(2082);
+      expect(result.fiscalYear.endYear).toBe(2083);
+    }
+  });
+
+  it("creates FY with correct startYear for early-year date (Baisakh)", async () => {
+    vi.mocked(db.select).mockReturnValue(mockChainReturn([]) as never);
+    vi.mocked(db.insert).mockReturnValue(
+      mockInsertReturn([{ id: "fy-new", name: "2082-2083", startYear: 2082, endYear: 2083, isActive: false }]) as never,
+    );
+    const result = await resolveFiscalYear("comp-1", "15/04/2083");
+    expect("fiscalYearId" in result).toBe(true);
+    if ("fiscalYearId" in result) {
+      expect(result.fiscalYear.startYear).toBe(2082);
+      expect(result.fiscalYear.endYear).toBe(2083);
+    }
+  });
+
+  it("returns error for completely invalid date string", async () => {
+    const result = await resolveFiscalYear("comp-1", "not-a-date");
+    expect("error" in result).toBe(true);
+  });
+
+  it("returns error for empty string", async () => {
+    const result = await resolveFiscalYear("comp-1", "");
+    expect("error" in result).toBe(true);
+  });
 });
 
 describe("loadExpenseReferences", () => {

@@ -2,13 +2,29 @@ import { vi } from "vitest";
 
 /**
  * Builds a chainable mock for a `db.select().from().where().limit()` query.
+ * Also supports `.orderBy()` which resolves directly to rows.
+ * The `where()` return is thenable so `await db.select().from().where()` works in Promise.all.
  * The row type is inferred from the passed rows.
  */
 export function mockChainReturn<T>(rows: T) {
   const limit = vi.fn().mockResolvedValue(rows);
-  const where = vi.fn().mockReturnValue({ limit });
+  const orderBy = vi.fn().mockResolvedValue(rows);
+  const whereThenable = { orderBy, limit, then: (resolve: (value: unknown) => void) => { resolve(rows); } };
+  const where = vi.fn().mockReturnValue(whereThenable);
+  const from = vi.fn().mockReturnValue({ where, orderBy, limit });
+  return { from, where, orderBy, limit };
+}
+
+/**
+ * Builds a chainable mock for a `db.select().from().where().orderBy().limit().offset()` query.
+ */
+export function mockChainReturnOrdered<T>(rows: T) {
+  const offset = vi.fn().mockResolvedValue(rows);
+  const limit = vi.fn().mockReturnValue({ offset });
+  const orderBy = vi.fn().mockReturnValue({ limit });
+  const where = vi.fn().mockReturnValue({ orderBy });
   const from = vi.fn().mockReturnValue({ where });
-  return { from, where, limit };
+  return { from, where, orderBy, limit, offset };
 }
 
 /**

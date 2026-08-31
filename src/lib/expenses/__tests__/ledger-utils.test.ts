@@ -56,6 +56,30 @@ describe("formatMitiInput", () => {
     expect(formatMitiInput("2083-0")).toBe("2083-0");
     expect(formatMitiInput("2083-04-1")).toBe("2083-04-1");
   });
+
+  it("converts DD/MM/YYYY with slash separator", () => {
+    expect(formatMitiInput("01/04/2083")).toBe("2083-04-01");
+    expect(formatMitiInput("15/06/2082")).toBe("2082-06-15");
+    expect(formatMitiInput("31/12/2080")).toBe("2080-12-31");
+  });
+
+  it("converts DD-MM-YYYY with dash separator", () => {
+    expect(formatMitiInput("01-04-2083")).toBe("2083-04-01");
+    expect(formatMitiInput("15-06-2082")).toBe("2082-06-15");
+  });
+
+  it("converts DD.MM.YYYY with dot separator", () => {
+    expect(formatMitiInput("20.04.2083")).toBe("2083-04-20");
+    expect(formatMitiInput("01.01.2080")).toBe("2080-01-01");
+  });
+
+  it("trims whitespace before DD/MM/YYYY conversion", () => {
+    expect(formatMitiInput("  01/04/2083  ")).toBe("2083-04-01");
+  });
+
+  it("does not double-convert already YYYY-MM-DD input", () => {
+    expect(formatMitiInput("2083-04-15")).toBe("2083-04-15");
+  });
 });
 
 describe("normalizeInvoiceNumber", () => {
