@@ -6,39 +6,15 @@ Single tracking document for planned work, open PRs, and completed changes. Both
 
 ## Open PRs (Review)
 
-### PR #12 — `feature/backend-audit` (2 commits, Phase 1+2)
-- **Phase 1 (security):** gate companies API, scope party-statement, enforce import size limits, sanitize CSV exports, validate FK ownership.
-- **Phase 2 (data integrity):** FY membership check, atomic import confirm, delete 409, transactional expense-create, amount validation.
-- **Files changed:** 31 (API routes, services, tests, validation, exports, format, party-statement).
-- **Review status:** No review yet.
-- **Action needed:** Review changes, confirm no conflicts with recent main, decide merge.
-
-### PR #11 — `feature/phase3-audit-hardening` (1 commit, Phase 3)
-- **Scope:** Auth hardening (rate-limiter on login attempts, reject default superadmin creds, session sync), invoice normalization (trim+lowercase), duplicate-conflict handling via `isUniqueViolation`, ledger validation (invalid taxable amounts rejected, saving-row edit lock), VAT-rate propagation, fiscal-year creation transactional.
-- **Files changed:** 26 (auth, actions, reducers, validation, migrations, tests, ledger, useApp).
-- **Review status:** CodeRabbit — **Merge Risk: CRITICAL**, 12 actionable comments.
-- **Key findings to address before merge:**
-  - 🔴 `src/auth.ts` — unbounded `loginAttempts` `Map` can exhaust memory (unique emails accumulate). Replace with TTL-backed limiter + max key count.
-  - 🔴 `src/lib/actions/common.ts` — `inputCompanyId` accepted when unauthenticated (`user` is `undefined`). Require `ROLE_SUPER_ADMIN` for this path.
-  - 🟠 `src/app/api/expenses/invoice-keys/route.ts` — 10k-row limit silently truncates invoice keys. Add pagination or use server-side duplicate detection as authority.
-  - 🟠 `src/app/api/admin/companies/[id]/fiscal-years/route.ts` — concurrent FY inserts hit DB unique violation but catch returns `internalError()`. Map `23505` to `conflict()`.
-  - 🟠 `src/lib/expenses/ledger-reducer.ts` — `AUTO_FIX` still modifies rows with `STATUS_SAVING`. Guard it.
-  - 🟠 VAT-rate consistency — `defaultVatRate` not propagated to `ledger-calculation.ts` (uses hardcoded `VAT_RATE`), displayed amounts may differ from persisted `vatRate`.
-  - 🟡 Migration `0007_normalize_invoice_lowercase.sql` — `CREATE UNIQUE INDEX` blocks writes; consider `CONCURRENTLY`. Also schema not updated to match `lower(invoiceNumber)`.
-- **Action needed:** Fix critical + major findings, re-review, then merge.
-
-### Recommended Order
-1. Merge #12 (backend-audit, cleaner diff, no critical review findings).
-2. Address #11 CodeRabbit findings.
-3. Merge #11.
+(No open PRs — PRs #11 and #12 are merged.)
 
 ---
 
 ## TODO
 
-- [ ] **Review & merge open PRs #11 and #12** — see Open PRs section above for details and recommended order. | Priority: high | Files: `src/auth.ts`, `src/lib/actions/common.ts`, `src/app/api/expenses/invoice-keys/route.ts`, `src/app/api/admin/companies/[id]/fiscal-years/route.ts`, `src/lib/expenses/ledger-reducer.ts`, `src/lib/db/schema.ts`, `src/lib/db/migrations/0007_normalize_invoice_lowercase.sql`
+- [ ] **Branch consolidation** — delete stale branches (`dev`, `LatestDevelop`, `feature/backend-audit`, `feature/phase3-audit-hardening`). Consolidate on `develop`/`main`. | Priority: low
 
-- [ ] **Per-row fiscal year resolution in import** — resolve each row's FY from its miti, auto-create if missing. Deferred by user. | Priority: high | Files: `src/app/api/import/[batchId]/confirm/route.ts`, `preview/route.ts`
+- [x] **Per-row fiscal year resolution in import** — resolve each row's FY from its miti, auto-create if missing, per-row duplicate check. | Priority: high | Files: `src/app/api/import/[batchId]/preview/route.ts`, `confirm/route.ts`, `src/lib/db/schema.ts`, migration `0013`, `src/app/import/types.ts`, `import-preview-table.tsx`, `page.tsx`
 
 - [x] **Smart Fix button** — hide when error is not auto-fixable (only show for: missing miti, invalid date, missing category, FY not found). | Priority: medium | Files: `src/lib/expenses/ledger-validation.ts`, `src/lib/expenses/ledger-reducer.ts`, `src/components/expenses/ledger-table.tsx`
 
@@ -57,6 +33,15 @@ Single tracking document for planned work, open PRs, and completed changes. Both
 - **Navigation submenu reactivity:** Sidebar and mobile nav submenus now expand/collapse reactively when route changes. Uses ref-based state adjustment during render (avoids useEffect setState lint error).
 - **Reports tab active check:** Fixed imprecise `startsWith("/reports")` to exact match + trailing-slash guard.
 - **Smart Fix for FY mismatch:** New `autoCreateFiscalYear` FixActionType. When a row's miti falls in a different FY, a "Create FY & fix" button appears. Clicking clears the error; actual FY creation happens at save time via `resolveFiscalYear`.
+- **Verification:** typecheck clean, lint clean, 412 tests pass.
+
+### Import Per-Row Fiscal Year Resolution (2026-08-31)
+- **Schema:** Added `resolved_fiscal_year_id` column to `import_batch_rows` (migration `0013`).
+- **Preview endpoint:** Resolves each row's FY from its miti date using existing fiscal year records. Falls back to batch FY only for invalid dates. Cross-DB duplicate check now uses per-row FY instead of batch-level FY.
+- **Confirm endpoint:** Uses `resolveFiscalYear()` to auto-create missing FYs instead of inline lookup. Each row is filed under its correct FY.
+- **Preview table:** New "FY" column showing resolved fiscal year name. Rows differing from batch FY highlighted with "(differs)".
+- **FY mismatch warning:** Warning banner on import page when any rows resolve to a different FY than the batch.
+- **App version display:** Version injected from `package.json` via `next.config.ts` env. Displayed in sidebar footer (expanded + collapsed) and mobile drawer footer.
 - **Verification:** typecheck clean, lint clean, 412 tests pass.
 
 ### Item-Category Links + Expense Form UX + Truck Documents (2026-08-26)
@@ -90,7 +75,7 @@ All magic strings/numbers/error messages centralized in `src/lib/status-constant
 ### Still Open (details)
 
 #### Import Per-Row Fiscal Year Resolution
-**Status:** Deferred. All rows use `batch.fiscalYearId`. Planned: resolve from `resolvedMiti` via `resolveFiscalYear`, group by FY, insert in batches.
+**Status:** Complete. Each row's FY is resolved from its miti via existing fiscal year records. Missing FYs are auto-created during confirm via `resolveFiscalYear()`. Cross-DB duplicate check now uses per-row FY. Preview table shows FY column with mismatch highlighting. Warning banner displayed when rows differ from batch FY.
 
 #### Batch Entry Form Redesign
 **Status:** Complete. Empty state when no rows, alternating row backgrounds for pending rows, sticky mobile action bar.
@@ -108,5 +93,5 @@ All magic strings/numbers/error messages centralized in `src/lib/status-constant
 5. ~~Issue 3 (smart Fix button)~~ — Done
 6. ~~Issue 1 (pagination)~~ — Done
 7. ~~Issue 5 (batch entry redesign)~~ — Done
-8. Import FY resolution — Deferred
-9. **Review & merge PRs #11 + #12** — NEW, high priority
+8. ~~Import FY resolution~~ — Done (2026-08-31)
+9. ~~Review & merge PRs #11 + #12~~ — Done
