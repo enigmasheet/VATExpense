@@ -7,11 +7,12 @@ import type { BatchRow } from "./types";
 
 interface ImportPreviewTableProps {
   rows: BatchRow[];
+  batchFiscalYearName?: string;
   applyingRowId: string | null;
   onApplySuggestion: (rowId: string, field: "party" | "category", value: string) => void;
 }
 
-export function ImportPreviewTable({ rows, applyingRowId, onApplySuggestion }: ImportPreviewTableProps) {
+export function ImportPreviewTable({ rows, batchFiscalYearName, applyingRowId, onApplySuggestion }: ImportPreviewTableProps) {
   return (
     <DataTable
       compact
@@ -42,6 +43,20 @@ export function ImportPreviewTable({ rows, applyingRowId, onApplySuggestion }: I
           },
         },
         { header: "Invoice", cell: (row) => row.raw.invoiceNumber ?? "\u2014" },
+        {
+          header: "FY",
+          cell: (row) => {
+            const fy = row.resolved.fiscalYearName;
+            if (!fy) return <span className="text-muted">\u2014</span>;
+            const mismatch = batchFiscalYearName && fy !== batchFiscalYearName;
+            return (
+              <span className={mismatch ? "text-warning font-medium" : ""}>
+                {fy}
+                {mismatch && <span className="ml-1 text-xs" title={`Row FY differs from batch FY (${batchFiscalYearName})`}>(differs)</span>}
+              </span>
+            );
+          },
+        },
         {
           header: "Party",
           cell: (row) => {
@@ -136,7 +151,7 @@ export function ImportPreviewTable({ rows, applyingRowId, onApplySuggestion }: I
             <span className="tabular-amount font-medium">{formatAmount(row.raw.totalAmount)}</span>
           </div>
           <p className="mt-1 text-xs text-muted">
-            {row.raw.miti} · {row.resolved.partyName ?? row.raw.partyName}
+            {row.raw.miti} · {row.resolved.fiscalYearName ?? "\u2014"} · {row.resolved.partyName ?? row.raw.partyName}
           </p>
           {row.errors.length > 0 && (
             <ul className="mt-1 list-disc text-xs text-danger">

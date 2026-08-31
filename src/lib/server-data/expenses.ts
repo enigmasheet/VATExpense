@@ -46,7 +46,17 @@ export async function getDashboardSummary(companyId: string, fiscalYearId: strin
         eq(expenses.isDeleted, false),
       ),
     )
-    .orderBy(sql`${expenses.miti} desc, ${expenses.createdAt} desc`)
+    .orderBy(sql`
+      CASE
+        WHEN ${expenses.miti} ~ '^\\d{2}/\\d{2}/\\d{4}$'
+          THEN substring(${expenses.miti} from 7 for 4)
+            || substring(${expenses.miti} from 4 for 2)
+            || substring(${expenses.miti} from 1 for 2)
+        ELSE ${expenses.miti}
+      END DESC,
+      CAST(${expenses.invoiceNumber} AS NUMERIC) DESC NULLS LAST,
+      ${expenses.createdAt} DESC
+    `)
     .limit(5);
 
   return { totals, recent };
@@ -125,7 +135,17 @@ export async function getExpenses(params: ExpenseListParams) {
     .leftJoin(parties, eq(parties.id, expenses.partyId))
     .leftJoin(categories, eq(categories.id, expenses.categoryId))
     .where(where)
-    .orderBy(sql`${expenses.miti} desc, ${expenses.createdAt} desc`)
+    .orderBy(sql`
+      CASE
+        WHEN ${expenses.miti} ~ '^\\d{2}/\\d{2}/\\d{4}$'
+          THEN substring(${expenses.miti} from 7 for 4)
+            || substring(${expenses.miti} from 4 for 2)
+            || substring(${expenses.miti} from 1 for 2)
+        ELSE ${expenses.miti}
+      END DESC,
+      CAST(${expenses.invoiceNumber} AS NUMERIC) DESC NULLS LAST,
+      ${expenses.createdAt} DESC
+    `)
     .limit(pageSize)
     .offset((page - 1) * pageSize);
 

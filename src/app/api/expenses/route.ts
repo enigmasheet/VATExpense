@@ -21,7 +21,7 @@ import {
 import { requireCompanyIdFromSession, requireAdminRole } from "@/lib/api-auth";
 import { findFiscalYearByIdAndCompany, findPartyByIdAndCompany } from "@/lib/db-helpers/entities";
 import { resolveFiscalYear } from "@/lib/actions/expenses-helpers";
-import { parseMiti, fyName } from "@/lib/nepali-date";
+import { parseMiti, normalizeMiti, fyName } from "@/lib/nepali-date";
 import { checkInvoiceDuplicate, findSuspiciousDuplicates } from "@/lib/expenses/duplicates";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@/lib/constants";
 import { and, eq, ilike, or, sql, aliasedTable, type SQL } from "drizzle-orm";
@@ -284,7 +284,7 @@ export async function POST(request: Request) {
           categoryId: input.categoryId,
           locationId: input.locationId ?? null,
           truckId: input.truckId ?? null,
-          miti: input.miti,
+          miti: normalizeMiti(input.miti),
           nepaliMonth: miti.monthName,
           invoiceNumber: input.invoiceNumber ?? null,
           item: input.item,

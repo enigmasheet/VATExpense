@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { importBatches, importBatchRows, parties, categories, locations, expenses, companies } from "@/lib/db/schema";
+import { importBatches, importBatchRows, parties, categories, locations, expenses, companies, fiscalYears } from "@/lib/db/schema";
 import { apiOk, badRequest, internalError, notFound, forbidden } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { loadActiveMasterData } from "@/lib/db-helpers/masters";
@@ -20,7 +20,7 @@ import {
   DEFAULT_CATEGORY_TYRES,
   DEFAULT_CATEGORY_GENERAL,
 } from "@/lib/status-constants";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 export const runtime = "nodejs";
 
@@ -85,6 +85,12 @@ export async function GET(
       categories: existingCategories,
       locations: existingLocations,
     } = await loadActiveMasterData(batch.companyId);
+
+    const existingFiscalYears = await db
+      .select()
+      .from(fiscalYears)
+      .where(eq(fiscalYears.companyId, batch.companyId));
+    const fyNameToId = new Map(existingFiscalYears.map((fy) => [fy.name, fy.id]));
 
     const partyMap = new Map(existingParties.map((p) => [p.normalizedName, p]));
     const partyByVat = new Map(
@@ -275,6 +281,9 @@ export async function GET(
           errors.push(`Invalid miti: ${mitiResult.error}`);
         }
 
+        const resolvedFiscalYearId = mitiResult.ok ? (fyNameToId.get(mitiResult.fiscalYearName) ?? null) : null;
+        const resolvedFiscalYearName = mitiResult.ok ? mitiResult.fiscalYearName : null;
+
         const rawTaxable = row.rawTaxableAmount ?? "";
         const rawVat = row.rawVatAmount ?? "";
         const rawTotal = row.rawTotalAmount ?? "";
@@ -359,6 +368,8 @@ export async function GET(
             locationName: resolvedLocationName,
             miti: mitiResult.ok ? row.rawMiti : null,
             nepaliMonth: mitiResult.ok ? mitiResult.monthName : null,
+            fiscalYearId: resolvedFiscalYearId,
+            fiscalYearName: resolvedFiscalYearName,
             item: normalizeItemName(row.rawItem ?? ""),
             taxableAmount: String(taxableVal),
             vatAmount: String(vatVal),
@@ -378,6 +389,7 @@ export async function GET(
             resolvedLocationId,
             resolvedMiti: mitiResult.ok ? row.rawMiti : null,
             resolvedNepaliMonth: mitiResult.ok ? mitiResult.monthName : null,
+            resolvedFiscalYearId,
             resolvedTaxableAmount: String(taxableVal),
             resolvedVatAmount: String(vatVal),
             resolvedTotalAmount: String(totalVal),
@@ -421,20 +433,23 @@ export async function GET(
         rowId: r.id,
         invoiceNumber: r.raw.invoiceNumber!.trim(),
         partyId: r.resolved.partyId!,
+        fiscalYearId: r.resolved.fiscalYearId ?? batch.fiscalYearId,
         rowIndex: r.rowIndex,
       }));
 
     if (invoicePartyPairs.length > 0) {
+      const uniqueFyIds = [...new Set(invoicePartyPairs.map((p) => p.fiscalYearId))];
       const existingExpenses = await db
         .select({
           invoiceNumber: expenses.invoiceNumber,
           partyId: expenses.partyId,
+          fiscalYearId: expenses.fiscalYearId,
         })
         .from(expenses)
         .where(
           and(
             eq(expenses.companyId, batch.companyId),
-            eq(expenses.fiscalYearId, batch.fiscalYearId),
+            inArray(expenses.fiscalYearId, uniqueFyIds),
             eq(expenses.isDeleted, false),
           ),
         );
@@ -442,11 +457,11 @@ export async function GET(
       const existingSet = new Set(
         existingExpenses
           .filter((e) => e.invoiceNumber)
-          .map((e) => `${e.partyId}|${e.invoiceNumber}`),
+          .map((e) => `${e.fiscalYearId}|${e.partyId}|${e.invoiceNumber}`),
       );
 
       for (const pair of invoicePartyPairs) {
-        const key = `${pair.partyId}|${pair.invoiceNumber}`;
+        const key = `${pair.fiscalYearId}|${pair.partyId}|${pair.invoiceNumber}`;
         if (existingSet.has(key)) {
           const row = resolvedRows.find((r) => r.id === pair.rowId);
           if (row) {
@@ -498,6 +513,7 @@ export async function GET(
         batchId: batch.id,
         filename: batch.filename,
         status: batch.status,
+        fiscalYearName: existingFiscalYears.find((fy) => fy.id === batch.fiscalYearId)?.name ?? "Unknown",
         rowCount: batch.rowCount,
         errorCount,
         warningCount,

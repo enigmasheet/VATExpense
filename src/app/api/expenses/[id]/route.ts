@@ -12,7 +12,7 @@ import {
 } from "@/lib/api-response";
 import { requireCompanyIdFromSession, getSessionUser, requireAdminRole } from "@/lib/api-auth";
 import { findExpenseById } from "@/lib/db-helpers/expenses";
-import { parseMiti } from "@/lib/nepali-date";
+import { parseMiti, normalizeMiti } from "@/lib/nepali-date";
 import { checkInvoiceDuplicate, findSuspiciousDuplicates } from "@/lib/expenses/duplicates";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -89,7 +89,7 @@ export async function PATCH(
     if (miti !== undefined) {
       const parsedMiti = parseMiti(miti);
       if (!parsedMiti.ok) return unprocessableEntity("Invalid miti", [parsedMiti.error]);
-      values.miti = miti;
+      values.miti = normalizeMiti(miti);
       values.nepaliMonth = parsedMiti.monthName;
     }
 

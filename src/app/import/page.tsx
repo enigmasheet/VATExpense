@@ -238,9 +238,19 @@ export default function ImportPage() {
                 </p>
               </div>
             )}
+
+            {preview.rows.some((r) => r.resolved.fiscalYearName && r.resolved.fiscalYearName !== preview.fiscalYearName) && (
+              <Alert kind="warning" className="mt-3">
+                <p className="font-medium">Fiscal Year Mismatch</p>
+                <p className="mt-1 text-sm">
+                  Some rows have miti dates that fall in a different fiscal year ({preview.fiscalYearName}).
+                  These rows will be filed under their correct FY automatically.
+                </p>
+              </Alert>
+            )}
           </div>
 
-          <ImportPreviewTable rows={preview.rows} applyingRowId={applyingRowId} onApplySuggestion={handleApplySuggestion} />
+          <ImportPreviewTable rows={preview.rows} batchFiscalYearName={preview.fiscalYearName} applyingRowId={applyingRowId} onApplySuggestion={handleApplySuggestion} />
         </div>
       )}
 

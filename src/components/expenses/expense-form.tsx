@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/toast";
 import { VAT_RATE, VAT_RATE_DEFAULT } from "@/lib/constants";
 import { calcFromTaxable as calcVatFromTaxable, calcFromTotal as calcVatFromTotal } from "@/lib/expenses/ledger-calculation";
 import { formatMitiInput, todayMiti } from "@/lib/expenses/ledger-utils";
+import { normalizeMiti } from "@/lib/nepali-date";
 import { MessageList, type Message } from "@/components/ui/alert";
 import { queryKeys } from "@/lib/query-keys";
 import { ExpensePartyAutocomplete } from "./expense-party-autocomplete";
@@ -88,7 +89,7 @@ export function ExpenseForm({
   const [values, setValues] = useState<FormValues>(() =>
     mode === "edit" && initial
       ? {
-          miti: initial.miti,
+          miti: normalizeMiti(initial.miti),
           invoiceNumber: initial.invoiceNumber ?? "",
           partyId: initial.partyId,
           categoryId: initial.categoryId,

@@ -316,6 +316,7 @@ function MobileDrawer({ onClose }: { onClose: () => void }) {
               </Button>
             </div>
           )}
+          <p className="mt-2 text-xs text-muted text-center">v{process.env.APP_VERSION ?? "dev"}</p>
         </div>
       </div>
     </>

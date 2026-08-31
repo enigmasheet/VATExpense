@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { importBatches, importBatchRows, expenses, parties, categories, locations, fiscalYears, companies } from "@/lib/db/schema";
+import { importBatches, importBatchRows, expenses, parties, categories, locations, companies } from "@/lib/db/schema";
 import { apiOk, badRequest, conflict, internalError, notFound, forbidden } from "@/lib/api-response";
 import { requireCompanyIdFromSession, getSessionUser } from "@/lib/api-auth";
 import {
@@ -11,7 +11,8 @@ import {
 
 import { eq, inArray, and } from "drizzle-orm";
 import { normalizeItemName } from "@/lib/normalize-master-data";
-import { normalizeMiti, parseMiti } from "@/lib/nepali-date";
+import { normalizeMiti } from "@/lib/nepali-date";
+import { resolveFiscalYear } from "@/lib/actions/expenses-helpers";
 
 export const runtime = "nodejs";
 
@@ -118,15 +119,11 @@ export async function POST(
     const revalidationSkipped = importableRows.length - importableRowsFinal.length;
 
     const uniqueMitis = [...new Set(importableRowsFinal.map((r) => r.resolvedMiti!).filter(Boolean))];
-    const fyRows = uniqueMitis.length > 0
-      ? await db.select().from(fiscalYears).where(eq(fiscalYears.companyId, companyId))
-      : [];
-    const fyNameToId = new Map(fyRows.map((fy) => [fy.name, fy.id]));
     const mitiToFiscalYearId = new Map<string, string>();
     for (const miti of uniqueMitis) {
-      const parsed = parseMiti(miti);
-      if (parsed.ok) {
-        mitiToFiscalYearId.set(miti, fyNameToId.get(parsed.fiscalYearName) ?? claimed.fiscalYearId);
+      const result = await resolveFiscalYear(companyId, miti);
+      if ("fiscalYearId" in result) {
+        mitiToFiscalYearId.set(miti, result.fiscalYearId);
       } else {
         mitiToFiscalYearId.set(miti, claimed.fiscalYearId);
       }

@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SlideOver } from "@/components/ui/slide-over";
 import { useToast } from "@/components/ui/toast";
 import { Alert } from "@/components/ui/alert";
+import { formatMitiInput } from "@/lib/expenses/ledger-utils";
 
 interface TruckDocument {
   id: string;
@@ -285,7 +286,7 @@ export function TruckDocumentsPage({
               id="td-expiry"
               placeholder="e.g. 2083-03-15"
               value={expiryDate}
-              onChange={(e) => setExpiryDate(e.target.value)}
+              onChange={(e) => setExpiryDate(formatMitiInput(e.target.value))}
             />
           </Field>
           <Field label="Reminder date (BS)" htmlFor="td-reminder" hint="When you want to be reminded">
@@ -293,7 +294,7 @@ export function TruckDocumentsPage({
               id="td-reminder"
               placeholder="e.g. 2083-02-15"
               value={reminderDate}
-              onChange={(e) => setReminderDate(e.target.value)}
+              onChange={(e) => setReminderDate(formatMitiInput(e.target.value))}
             />
           </Field>
           {formError && <Alert kind="danger">{formError}</Alert>}

@@ -176,6 +176,9 @@ export function Sidebar({
                 </button>
               </>
             )}
+            <span className="text-[10px] text-muted" title={`v${process.env.APP_VERSION ?? "dev"}`}>
+              v{process.env.APP_VERSION ?? "dev"}
+            </span>
           </div>
         ) : (
           <>
@@ -216,6 +219,8 @@ export function Sidebar({
                 </Button>
               </div>
             )}
+
+            <p className="mt-2 text-xs text-muted text-center">v{process.env.APP_VERSION ?? "dev"}</p>
           </>
         )}
       </div>

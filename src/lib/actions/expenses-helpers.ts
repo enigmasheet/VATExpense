@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { expenses, fiscalYears, parties } from "@/lib/db/schema";
 import { validateAmounts, type ExpenseInput } from "@/lib/validation/expense";
-import { parseMiti, fyName } from "@/lib/nepali-date";
+import { parseMiti, normalizeMiti, fyName } from "@/lib/nepali-date";
 import {
   checkInvoiceDuplicate,
   findSuspiciousDuplicates,
@@ -274,7 +274,7 @@ export async function prepareValidatedExpense(
         categoryId: data.categoryId,
         locationId: data.locationId ?? context.party.locationId ?? null,
         truckId: data.truckId ?? null,
-        miti: data.miti,
+        miti: normalizeMiti(data.miti),
         nepaliMonth: miti.monthName,
         invoiceNumber: data.invoiceNumber ?? null,
         item: data.item,

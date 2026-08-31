@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { toFixedStr } from "@/lib/money";
 import { VAT_RATE_DEFAULT, MAX_NAME_LENGTH, MAX_FY_NAME_LENGTH } from "@/lib/constants";
-import { SUPPORTED_MIN_BS_YEAR, SUPPORTED_MAX_BS_YEAR } from "@/lib/nepali-date";
+import { SUPPORTED_MIN_BS_YEAR, SUPPORTED_MAX_BS_YEAR, parseMiti } from "@/lib/nepali-date";
 
 export const companyIdSchema = z.uuid("companyId must be a valid UUID");
 
@@ -94,7 +94,10 @@ export type UpdateItemCategoryInput = z.infer<typeof updateItemCategorySchema>;
 
 const bsDateText = z.preprocess(
   (v) => (v === null || v === undefined || v === "" ? null : v),
-  z.string().trim().max(10, "Date must be in YYYY-MM-DD format").nullable().optional(),
+  z.string().trim().refine(
+    (v) => v === null || parseMiti(v).ok,
+    "Invalid BS date",
+  ).nullable().optional(),
 );
 
 export const createTruckDocumentSchema = z.object({

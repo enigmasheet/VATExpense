@@ -34,6 +34,10 @@ export function todayMiti(): string {
  * Examples: "20830" → "2083-0", "20830415" → "2083-04-15"
  */
 export function formatMitiInput(raw: string): string {
+  const ddMatch = /^(\d{2})[\/\-.](\d{2})[\/\-.](\d{4})$/.exec(raw.trim());
+  if (ddMatch) {
+    return `${ddMatch[3]}-${ddMatch[2]}-${ddMatch[1]}`;
+  }
   const digits = raw.replace(/\D/g, "").slice(0, 8);
   if (digits.length <= 4) return digits;
   if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;

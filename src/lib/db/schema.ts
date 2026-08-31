@@ -329,6 +329,7 @@ export const importBatchRows = pgTable(
     resolvedLocationId: uuid("resolved_location_id"),
     resolvedMiti: text("resolved_miti"),
     resolvedNepaliMonth: text("resolved_nepali_month"),
+    resolvedFiscalYearId: uuid("resolved_fiscal_year_id"),
     resolvedTaxableAmount: numeric("resolved_taxable_amount", { precision: 18, scale: 2 }),
     resolvedVatAmount: numeric("resolved_vat_amount", { precision: 18, scale: 2 }),
     resolvedTotalAmount: numeric("resolved_total_amount", { precision: 18, scale: 2 }),

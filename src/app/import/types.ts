@@ -22,6 +22,8 @@ export interface BatchRow {
     categoryName: string | null;
     miti: string | null;
     nepaliMonth: string | null;
+    fiscalYearId: string | null;
+    fiscalYearName: string | null;
     taxableAmount: string;
     vatAmount: string;
     totalAmount: string;
@@ -39,6 +41,7 @@ export interface BatchPreview {
   batchId: string;
   filename: string;
   status: string;
+  fiscalYearName: string;
   rowCount: number;
   errorCount: number;
   warningCount: number;
