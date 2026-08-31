@@ -1,5 +1,3 @@
-import { vi } from "vitest";
-
 export interface MockSessionUser {
   id: string;
   email?: string;

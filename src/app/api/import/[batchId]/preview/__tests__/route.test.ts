@@ -49,7 +49,7 @@ describe("GET /api/import/[batchId]/preview", () => {
 
   it("returns 401 when unauthenticated", async () => {
     const { auth } = await import("@/auth");
-    vi.mocked(auth).mockResolvedValueOnce(null);
+    vi.mocked(auth).mockResolvedValueOnce(null as never);
 
     const req = createMockRequest("http://localhost/api/import/batch-1/preview");
     const res = await GET(req, { params: createMockParams({ batchId: "batch-1" }) });

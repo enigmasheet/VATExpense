@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mockChainReturn, mockUpdateReturn, mockInsertReturn } from "@/lib/test-utils/mock-db";
+import { mockChainReturn, mockUpdateReturn } from "@/lib/test-utils/mock-db";
 import { createMockRequest, createMockParams, parseResponse } from "@/lib/test-utils/mock-request";
 
 vi.mock("@/lib/db", () => ({
@@ -44,7 +44,7 @@ describe("POST /api/import/[batchId]/confirm", () => {
 
   it("returns 401 when unauthenticated", async () => {
     const { auth } = await import("@/auth");
-    vi.mocked(auth).mockResolvedValueOnce(null);
+    vi.mocked(auth).mockResolvedValueOnce(null as never);
 
     const req = createMockRequest("http://localhost/api/import/batch-1/confirm", { method: "POST" });
     const res = await POST(req, { params: createMockParams({ batchId: "batch-1" }) });
@@ -163,7 +163,21 @@ describe("POST /api/import/[batchId]/confirm", () => {
   it("uses resolveFiscalYear for per-row FY resolution", async () => {
     const { resolveFiscalYear } = await import("@/lib/actions/expenses-helpers");
     vi.mocked(resolveFiscalYear).mockClear();
-    vi.mocked(resolveFiscalYear).mockResolvedValue({ fiscalYearId: "fy-custom" });
+    vi.mocked(resolveFiscalYear).mockResolvedValue({
+      fiscalYearId: "fy-custom",
+      fiscalYear: {
+        id: "fy-custom",
+        name: "2082/83",
+        companyId: "comp-1",
+        startYear: 2082,
+        endYear: 2083,
+        isActive: false,
+        createdBy: null,
+        updatedBy: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
 
     const validRow = {
       id: "row-1", rowIndex: 0, status: "valid",
