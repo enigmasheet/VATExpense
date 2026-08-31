@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - **Party statement sorting** (`party-statement.ts`): Invoice numbers are now sorted numerically (`862` before `8456`, previously text-sorted) and BS dates sort chronologically regardless of stored format (`YYYY-MM-DD` or `DD/MM/YYYY`). Sort order is now miti → createdAt → numeric invoice number.
+- **Navigation submenu expansion** (`sidebar.tsx`, `mobile-nav.tsx`): Submenus now expand/collapse reactively when route changes. Previously, submenus only expanded on initial render and stayed expanded after navigating away.
+- **Reports tab active detection** (`mobile-nav.tsx`): Fixed imprecise `pathname.startsWith("/reports")` to include exact-match guard, preventing false positives on hypothetical `/reportsXYZ` paths.
 
 ### Added
 
@@ -14,6 +16,10 @@ All notable changes to this project will be documented in this file.
 - **Item autocomplete on expense form**: The Item field is now an autocomplete backed by item-category links. Selecting an item auto-fills the category; unknown items show a red indicator and a "Link" button opens a modal to create the link inline.
 - **Location auto-fill + hidden field**: Location dropdown removed from the expense form; `locationId` now auto-fills from the selected party's location and is still saved with the expense.
 - **Truck documents**: New `truck_documents` table supporting multiple documents per truck (type, number, BS expiry date, BS reminder date). CRUD via `/trucks/[id]/documents` page, linked from a new "Documents" column on the Trucks page.
+- **Batch entry empty state** (`ledger-table.tsx`): When all rows are removed, the ledger shows a centered empty state with icon and "No entries yet" message.
+- **Batch entry alternating rows** (`ledger-table.tsx`): Pending and incomplete rows now alternate between no background and a subtle muted background for better visual separation. Status-driven colors remain unchanged.
+- **Sticky mobile action bar** (`ledger-actions.tsx`): On mobile, the Add row / Save / Clear saved buttons stick to the viewport bottom while the table scrolls. Desktop layout unaffected.
+- **Smart Fix for FY mismatch** (`ledger-validation.ts`, `ledger-reducer.ts`): New `autoCreateFiscalYear` FixActionType. When a row's miti date falls in a different fiscal year, a "Create FY & fix" button appears. Clicking clears the error; actual FY creation happens at save time via `resolveFiscalYear`.
 
 ## [1.0.0] - 2026-08-20
 
