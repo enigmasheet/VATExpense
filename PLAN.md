@@ -106,7 +106,7 @@ All magic strings/numbers/error messages centralized in `src/lib/status-constant
 3. ~~Issue 2 (error message)~~ — Done
 4. ~~Issue 7 (FY dropdown -> DB)~~ — Done
 5. ~~Issue 3 (smart Fix button)~~ — Done
-6. Issue 1 (pagination) — Done
+6. ~~Issue 1 (pagination)~~ — Done
 7. ~~Issue 5 (batch entry redesign)~~ — Done
 8. Import FY resolution — Deferred
 9. **Review & merge PRs #11 + #12** — NEW, high priority

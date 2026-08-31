@@ -289,6 +289,8 @@ src/
   - `import_batch_rows` — id, batchId, rowIndex, status (pending|valid|error|confirmed), raw* fields, resolved* fields, errors (JSON text)
   - `users` — id, companyId, email, name, passwordHash, role, isActive
   - `admin_audit_log` — id, actorEmail, action, targetType, targetId, targetName, details
+  - `item_categories` — id, companyId, itemName, normalizedItemName, categoryId (unique on companyId+normalizedItemName)
+  - `truck_documents` — id, companyId, truckId, documentType, documentNumber, expiryDateBs, reminderDateBs
 - **Key constraints**:
   - `expenses_company_fy_party_invoice_uq` — unique on (companyId, fiscalYearId, partyId, invoiceNumber) WHERE invoiceNumber IS NOT NULL
   - `fiscal_years_company_name_uq` — unique on (companyId, name)
@@ -460,7 +462,7 @@ This is Next.js 16.3.0 — APIs may differ from training data. Always check `nod
 - **Test files**: Co-located `__tests__/*.test.ts` next to source.
 - **Mock DB**: `src/lib/test-utils/mock-db.ts` provides `mockChainReturn` and `mockInsertReturn` for mocking Drizzle query chains.
 - **Pattern**: `vi.mock("@/lib/db")` → mock `db.select`/`db.insert`/`db.update`/`db.delete` → use `mockChainReturn` to simulate query results.
-- **Test count**: 402 tests across 25 files. All must pass before committing.
+- **Test count**: 412 tests across 25 files. All must pass before committing.
 
 ---
 
