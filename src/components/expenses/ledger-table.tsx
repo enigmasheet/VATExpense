@@ -14,7 +14,7 @@ import {
 import type { Party, Category, LedgerRow, CellField } from "@/lib/expenses/ledger-types";
 import { getFixableAction } from "@/lib/expenses/ledger-validation";
 import type { FixableAction } from "@/lib/expenses/ledger-validation";
-import { formatMitiInput } from "@/lib/expenses/ledger-utils";
+import { MitiDateInput } from "@/components/ui/miti-date-input";
 import { PartyAutocomplete } from "./party-autocomplete";
 import { StatusBadge } from "./status-badge";
 import { Button } from "@/components/ui/button";
@@ -107,12 +107,12 @@ export function LedgerTable({
                 <td className="px-2 py-1.5 text-center text-xs text-muted-foreground">{idx + 1}</td>
 
                 <td className="px-1 py-1">
-                  <input
-                    type="text"
+                  <MitiDateInput
+                    compact
                     data-row={row.id}
                     data-field="miti"
                     value={row.miti}
-                    onChange={(e) => onUpdateField(row.id, "miti", formatMitiInput(e.target.value))}
+                    onChange={(v) => onUpdateField(row.id, "miti", v)}
                     onKeyDown={(e) => onCellKeyDown(e, row.id, "miti")}
                     placeholder="2083-04-15"
                     aria-label={`Miti for row ${idx + 1}`}
@@ -362,12 +362,12 @@ export function LedgerTable({
             <div className="grid grid-cols-2 gap-2.5">
               <div className="col-span-2">
                 <label className="mb-1 block text-xs text-muted-foreground">Miti</label>
-                <input
-                  type="text"
+                <MitiDateInput
+                  compact
                   data-row={row.id}
                   data-field="miti"
                   value={row.miti}
-                  onChange={(e) => onUpdateField(row.id, "miti", formatMitiInput(e.target.value))}
+                  onChange={(v) => onUpdateField(row.id, "miti", v)}
                   onKeyDown={(e) => onCellKeyDown(e, row.id, "miti")}
                   placeholder="2083-04-15"
                   aria-label={`Miti for row ${idx + 1}`}
