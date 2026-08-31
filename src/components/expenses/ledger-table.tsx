@@ -23,14 +23,14 @@ function isIssueRow(row: LedgerRow): boolean {
   return row.status === STATUS_ERROR || row.status === STATUS_DUPLICATE || row.status === STATUS_INCOMPLETE;
 }
 
-function cellBg(status: LedgerRow["status"]): string {
+function cellBg(status: LedgerRow["status"], index: number): string {
   switch (status) {
     case STATUS_SAVED: return "bg-success/8";
     case STATUS_SAVING: return "bg-primary/5";
     case STATUS_ERROR: return "bg-danger/10";
     case STATUS_DUPLICATE: return "bg-warning/10";
-    case STATUS_INCOMPLETE: return "bg-surface";
-    default: return "";
+    case STATUS_INCOMPLETE: return index % 2 === 0 ? "bg-surface" : "bg-surface-muted/30";
+    default: return index % 2 === 0 ? "" : "bg-muted/15";
   }
 }
 
@@ -66,6 +66,20 @@ export function LedgerTable({
   onFix,
   onCellKeyDown,
 }: LedgerTableProps) {
+  if (rows.length === 0) {
+    return (
+      <div className="overflow-x-auto rounded-lg border border-border/50">
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <svg className="h-10 w-10 text-muted/40 mb-3" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm font-medium text-muted-foreground">No entries yet</p>
+          <p className="text-xs text-muted mt-1">Add your first expense row below</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto rounded-lg border border-border/50">
       {/* Desktop Table */}
@@ -89,7 +103,7 @@ export function LedgerTable({
         <tbody>
           {rows.map((row, idx) => (
             <React.Fragment key={row.id}>
-              <tr className={`border-b border-border/30 last:border-b-0 transition-colors hover:bg-muted/20 ${cellBg(row.status)}`}>
+              <tr className={`border-b border-border/30 last:border-b-0 transition-colors hover:bg-muted/20 ${cellBg(row.status, idx)}`}>
                 <td className="px-2 py-1.5 text-center text-xs text-muted-foreground">{idx + 1}</td>
 
                 <td className="px-1 py-1">
@@ -310,7 +324,7 @@ export function LedgerTable({
         {rows.map((row, idx) => (
           <div
             key={row.id}
-            className={`border-b border-border/30 p-3 last:border-b-0 transition-colors ${cellBg(row.status)}`}
+            className={`border-b border-border/30 p-3 last:border-b-0 transition-colors ${cellBg(row.status, idx)}`}
           >
             <div className="mb-2.5 flex items-start justify-between">
               <div className="flex items-center gap-2">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useApp } from "@/lib/useApp";
@@ -45,6 +45,11 @@ function SidebarSubmenu({ item, pathname, collapsed, onClose }: { item: NavItem;
   const isActive = isItemActive(item.href, pathname);
   const isExpanded = hasChildren && (isActive || item.children?.some((child) => isChildActive(child.href, pathname)));
   const [open, setOpen] = useState(isExpanded);
+  const prevExpanded = useRef(isExpanded);
+  if (prevExpanded.current !== isExpanded) {
+    prevExpanded.current = isExpanded;
+    setOpen(isExpanded);
+  }
 
   if (collapsed || !hasChildren) {
     return <SidebarLink {...item} active={isActive} collapsed={collapsed} onClose={onClose} />;

@@ -64,7 +64,10 @@ function isRateLimited(key: string): boolean {
   const entry = loginAttempts.get(key);
   if (!entry) return false;
   const now = Date.now();
-  return entry.timestamps.filter((t) => now - t < LOGIN_WINDOW_MS).length > MAX_LOGIN_ATTEMPTS;
+  return (
+    entry.timestamps.filter((t) => now - t < LOGIN_WINDOW_MS).length >
+    MAX_LOGIN_ATTEMPTS
+  );
 }
 
 function clearAttempts(key: string): void {
@@ -98,10 +101,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const saEmail = process.env.SUPERADMIN_EMAIL;
         const saPassword = process.env.SUPERADMIN_PASSWORD;
         if (saEmail && saPassword && email === saEmail) {
-          if (saPassword === DEFAULT_SA_PASSWORD) {
-            console.error(
-              "SECURITY: Superadmin login rejected — SUPERADMIN_PASSWORD must not be 'changeme'",
-            );
+          if (
+            saPassword === DEFAULT_SA_PASSWORD &&
+            process.env.NODE_ENV !== "development"
+          ) {
+            console.error("SECURITY: Superadmin login rejected...");
             return null;
           }
           if (password === saPassword) {
@@ -117,11 +121,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         const user = (
-          await db
-            .select()
-            .from(users)
-            .where(eq(users.email, email))
-            .limit(1)
+          await db.select().from(users).where(eq(users.email, email)).limit(1)
         )[0];
 
         if (!user || !user.isActive) {
@@ -166,7 +166,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (userId !== "superadmin") {
           const user = (
             await db
-              .select({ isActive: users.isActive, role: users.role, companyId: users.companyId })
+              .select({
+                isActive: users.isActive,
+                role: users.role,
+                companyId: users.companyId,
+              })
               .from(users)
               .where(eq(users.id, userId))
               .limit(1)

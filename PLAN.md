@@ -40,15 +40,24 @@ Single tracking document for planned work, open PRs, and completed changes. Both
 
 - [ ] **Per-row fiscal year resolution in import** — resolve each row's FY from its miti, auto-create if missing. Deferred by user. | Priority: high | Files: `src/app/api/import/[batchId]/confirm/route.ts`, `preview/route.ts`
 
-- [ ] **Smart Fix button** — hide when error is not auto-fixable (only show for: missing miti, invalid date, missing category, FY not found). | Priority: medium | Files: `src/lib/expenses/ledger-validation.ts`, `src/lib/expenses/ledger-reducer.ts`, `src/components/expenses/ledger-table.tsx`
+- [x] **Smart Fix button** — hide when error is not auto-fixable (only show for: missing miti, invalid date, missing category, FY not found). | Priority: medium | Files: `src/lib/expenses/ledger-validation.ts`, `src/lib/expenses/ledger-reducer.ts`, `src/components/expenses/ledger-table.tsx`
 
-- [ ] **Batch entry form redesign** — sticky mobile action bar, empty state icon + button, alternating row backgrounds. | Priority: low | Files: `src/components/expenses/ledger-grid.tsx`, `src/components/expenses/ledger-table.tsx`
+- [x] **Batch entry form redesign** — sticky mobile action bar, empty state icon + button, alternating row backgrounds. | Priority: low | Files: `src/components/expenses/ledger-grid.tsx`, `src/components/expenses/ledger-table.tsx`, `src/components/expenses/ledger-actions.tsx`
 
-- [ ] **Navigation active state** — ensure child items use exact match for active detection. | Priority: low | Files: `src/components/layout/sidebar.tsx`, `src/components/layout/mobile-nav.tsx`
+- [x] **Navigation active state** — ensure child items use exact match for active detection. | Priority: low | Files: `src/components/layout/sidebar.tsx`, `src/components/layout/mobile-nav.tsx`
 
 ---
 
 ## Completed
+
+### Batch Entry Polish + Navigation + Smart Fix (2026-08-31)
+- **Batch entry empty state:** LedgerTable shows centered empty state with icon and text when no rows exist.
+- **Alternating row backgrounds:** Pending/incomplete rows alternate between no background and subtle muted background. Status-driven colors (error, saved, etc.) remain unchanged.
+- **Sticky mobile action bar:** Action buttons (Add row, Save, Clear saved) stick to viewport bottom on mobile while table scrolls. Hidden behind bottom tab bar (z-20 vs z-30). Desktop layout unaffected.
+- **Navigation submenu reactivity:** Sidebar and mobile nav submenus now expand/collapse reactively when route changes. Uses ref-based state adjustment during render (avoids useEffect setState lint error).
+- **Reports tab active check:** Fixed imprecise `startsWith("/reports")` to exact match + trailing-slash guard.
+- **Smart Fix for FY mismatch:** New `autoCreateFiscalYear` FixActionType. When a row's miti falls in a different FY, a "Create FY & fix" button appears. Clicking clears the error; actual FY creation happens at save time via `resolveFiscalYear`.
+- **Verification:** typecheck clean, lint clean, 412 tests pass.
 
 ### Item-Category Links + Expense Form UX + Truck Documents (2026-08-26)
 - **Item-category links:** New `item_categories` table (`schema.ts`, migration `0011`), service, actions, and APIs (`/api/item-categories`, `[id]`, `lookup`). CRUD integrated into the Categories page as a second section ("Item-Category Links").
@@ -84,10 +93,10 @@ All magic strings/numbers/error messages centralized in `src/lib/status-constant
 **Status:** Deferred. All rows use `batch.fiscalYearId`. Planned: resolve from `resolvedMiti` via `resolveFiscalYear`, group by FY, insert in batches.
 
 #### Batch Entry Form Redesign
-**Status:** Partially complete. Still needed: sticky mobile action bar, empty state, alternating rows.
+**Status:** Complete. Empty state when no rows, alternating row backgrounds for pending rows, sticky mobile action bar.
 
 #### Smart Fix Button
-**Status:** Not started. Only show Fix for: missing miti (→ today's BS date), invalid date (→ today), missing category (→ General), FY not found (→ auto-create).
+**Status:** Complete. Shows Fix for: missing miti (→ today's BS date), invalid date (→ today), missing category (→ General), FY not found (→ auto-create FY). All other errors correctly show no button.
 
 ---
 
@@ -96,8 +105,8 @@ All magic strings/numbers/error messages centralized in `src/lib/status-constant
 2. ~~Issue 4 (icon sizes)~~ — Done
 3. ~~Issue 2 (error message)~~ — Done
 4. ~~Issue 7 (FY dropdown -> DB)~~ — Done
-5. Issue 3 (smart Fix button) — moderate complexity
+5. ~~Issue 3 (smart Fix button)~~ — Done
 6. Issue 1 (pagination) — Done
-7. Issue 5 (batch entry redesign) — partially done
+7. ~~Issue 5 (batch entry redesign)~~ — Done
 8. Import FY resolution — Deferred
 9. **Review & merge PRs #11 + #12** — NEW, high priority

@@ -21,7 +21,7 @@ export function LedgerActions({
   onClearSaved,
 }: LedgerActionsProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3 sticky bottom-0 z-20 bg-surface border-t border-border p-3 md:static md:border-t-0 md:p-0 md:bg-transparent">
       <Button
         variant="secondary"
         onClick={onAddRow}

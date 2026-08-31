@@ -155,5 +155,13 @@ export function getFixableAction(
     };
   }
 
+  if (error.startsWith("Date falls in FY")) {
+    return {
+      fixType: "autoCreateFiscalYear",
+      label: "Create FY & fix",
+      value: "",
+    };
+  }
+
   return null;
 }

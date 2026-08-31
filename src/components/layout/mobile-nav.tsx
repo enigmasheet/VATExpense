@@ -29,6 +29,11 @@ function MobileSubmenu({ item, pathname, onClose }: { item: NavItem; pathname: s
   const isActive = isItemActive(item.href, pathname);
   const isExpanded = hasChildren && (isActive || item.children?.some((child) => isChildActive(child.href, pathname)));
   const [open, setOpen] = useState(isExpanded);
+  const prevExpanded = useRef(isExpanded);
+  if (prevExpanded.current !== isExpanded) {
+    prevExpanded.current = isExpanded;
+    setOpen(isExpanded);
+  }
 
   if (!hasChildren) {
     return <SidebarLink {...item} active={isActive} onClose={onClose} accent />;
@@ -132,7 +137,7 @@ function BottomTabBar({ onReports, onMore }: { onReports: () => void; onMore: ()
     return pathname === href || pathname.startsWith(href + "/");
   }
 
-  const reportsActive = pathname.startsWith("/reports");
+  const reportsActive = pathname === "/reports" || pathname.startsWith("/reports/");
 
   return (
     <div className="fixed bottom-0 inset-x-0 z-30 lg:hidden">

@@ -292,7 +292,9 @@ export function LedgerGrid({
       />
 
       {/* Summary */}
-      <LedgerSummary totals={totals} rowCount={enrichedRows.length} errorCount={errorCount} duplicateCount={duplicateCount} />
+      <div className="pb-16 md:pb-0">
+        <LedgerSummary totals={totals} rowCount={enrichedRows.length} errorCount={errorCount} duplicateCount={duplicateCount} />
+      </div>
 
       {/* Actions */}
       <LedgerActions

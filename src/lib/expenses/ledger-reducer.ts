@@ -9,7 +9,7 @@ import {
   DEFAULT_CATEGORY_GENERAL,
 } from "@/lib/status-constants";
 
-export type FixActionType = "fillTodayMiti" | "selectGeneralCategory";
+export type FixActionType = "fillTodayMiti" | "selectGeneralCategory" | "autoCreateFiscalYear";
 
 export type LedgerAction =
   | {
@@ -265,6 +265,8 @@ export function ledgerReducer(
           next = { ...next, miti: action.value };
         } else if (action.fixType === "selectGeneralCategory") {
           next = { ...next, categoryId: action.value, categoryName: action.categoryName ?? DEFAULT_CATEGORY_GENERAL };
+        } else if (action.fixType === "autoCreateFiscalYear") {
+          next = { ...next, error: undefined };
         }
 
         return next;
