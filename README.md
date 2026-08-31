@@ -77,6 +77,8 @@ Open [http://localhost:3000](http://localhost:3000).
 - **Reports**: Fiscal year summary, monthly breakdown, party statements
 - **Exports**: CSV + XLSX download
 - **Master Data**: Parties, categories, locations, trucks with fuzzy matching
+- **Item-Category Links**: Map item names to expense categories for auto-resolution during import and entry
+- **Truck Documents**: Track document types, numbers, and BS expiry dates per truck
 - **Duplicate Detection**: Invoice-level duplicate and suspicious-duplicate warnings
 - **Multi-company**: Company-scoped data with admin panel
 
