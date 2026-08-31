@@ -2,7 +2,6 @@
 
 import { useApp } from "@/lib/useApp";
 import { useCategories, useItemCategories } from "@/lib/hooks/use-reference-data";
-import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { CategoriesTable } from "@/components/categories/categories-table";
 import { ItemLinksTable } from "@/components/categories/item-links-table";

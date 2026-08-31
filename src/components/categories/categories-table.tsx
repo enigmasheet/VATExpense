@@ -21,9 +21,10 @@ interface CategoriesTableProps {
   links: ItemCategoryLink[];
   isLoading: boolean;
   error: string | null;
+  onAdd?: () => void;
 }
 
-export function CategoriesTable({ categories, links, isLoading, error }: CategoriesTableProps) {
+export function CategoriesTable({ categories, links, isLoading, error, onAdd }: CategoriesTableProps) {
   const { companyId } = useApp();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -72,6 +73,7 @@ export function CategoriesTable({ categories, links, isLoading, error }: Categor
   });
 
   function openCreate() {
+    if (onAdd) { onAdd(); return; }
     setFormMode("create"); setEditing(null); setName(""); setFormError(null); setFormOpen(true);
   }
 
@@ -102,6 +104,11 @@ export function CategoriesTable({ categories, links, isLoading, error }: Categor
 
   return (
     <>
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-lg font-semibold">Categories</h2>
+        <Button size="sm" onClick={openCreate} disabled={!companyId}>Add Category</Button>
+      </div>
+
       {error && <Alert kind="danger">{error}</Alert>}
 
       <DataTable<Category>
