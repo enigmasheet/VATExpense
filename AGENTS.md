@@ -25,7 +25,7 @@ VAT Expense Ledger — a purchase invoice register built for Nepali fiscal-year 
 | Database | PostgreSQL (Neon or local) via Drizzle ORM 0.45 |
 | Auth | NextAuth v5 (Credentials provider, JWT strategy) |
 | Validation | Zod 4 |
-| Testing | Vitest (400+ tests, 25 files) |
+| Testing | Vitest (412 tests, 25 files) |
 | Package manager | pnpm |
 
 ---
@@ -77,13 +77,17 @@ src/
 │   │   ├── [id]/page.tsx             # Edit expense
 │   │   └── new/page.tsx              # Alias → redirects to /expenses
 │   ├── import/                       # CSV/Excel import pipeline
-│   │   └── page.tsx                  # Upload → preview → confirm flow (client)
+│   │   ├── page.tsx                  # Upload → preview → confirm flow (client)
+│   │   ├── types.ts                  # BatchRow, BatchPreview, ImportResult types
+│   │   ├── import-preview-table.tsx  # Preview DataTable component
+│   │   └── import-issue-summary.tsx  # Error/warning breakdown component
 │   ├── reports/                      # Report pages
 │   │   ├── fiscal-year/              # Fiscal year summary
 │   │   ├── monthly/                  # Monthly breakdown
 │   │   └── parties/                  # Party statement + party detail
 │   ├── admin/                        # Superadmin-only area
 │   │   ├── layout.tsx                # Server layout — blocks non-superadmins
+│   │   ├── page.tsx                  # Admin overview dashboard
 │   │   ├── companies/                # Company CRUD
 │   │   ├── users/                    # User CRUD + password reset
 │   │   ├── fiscal-years/             # Fiscal year CRUD
@@ -92,6 +96,7 @@ src/
 │   ├── locations/                    # Master page
 │   ├── parties/                      # Master page (with party detail modals)
 │   ├── trucks/                       # Master page
+│   │   └── [id]/documents/           # Truck documents page
 │   ├── fiscal-years/                 # Master page
 │   └── api/                          # API routes
 │       ├── auth/[...nextauth]/       # NextAuth handler
@@ -110,6 +115,8 @@ src/
 │       │       ├── preview/route.ts  # Resolve rows (party/cat/loc/miti/amounts)
 │       │       ├── confirm/route.ts  # Insert expenses from valid rows
 │       │       └── rows/[rowId]/     # PATCH: apply suggestion to a row
+│       ├── item-categories/          # Item-category link CRUD
+│       ├── truck-documents/          # Truck document CRUD
 │       └── admin/                    # Superadmin-only APIs
 │           ├── companies/
 │           ├── users/
@@ -119,11 +126,14 @@ src/
 ├── components/
 │   ├── expenses/                     # Expense entry components
 │   │   ├── expense-form.tsx          # Single expense create/edit form
+│   │   ├── expense-party-autocomplete.tsx  # Party autocomplete for expense form
+│   │   ├── item-autocomplete.tsx     # Item autocomplete with category links
+│   │   ├── item-link-modal.tsx       # Modal to create item-category link
 │   │   ├── ledger-grid.tsx           # Batch entry ledger (reducer-driven)
-│   │   ├── ledger-table.tsx          # Ledger table (desktop)
+│   │   ├── ledger-table.tsx          # Ledger table (desktop + mobile cards)
 │   │   ├── ledger-summary.tsx        # Totals row
 │   │   ├── ledger-actions.tsx        # Add/delete/duplicate row buttons
-│   │   ├── party-autocomplete.tsx    # Party dropdown with autocomplete
+│   │   ├── party-autocomplete.tsx    # Party dropdown with autocomplete (ledger)
 │   │   ├── status-badge.tsx          # Row status indicator
 │   │   └── batch-entry.tsx           # Wrapper: loads FY + renders LedgerGrid
 │   ├── layout/                       # Navigation shell
@@ -131,6 +141,8 @@ src/
 │   │   ├── sidebar.tsx               # Desktop sidebar navigation
 │   │   ├── mobile-nav.tsx            # Mobile header + bottom tab bar + report picker
 │   │   ├── icons.tsx                 # SVG icon components
+│   │   ├── nav-config.ts             # Navigation item definitions and grouping
+│   │   ├── nav-styles.ts             # Shared nav CSS classes
 │   │   └── useSidebarCollapsed.ts    # Sidebar collapse state (localStorage)
 │   ├── admin/                        # Admin panel components
 │   │   ├── companies-page.tsx        # Companies list + ProvisionPanel + CompanyEditPanel
@@ -163,7 +175,12 @@ src/
 │   │   ├── status-widgets.tsx
 │   │   ├── status-dot.tsx
 │   │   └── nav-select.tsx
-│   ├── master-page.tsx               # Reusable CRUD page (parties, categories, etc.)
+│   ├── categories/                   # Categories page components
+│   │   ├── categories-table.tsx      # Categories CRUD table
+│   │   └── item-links-table.tsx      # Item-category links CRUD table
+│   ├── parties/                      # Parties page components
+│   │   └── parties-page.tsx          # Standalone parties page with React Query
+│   ├── master-page.tsx               # Reusable CRUD page (categories, locations, etc.)
 │   ├── party-form-modal.tsx          # Slide-over for creating/editing a party
 │   ├── location-form-modal.tsx       # Modal for creating a location
 │   ├── expense-detail-client.tsx     # Expense detail view (client)
@@ -177,7 +194,7 @@ src/
 │   ├── db/
 │   │   ├── schema.ts                 # Drizzle schema (all tables)
 │   │   ├── index.ts                  # DB driver (neon-serverless for prod, postgres-js for local)
-│   │   └── migrations/               # SQL migration files (0000–0006)
+│   │   └── migrations/               # SQL migration files (0000–0012)
 │   ├── actions/                      # Server actions ("use server")
 │   │   ├── common.ts                 # requireCompanyId, ActionResult type
 │   │   ├── expenses.ts               # Batch save, create, update, delete expenses
@@ -216,6 +233,10 @@ src/
 │   │   ├── masters.ts                # loadActiveMasterData (parties, categories, locations)
 │   │   ├── expenses.ts
 │   │   └── parties.ts
+│   ├── hooks/                        # React Query hooks
+│   │   └── use-reference-data.ts     # useReferenceData, useItemCategories hooks
+│   ├── types/                        # Shared TypeScript types
+│   │   └── entities.ts               # Category, Location, Truck, Party, ItemCategoryLink
 │   ├── validation/                   # Zod schemas
 │   │   ├── expense.ts                # expenseInputSchema, validateAmounts
 │   │   ├── masters.ts                # Party, category, location, truck validation
