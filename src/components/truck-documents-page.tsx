@@ -7,6 +7,7 @@ import { SubmitEvent } from "react";
 import { useApp } from "@/lib/useApp";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { MitiDateInput } from "@/components/ui/miti-date-input";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type DataColumn } from "@/components/ui/data-table";
@@ -14,7 +15,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SlideOver } from "@/components/ui/slide-over";
 import { useToast } from "@/components/ui/toast";
 import { Alert } from "@/components/ui/alert";
-import { formatMitiInput } from "@/lib/expenses/ledger-utils";
 
 interface TruckDocument {
   id: string;
@@ -281,20 +281,18 @@ export function TruckDocumentsPage({
               onChange={(e) => setDocumentNumber(e.target.value)}
             />
           </Field>
-          <Field label="Expiry date (BS)" htmlFor="td-expiry" hint="YYYY-MM-DD">
-            <Input
+          <Field label="Expiry date (BS)" htmlFor="td-expiry">
+            <MitiDateInput
               id="td-expiry"
-              placeholder="e.g. 2083-03-15"
               value={expiryDate}
-              onChange={(e) => setExpiryDate(formatMitiInput(e.target.value))}
+              onChange={setExpiryDate}
             />
           </Field>
-          <Field label="Reminder date (BS)" htmlFor="td-reminder" hint="When you want to be reminded">
-            <Input
+          <Field label="Reminder date (BS)" htmlFor="td-reminder">
+            <MitiDateInput
               id="td-reminder"
-              placeholder="e.g. 2083-02-15"
               value={reminderDate}
-              onChange={(e) => setReminderDate(formatMitiInput(e.target.value))}
+              onChange={setReminderDate}
             />
           </Field>
           {formError && <Alert kind="danger">{formError}</Alert>}

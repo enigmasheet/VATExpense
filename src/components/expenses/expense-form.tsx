@@ -9,11 +9,12 @@ import { useCategories, useItemCategories, useParties, useTrucks } from "@/lib/h
 import { round2 } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
+import { MitiDateInput } from "@/components/ui/miti-date-input";
 import { PartyFormModal } from "@/components/party-form-modal";
 import { useToast } from "@/components/ui/toast";
 import { VAT_RATE, VAT_RATE_DEFAULT } from "@/lib/constants";
 import { calcFromTaxable as calcVatFromTaxable, calcFromTotal as calcVatFromTotal } from "@/lib/expenses/ledger-calculation";
-import { formatMitiInput, todayMiti } from "@/lib/expenses/ledger-utils";
+import { todayMiti } from "@/lib/expenses/ledger-utils";
 import { normalizeMiti } from "@/lib/nepali-date";
 import { MessageList, type Message } from "@/components/ui/alert";
 import { queryKeys } from "@/lib/query-keys";
@@ -322,12 +323,11 @@ export function ExpenseForm({
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Miti (BS)" htmlFor="e-miti">
-            <Input
+            <MitiDateInput
               id="e-miti"
               required
-              placeholder="2083-04-15"
               value={values.miti}
-              onChange={(e) => setValues((v) => ({ ...v, miti: formatMitiInput(e.target.value) }))}
+              onChange={(v) => setValues((prev) => ({ ...prev, miti: v }))}
             />
           </Field>
           <Field label="Invoice number" htmlFor="e-invoice" hint="Leave blank for cash memos">
