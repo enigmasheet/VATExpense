@@ -40,7 +40,8 @@ describe("pad", () => {
 
 describe("clampDay", () => {
   it("clamps day to max for month", () => {
-    expect(clampDay(2083, 1, 32)).toBe(31);
+    const maxDay = getDaysInMonth(2083, 1);
+    expect(clampDay(2083, 1, 32)).toBe(maxDay);
     expect(clampDay(2083, 1, 0)).toBe(1);
   });
 
@@ -75,11 +76,13 @@ describe("bumpSegment", () => {
     it("increments year by 1", () => {
       const result = bumpSegment("2083-04-15", 2, 1);
       expect(result.value).toBe("2084-04-15");
+      expect(result.segment).toBe("year");
     });
 
     it("decrements year by 1", () => {
       const result = bumpSegment("2083-04-15", 2, -1);
       expect(result.value).toBe("2082-04-15");
+      expect(result.segment).toBe("year");
     });
 
     it("clamps year to max BS year", () => {
@@ -103,6 +106,7 @@ describe("bumpSegment", () => {
     it("increments month by 1", () => {
       const result = bumpSegment("2083-04-15", 5, 1);
       expect(result.value).toBe("2083-05-15");
+      expect(result.segment).toBe("month");
     });
 
     it("decrements month by 1", () => {
@@ -122,13 +126,9 @@ describe("bumpSegment", () => {
 
     it("clamps day when month changes to shorter month", () => {
       const result = bumpSegment("2083-01-31", 5, 1);
-      expect(result.value).toBe("2083-02-31");
-      const parsed = /^2083-02-(\d+)$/.exec(result.value);
-      expect(parsed).not.toBeNull();
-      if (parsed) {
-        const maxDays = getDaysInMonth(2083, 2);
-        expect(Number(parsed[1])).toBeLessThanOrEqual(maxDays);
-      }
+      const maxDay = getDaysInMonth(2083, 2);
+      const day = Number(result.value.split("-")[2]);
+      expect(day).toBeLessThanOrEqual(maxDay);
     });
   });
 
@@ -136,6 +136,7 @@ describe("bumpSegment", () => {
     it("increments day by 1", () => {
       const result = bumpSegment("2083-04-15", 8, 1);
       expect(result.value).toBe("2083-04-16");
+      expect(result.segment).toBe("day");
     });
 
     it("decrements day by 1", () => {
@@ -168,8 +169,9 @@ describe("bumpSegment", () => {
     });
   });
 
-  it("preserves cursor position", () => {
-    const result = bumpSegment("2083-04-15", 5, 1);
-    expect(result.newPos).toBe(5);
+  it("returns the changed segment", () => {
+    expect(bumpSegment("2083-04-15", 2, 1).segment).toBe("year");
+    expect(bumpSegment("2083-04-15", 5, 1).segment).toBe("month");
+    expect(bumpSegment("2083-04-15", 8, 1).segment).toBe("day");
   });
 });

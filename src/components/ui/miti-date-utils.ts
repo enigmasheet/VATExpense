@@ -13,12 +13,16 @@ export function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
 
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(Math.max(n, min), max);
+}
+
 export function clampDay(year: number, month: number, day: number): number {
   try {
     const maxDay = NepaliDate.getDaysOfMonth(year, month - 1);
-    return Math.min(Math.max(day, 1), maxDay);
+    return clamp(day, 1, maxDay);
   } catch {
-    return Math.min(Math.max(day, 1), 32);
+    return clamp(day, 1, 32);
   }
 }
 
@@ -30,17 +34,21 @@ export function getDaysInMonth(year: number, month: number): number {
   }
 }
 
-export function bumpSegment(value: string, pos: number, delta: number): { value: string; newPos: number } {
+export function bumpSegment(
+  value: string,
+  pos: number,
+  delta: number,
+): { value: string; segment: Segment } {
+  const seg = getSegment(pos);
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return { value, newPos: pos };
+  if (!match) return { value, segment: seg };
 
   let year = Number(match[1]);
   let month = Number(match[2]);
   let day = Number(match[3]);
-  const seg = getSegment(pos);
 
   if (seg === "year") {
-    year = Math.min(Math.max(year + delta, SUPPORTED_MIN_BS_YEAR), SUPPORTED_MAX_BS_YEAR);
+    year = clamp(year + delta, SUPPORTED_MIN_BS_YEAR, SUPPORTED_MAX_BS_YEAR);
     day = clampDay(year, month, day);
   } else if (seg === "month") {
     month += delta;
@@ -54,7 +62,10 @@ export function bumpSegment(value: string, pos: number, delta: number): { value:
     if (day < 1) day = maxDay;
   }
 
-  return { value: `${year}-${pad(month)}-${pad(day)}`, newPos: pos };
+  return {
+    value: `${String(year).padStart(4, "0")}-${pad(month)}-${pad(day)}`,
+    segment: seg,
+  };
 }
 
 export function selectSegment(input: HTMLInputElement, seg: Segment) {
