@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { expenses, parties, categories, locations, fiscalYears } from "@/lib/db/schema";
 import { badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
-import { NEPALI_MONTHS } from "@/lib/nepali-date";
+import { normalizeMiti, NEPALI_MONTHS } from "@/lib/nepali-date";
 import { sanitizeCsvValue } from "@/lib/format";
 import { and, eq, sql, type SQL } from "drizzle-orm";
 import {
@@ -86,7 +86,7 @@ export async function GET(request: Request) {
 
         const data = rows.map((r, i) => ({
           "S.N.": i + 1,
-          Miti: r.miti,
+          Miti: normalizeMiti(r.miti),
           "Invoice No.": sanitizeCsvValue(r.invoiceNumber),
           Party: sanitizeCsvValue(r.partyName),
           "VAT No.": sanitizeCsvValue(r.partyVatNumber),

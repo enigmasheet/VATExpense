@@ -1,6 +1,7 @@
 import { badRequest, internalError } from "@/lib/api-response";
 import { requireCompanyIdFromSession } from "@/lib/api-auth";
 import { getPartyStatement } from "@/lib/server-data/party-statement";
+import { normalizeMiti } from "@/lib/nepali-date";
 import { sanitizeCsvValue } from "@/lib/format";
 import {
   HTTP_NOT_FOUND,
@@ -45,7 +46,7 @@ export async function GET(
 
     const data = rows.map((r, i) => ({
       "S.N.": i + 1,
-      Miti: r.miti,
+      Miti: normalizeMiti(r.miti),
       "Invoice No.": sanitizeCsvValue(r.invoiceNumber),
       Item: sanitizeCsvValue(r.itemName),
       Category: sanitizeCsvValue(r.categoryName),
