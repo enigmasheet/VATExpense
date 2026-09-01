@@ -366,6 +366,7 @@ export function ExpenseForm({
               value={itemSearch}
               resolved={itemResolved}
               onChange={(itemName, categoryId) => setValues((v) => ({ ...v, item: itemName, categoryId: categoryId ?? v.categoryId }))}
+              onSearchChange={setItemSearch}
               onResolvedChange={setItemResolved}
               onLinkNew={() => {
                 setLinkItemName(itemSearch);

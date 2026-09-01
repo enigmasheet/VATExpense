@@ -16,6 +16,7 @@ export interface ItemAutocompleteProps {
   value: string;
   resolved: boolean;
   onChange: (itemName: string, categoryId: string | null) => void;
+  onSearchChange: (search: string) => void;
   onResolvedChange: (resolved: boolean) => void;
   onLinkNew: () => void;
 }
@@ -25,6 +26,7 @@ export function ItemAutocomplete({
   value,
   resolved,
   onChange,
+  onSearchChange,
   onResolvedChange,
   onLinkNew,
 }: ItemAutocompleteProps) {
@@ -58,6 +60,7 @@ export function ItemAutocomplete({
   }
 
   function select(mapping: ItemMapping) {
+    onSearchChange(mapping.itemName);
     onChange(mapping.itemName, mapping.categoryId);
     onResolvedChange(true);
     setOpen(false);
@@ -95,6 +98,7 @@ export function ItemAutocomplete({
           value={value}
           onChange={(e) => {
             const val = e.target.value;
+            onSearchChange(val);
             onChange(val, null);
             onResolvedChange(false);
             search(val);
@@ -102,10 +106,7 @@ export function ItemAutocomplete({
           onFocus={() => {
             updateDropdownPos();
             if (results.length > 0) setOpen(true);
-            else if (value.length > 0) {
-              search(value);
-              setOpen(results.length > 0);
-            }
+            else if (value.length > 0) search(value);
           }}
           onKeyDown={(e) => {
             if (!open) return;
